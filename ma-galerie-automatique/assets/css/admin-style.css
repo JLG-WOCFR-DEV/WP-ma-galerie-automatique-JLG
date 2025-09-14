@@ -1,0 +1,4 @@
+.mga-admin-wrap .nav-tab-wrapper { margin-bottom: 20px; }
+.mga-admin-wrap .tab-content { display: none; }
+.mga-admin-wrap .tab-content.active { display: block; }
+#mga_thumb_size_value, #mga_bg_opacity_value { font-weight: bold; margin-left: 10px; }
