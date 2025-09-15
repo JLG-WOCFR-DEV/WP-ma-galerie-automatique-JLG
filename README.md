@@ -32,8 +32,11 @@ Après l’activation :
 <a href="image-large.jpg"><img src="image-large.jpg" alt="Exemple" /></a>
 ```
 
+## Développement
+Le modèle de la page d'administration se trouve dans `includes/admin-page-template.php`. Il est automatiquement chargé lors de l'affichage des réglages du plugin.
+
 ## Licence et support
-Distribué sous licence [GPL 2.0 ou ultérieure](https://www.gnu.org/licenses/gpl-2.0.html).  
+Distribué sous licence [GPL 2.0 ou ultérieure](https://www.gnu.org/licenses/gpl-2.0.html).
 Pour toute question ou suggestion, ouvrez une issue sur ce dépôt ou contactez l’auteur.
 
 ## Notes

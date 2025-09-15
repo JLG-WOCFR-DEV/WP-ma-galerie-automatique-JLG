@@ -135,8 +135,8 @@ function mga_options_page_html() {
     
     $settings = get_option( 'mga_settings', mga_get_default_settings() );
     
-    $admin_template_path = plugin_dir_path(__FILE__) . 'includes/admin-page-template.php';
-    if (file_exists($admin_template_path)) {
-        include($admin_template_path);
+    $admin_template_path = plugin_dir_path( __FILE__ ) . 'includes/admin-page-template.php';
+    if ( is_readable( $admin_template_path ) ) {
+        include $admin_template_path;
     }
 }
