@@ -3,56 +3,23 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         const settings = window.mga_settings || {};
-        let debugPanel = null;
-        let debugLogContainer = null;
+        const noop = () => {};
+        const debug = window.mgaDebug || {
+            enabled: false,
+            init: noop,
+            log: noop,
+            updateInfo: noop,
+            onForceOpen: noop,
+            stopTimer: noop,
+            table: noop,
+        };
         let mainSwiper = null;
         let thumbsSwiper = null;
         const preloadedUrls = new Set();
-        let debugTimerInterval = null;
         let resizeTimeout;
 
-        // --- FONCTIONS DE DÉBOGAGE ---
-        function createDebugPanel() {
-            const panel = document.createElement('div');
-            panel.id = 'mga-debug-panel';
-            panel.style.cssText = 'position: fixed; bottom: 10px; right: 10px; background: #23282d; color: #fff; border: 2px solid #0073aa; padding: 15px; font-family: monospace; font-size: 12px; z-index: 999999; max-width: 450px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);';
-            panel.innerHTML = `
-                <h4 style="margin: 0 0 10px; padding: 0 0 10px; border-bottom: 1px solid #444; font-size: 14px;">Debug MGA Performance</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                    <div><strong>Chronomètre réel:</strong><div id="mga-debug-realtime" style="font-size: 16px; color: #4CAF50;">0.00s</div></div>
-                    <div><strong>Timer Autoplay:</strong><div id="mga-debug-autoplay-time" style="font-size: 16px; color: #FFC107;">N/A</div></div>
-                </div>
-                <button id="mga-force-open" style="background: #0073aa; color: white; border: none; padding: 8px 12px; cursor: pointer; margin-top: 10px; width: 100%;">Forcer l'ouverture (Test)</button>
-                <div id="mga-log-container" style="margin-top: 15px; max-height: 200px; overflow-y: auto; background: #111; padding: 5px;">
-                     <h5 style="margin:0 0 5px; padding:0; color: #ccc;">Journal d'événements :</h5>
-                     <div id="mga-debug-log"></div>
-                </div>
-            `;
-            document.body.appendChild(panel);
-            debugLogContainer = panel.querySelector('#mga-debug-log');
-            return panel;
-        }
+        debug.init();
 
-        function logDebug(message, isError = false) {
-            const time = (performance.now() / 1000).toFixed(3);
-            console[isError ? 'error' : 'log'](`MGA [${time}s]: ${message}`);
-            if (!debugLogContainer) return;
-            const p = document.createElement('p');
-            p.style.cssText = `margin: 2px 5px; padding: 0; color: ${isError ? '#F44336' : '#4CAF50'}; font-size: 11px; word-break: break-all;`;
-            p.innerHTML = `<span style="color:#888;">[${time}s]</span> > ${message}`;
-            debugLogContainer.appendChild(p);
-            debugLogContainer.scrollTop = debugLogContainer.scrollHeight;
-        }
-
-        function updateDebugInfo(key, value, color = '#fff') {
-            if (!debugPanel) return;
-            const el = document.getElementById(key);
-            if (el) {
-                el.textContent = value;
-                el.style.color = color;
-            }
-        }
-        
         // --- FONCTIONS UTILITAIRES ---
         function getHighResUrl(linkElement) {
             if (!linkElement) return null;
@@ -75,7 +42,7 @@
         function getViewer() {
             let viewer = document.getElementById('mga-viewer');
             if (!viewer) {
-                logDebug('Viewer non trouvé. Création à la volée...');
+                debug.log('Viewer non trouvé. Création à la volée...');
                 const viewerHTML = `
                     <div id="mga-viewer" class="mga-viewer" style="display: none;" role="dialog" aria-modal="true">
                         <div class="mga-echo-bg"></div>
@@ -100,23 +67,15 @@
                     </div>`;
                 document.body.insertAdjacentHTML('beforeend', viewerHTML);
                 viewer = document.getElementById('mga-viewer');
-                if (viewer) logDebug('Viewer créé et ajouté au body avec succès.');
-                else logDebug('ERREUR CRITIQUE: Échec de la création du viewer !', true);
+                if (viewer) debug.log('Viewer créé et ajouté au body avec succès.');
+                else debug.log('ERREUR CRITIQUE: Échec de la création du viewer !', true);
             }
             return viewer;
         }
 
         // --- LOGIQUE PRINCIPALE ---
-        if (settings.debug_mode) {
-            debugPanel = createDebugPanel();
-            let startTime = performance.now();
-            debugTimerInterval = setInterval(() => {
-                updateDebugInfo('mga-debug-realtime', ((performance.now() - startTime) / 1000).toFixed(2) + 's');
-            }, 100);
-        }
-
-        logDebug('Script initialisé et prêt.');
-        updateDebugInfo('mga-debug-status', 'Prêt', '#4CAF50');
+        debug.log('Script initialisé et prêt.');
+        debug.updateInfo('mga-debug-status', 'Prêt', '#4CAF50');
 
         const contentSelectors = ['.wp-block-post-content', '.entry-content', '.post-content'];
         let contentArea = document.body;
@@ -129,26 +88,24 @@
                 break;
             }
         }
-        updateDebugInfo('mga-debug-content-area', foundSelector, '#4CAF50');
+        debug.updateInfo('mga-debug-content-area', foundSelector, '#4CAF50');
         
         const triggerLinks = Array.from(contentArea.querySelectorAll('a')).filter(a => a.querySelector('img'));
-        updateDebugInfo('mga-debug-trigger-img', triggerLinks.length);
+        debug.updateInfo('mga-debug-trigger-img', triggerLinks.length);
 
-        if (settings.debug_mode) {
-            document.getElementById('mga-force-open').addEventListener('click', function() {
-                logDebug("Clic sur 'Forcer l'ouverture'.");
-                const testImages = [
-                    { highResUrl: 'https://placehold.co/800x600/0073aa/ffffff?text=Image+Test+1', thumbUrl: 'https://placehold.co/150x150/0073aa/ffffff?text=Thumb+1', caption: 'Ceci est la première image de test.' },
-                    { highResUrl: 'https://placehold.co/800x600/F44336/ffffff?text=Image+Test+2', thumbUrl: 'https://placehold.co/150x150/F44336/ffffff?text=Thumb+2', caption: 'Ceci est la seconde image de test.' }
-                ];
-                openViewer(testImages, 0);
-            });
-        }
+        debug.onForceOpen(() => {
+            debug.log("Clic sur 'Forcer l'ouverture'.");
+            const testImages = [
+                { highResUrl: 'https://placehold.co/800x600/0073aa/ffffff?text=Image+Test+1', thumbUrl: 'https://placehold.co/150x150/0073aa/ffffff?text=Thumb+1', caption: 'Ceci est la première image de test.' },
+                { highResUrl: 'https://placehold.co/800x600/F44336/ffffff?text=Image+Test+2', thumbUrl: 'https://placehold.co/150x150/F44336/ffffff?text=Thumb+2', caption: 'Ceci est la seconde image de test.' }
+            ];
+            openViewer(testImages, 0);
+        });
 
         contentArea.addEventListener('click', function (e) {
             const targetLink = e.target.closest('a');
             if (targetLink && targetLink.querySelector('img')) {
-                logDebug("Clic sur un lien contenant une image.");
+                debug.log("Clic sur un lien contenant une image.");
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -172,8 +129,8 @@
                     return { highResUrl, thumbUrl, caption };
                 }).filter(item => item && item.highResUrl);
                 
-                logDebug(`${galleryData.length} images valides préparées pour la galerie.`);
-                if(settings.debug_mode) console.table(galleryData);
+                debug.log(`${galleryData.length} images valides préparées pour la galerie.`);
+                debug.table(galleryData);
 
                 const clickedHighResUrl = getHighResUrl(targetLink);
                 const startIndex = galleryData.findIndex(img => img.highResUrl === clickedHighResUrl);
@@ -181,14 +138,14 @@
                 if (startIndex !== -1) {
                     openViewer(galleryData, startIndex);
                 } else {
-                    logDebug("ERREUR: L'image cliquée n'a pas été trouvée dans la galerie construite.", true);
-                    logDebug(`URL cliquée cherchée : ${clickedHighResUrl}`, true);
+                    debug.log("ERREUR: L'image cliquée n'a pas été trouvée dans la galerie construite.", true);
+                    debug.log(`URL cliquée cherchée : ${clickedHighResUrl}`, true);
                 }
             }
         }, true);
 
         function openViewer(images, startIndex) {
-            logDebug(`openViewer appelé avec ${images.length} images, index ${startIndex}.`);
+            debug.log(`openViewer appelé avec ${images.length} images, index ${startIndex}.`);
             const viewer = getViewer();
             if (!viewer) return;
 
@@ -239,17 +196,17 @@
 
                     thumbsWrapper.appendChild(thumbSlide);
                 });
-                logDebug('Wrappers HTML remplis avec URLs optimisées.');
+                debug.log('Wrappers HTML remplis avec URLs optimisées.');
 
                 initSwiper(viewer, images);
                 mainSwiper.slideToLoop(startIndex, 0);
                 updateInfo(viewer, images, startIndex);
                 viewer.style.display = 'flex';
                 document.body.style.overflow = 'hidden';
-                logDebug('Galerie affichée avec succès.');
+                debug.log('Galerie affichée avec succès.');
                 window.addEventListener('resize', handleResize);
             } catch (error) {
-                logDebug(`ERREUR dans openViewer: ${error.message}`, true);
+                debug.log(`ERREUR dans openViewer: ${error.message}`, true);
                 console.error(error);
             }
         }
@@ -303,24 +260,24 @@
                     autoplayTimeLeft(s, time, progress) {
                         const progressCircle = viewer.querySelector('.mga-timer-progress');
                         if (progressCircle) progressCircle.style.strokeDashoffset = 100 - (progress * 100);
-                        updateDebugInfo('mga-debug-autoplay-time', (time / 1000).toFixed(2) + 's');
+                        debug.updateInfo('mga-debug-autoplay-time', (time / 1000).toFixed(2) + 's');
                     },
                     slideChangeTransitionStart: function(swiper) {
                         const slide = swiper.slides[swiper.activeIndex];
                         const img = slide.querySelector('img');
                         if (img && !img.complete) {
-                            logDebug(`Chargement de l'image ${slide.dataset.slideIndex}...`);
+                            debug.log(`Chargement de l'image ${slide.dataset.slideIndex}...`);
                             slide.querySelector('.mga-spinner').style.display = 'block';
                             img.onload = () => {
-                                logDebug(`Image ${slide.dataset.slideIndex} chargée.`);
+                                debug.log(`Image ${slide.dataset.slideIndex} chargée.`);
                                 slide.querySelector('.mga-spinner').style.display = 'none';
                             };
                         }
                     },
-                    autoplayStart: () => { logDebug('Autoplay DÉMARRÉ.'); viewer.querySelector('.mga-play-icon').style.display = 'none'; viewer.querySelector('.mga-pause-icon').style.display = 'inline-block'; },
-                    autoplayStop: () => { logDebug('Autoplay ARRÊTÉ.'); viewer.querySelector('.mga-play-icon').style.display = 'inline-block'; viewer.querySelector('.mga-pause-icon').style.display = 'none'; const progressCircle = viewer.querySelector('.mga-timer-progress'); if (progressCircle) progressCircle.style.strokeDashoffset = 100; updateDebugInfo('mga-debug-autoplay-time', 'Stoppé'); },
-                    touchStart: () => { logDebug('Interaction manuelle DÉTECTÉE (touch).'); },
-                    sliderMove: () => { logDebug('Interaction manuelle DÉTECTÉE (drag).'); }
+                    autoplayStart: () => { debug.log('Autoplay DÉMARRÉ.'); viewer.querySelector('.mga-play-icon').style.display = 'none'; viewer.querySelector('.mga-pause-icon').style.display = 'inline-block'; },
+                    autoplayStop: () => { debug.log('Autoplay ARRÊTÉ.'); viewer.querySelector('.mga-play-icon').style.display = 'inline-block'; viewer.querySelector('.mga-pause-icon').style.display = 'none'; const progressCircle = viewer.querySelector('.mga-timer-progress'); if (progressCircle) progressCircle.style.strokeDashoffset = 100; debug.updateInfo('mga-debug-autoplay-time', 'Stoppé'); },
+                    touchStart: () => { debug.log('Interaction manuelle DÉTECTÉE (touch).'); },
+                    sliderMove: () => { debug.log('Interaction manuelle DÉTECTÉE (drag).'); }
                 },
             });
 
@@ -341,7 +298,7 @@
             [nextIndex, prevIndex].forEach(index => {
                 const imageUrl = images[index]?.highResUrl;
                 if (imageUrl && !preloadedUrls.has(imageUrl)) {
-                    logDebug(`Préchargement de l'image ${index}`);
+                    debug.log(`Préchargement de l'image ${index}`);
                     const img = new Image();
                     img.src = imageUrl;
                     preloadedUrls.add(imageUrl);
@@ -380,7 +337,7 @@
             if (e.target.closest('#mga-close')) closeViewer(viewer);
             if (e.target.closest('#mga-play-pause')) { if (mainSwiper && mainSwiper.autoplay && mainSwiper.autoplay.running) mainSwiper.autoplay.stop(); else if (mainSwiper && mainSwiper.autoplay) mainSwiper.autoplay.start(); }
             if (e.target.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
-            if (e.target.closest('#mga-fullscreen')) { if (!document.fullscreenElement) viewer.requestFullscreen().catch(err => logDebug('Erreur plein écran: ' + err.message, true)); else document.exitFullscreen(); }
+            if (e.target.closest('#mga-fullscreen')) { if (!document.fullscreenElement) viewer.requestFullscreen().catch(err => debug.log('Erreur plein écran: ' + err.message, true)); else document.exitFullscreen(); }
         });
         
         document.addEventListener('keydown', (e) => { 
@@ -398,11 +355,8 @@
             if(mainSwiper && mainSwiper.autoplay) mainSwiper.autoplay.stop();
             viewer.style.display = 'none';
             document.body.style.overflow = '';
-            logDebug('Galerie fermée.');
-            if (debugTimerInterval) {
-                clearInterval(debugTimerInterval);
-                debugTimerInterval = null;
-            }
+            debug.log('Galerie fermée.');
+            debug.stopTimer();
         }
 
         function handleResize() {
@@ -410,12 +364,12 @@
             resizeTimeout = setTimeout(() => {
                 if (mainSwiper && mainSwiper.el && !mainSwiper.destroyed) {
                     const wasRunning = mainSwiper.autoplay.running;
-                    logDebug('Redimensionnement détecté. Mise à jour de Swiper.');
+                    debug.log('Redimensionnement détecté. Mise à jour de Swiper.');
                     mainSwiper.update();
                     if(thumbsSwiper && !thumbsSwiper.destroyed) thumbsSwiper.update();
                     if (wasRunning) {
                         mainSwiper.autoplay.start();
-                        logDebug('Autoplay relancé après redimensionnement.');
+                        debug.log('Autoplay relancé après redimensionnement.');
                     }
                 }
             }, 250);

@@ -33,6 +33,12 @@ register_uninstall_hook( __FILE__, 'mga_uninstall' );
  */
 function mga_enqueue_assets() {
     if ( is_singular() ) {
+        // Récupérer les réglages sauvegardés
+        $defaults = mga_get_default_settings();
+        $saved_settings = get_option('mga_settings', $defaults);
+        // On s'assure que toutes les clés existent pour éviter les erreurs PHP
+        $settings = wp_parse_args($saved_settings, $defaults);
+
         // Librairies (Mise à jour vers Swiper v11)
         $swiper_css = apply_filters( 'mga_swiper_css', plugin_dir_url( __FILE__ ) . 'assets/css/swiper-bundle.min.css' );
         $swiper_js  = apply_filters( 'mga_swiper_js', plugin_dir_url( __FILE__ ) . 'assets/js/swiper-bundle.min.js' );
@@ -41,13 +47,13 @@ function mga_enqueue_assets() {
 
         // Fichiers du plugin
         wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
-        wp_enqueue_script('mga-gallery-script', plugin_dir_url( __FILE__ ) . 'assets/js/gallery-slideshow.js', ['swiper-js'], MGA_VERSION, true);
-
-        // Récupérer les réglages sauvegardés
-        $defaults = mga_get_default_settings();
-        $saved_settings = get_option('mga_settings', $defaults);
-        // On s'assure que toutes les clés existent pour éviter les erreurs PHP
-        $settings = wp_parse_args($saved_settings, $defaults);
+        $script_dependencies = ['swiper-js'];
+        if ( ! empty( $settings['debug_mode'] ) ) {
+            wp_register_script('mga-debug-script', plugin_dir_url( __FILE__ ) . 'assets/js/debug.js', [], MGA_VERSION, true);
+            wp_enqueue_script('mga-debug-script');
+            $script_dependencies[] = 'mga-debug-script';
+        }
+        wp_enqueue_script('mga-gallery-script', plugin_dir_url( __FILE__ ) . 'assets/js/gallery-slideshow.js', $script_dependencies, MGA_VERSION, true);
 
         // Passer les réglages au JavaScript
         wp_localize_script('mga-gallery-script', 'mga_settings', $settings);
