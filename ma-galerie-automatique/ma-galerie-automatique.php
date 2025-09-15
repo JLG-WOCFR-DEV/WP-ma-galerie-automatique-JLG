@@ -9,6 +9,10 @@
 // Sécurité
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+if ( ! defined( 'MGA_VERSION' ) ) {
+    define( 'MGA_VERSION', '1.8' );
+}
+
 if ( ! defined( 'MGA_ADMIN_TEMPLATE_PATH' ) ) {
     define( 'MGA_ADMIN_TEMPLATE_PATH', plugin_dir_path( __FILE__ ) . 'includes/admin-page-template.php' );
 }
@@ -27,8 +31,8 @@ function mga_enqueue_assets() {
         wp_enqueue_script( 'swiper-js', $swiper_js, [], '11.1.4', true );
 
         // Fichiers du plugin
-        wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], '1.8');
-        wp_enqueue_script('mga-gallery-script', plugin_dir_url( __FILE__ ) . 'assets/js/gallery-slideshow.js', ['swiper-js'], '1.8', true);
+        wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
+        wp_enqueue_script('mga-gallery-script', plugin_dir_url( __FILE__ ) . 'assets/js/gallery-slideshow.js', ['swiper-js'], MGA_VERSION, true);
 
         // Récupérer les réglages sauvegardés
         $defaults = mga_get_default_settings();
@@ -127,8 +131,8 @@ function mga_sanitize_settings( $input ) {
  */
 function mga_admin_enqueue_assets($hook) {
     if ($hook != 'toplevel_page_ma-galerie-automatique') return;
-    wp_enqueue_style('mga-admin-style', plugin_dir_url(__FILE__) . 'assets/css/admin-style.css', [], '1.4');
-    wp_enqueue_script('mga-admin-script', plugin_dir_url(__FILE__) . 'assets/js/admin-script.js', [], '1.4', true);
+    wp_enqueue_style('mga-admin-style', plugin_dir_url(__FILE__) . 'assets/css/admin-style.css', [], MGA_VERSION);
+    wp_enqueue_script('mga-admin-script', plugin_dir_url(__FILE__) . 'assets/js/admin-script.js', [], MGA_VERSION, true);
 }
 add_action('admin_enqueue_scripts', 'mga_admin_enqueue_assets');
 
