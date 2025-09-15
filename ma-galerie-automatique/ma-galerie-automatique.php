@@ -129,9 +129,29 @@ function mga_sanitize_settings( $input ) {
     $defaults = mga_get_default_settings();
     $output = [];
 
-    $output['delay'] = isset($input['delay']) ? intval($input['delay']) : $defaults['delay'];
-    $output['thumb_size'] = isset($input['thumb_size']) ? intval($input['thumb_size']) : $defaults['thumb_size'];
-    $output['thumb_size_mobile'] = isset($input['thumb_size_mobile']) ? intval($input['thumb_size_mobile']) : $defaults['thumb_size_mobile'];
+    if ( isset( $input['delay'] ) ) {
+        $delay = intval( $input['delay'] );
+        $bounded_delay = max( 1, min( 30, $delay ) );
+        $output['delay'] = ( $delay === $bounded_delay ) ? $delay : $defaults['delay'];
+    } else {
+        $output['delay'] = $defaults['delay'];
+    }
+
+    if ( isset( $input['thumb_size'] ) ) {
+        $thumb_size = intval( $input['thumb_size'] );
+        $bounded_thumb_size = max( 50, min( 150, $thumb_size ) );
+        $output['thumb_size'] = ( $thumb_size === $bounded_thumb_size ) ? $thumb_size : $defaults['thumb_size'];
+    } else {
+        $output['thumb_size'] = $defaults['thumb_size'];
+    }
+
+    if ( isset( $input['thumb_size_mobile'] ) ) {
+        $thumb_size_mobile = intval( $input['thumb_size_mobile'] );
+        $bounded_thumb_mobile = max( 40, min( 100, $thumb_size_mobile ) );
+        $output['thumb_size_mobile'] = ( $thumb_size_mobile === $bounded_thumb_mobile ) ? $thumb_size_mobile : $defaults['thumb_size_mobile'];
+    } else {
+        $output['thumb_size_mobile'] = $defaults['thumb_size_mobile'];
+    }
     if ( isset( $input['accent_color'] ) ) {
         $sanitized_accent = sanitize_hex_color( $input['accent_color'] );
         $output['accent_color'] = $sanitized_accent ? $sanitized_accent : $defaults['accent_color'];
@@ -145,7 +165,13 @@ function mga_sanitize_settings( $input ) {
     $allowed_bg_styles = ['echo', 'blur', 'texture'];
     $output['background_style'] = isset($input['background_style']) && in_array($input['background_style'], $allowed_bg_styles, true) ? $input['background_style'] : $defaults['background_style'];
     
-    $output['z_index'] = isset($input['z_index']) ? intval($input['z_index']) : $defaults['z_index'];
+    if ( isset( $input['z_index'] ) ) {
+        $raw_z_index = intval( $input['z_index'] );
+        $sanitized_z_index = max( 0, $raw_z_index );
+        $output['z_index'] = ( $raw_z_index === $sanitized_z_index ) ? $sanitized_z_index : $defaults['z_index'];
+    } else {
+        $output['z_index'] = $defaults['z_index'];
+    }
     $output['debug_mode'] = isset($input['debug_mode']);
 
     return $output;
