@@ -17,6 +17,15 @@ if ( ! defined( 'MGA_ADMIN_TEMPLATE_PATH' ) ) {
     define( 'MGA_ADMIN_TEMPLATE_PATH', plugin_dir_path( __FILE__ ) . 'includes/admin-page-template.php' );
 }
 
+/**
+ * Supprime les données du plugin lors de la désinstallation.
+ */
+function mga_uninstall() {
+    delete_option( 'mga_settings' );
+}
+
+register_uninstall_hook( __FILE__, 'mga_uninstall' );
+
 // ===== FRONT-END =====
 
 /**
