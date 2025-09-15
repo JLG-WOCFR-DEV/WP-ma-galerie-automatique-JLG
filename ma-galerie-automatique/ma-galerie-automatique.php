@@ -17,8 +17,10 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 function mga_enqueue_assets() {
     if ( is_singular() ) {
         // Librairies (Mise à jour vers Swiper v11)
-        wp_enqueue_style( 'swiper-css', 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css', [], '11.1.4' );
-        wp_enqueue_script( 'swiper-js', 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js', [], '11.1.4', true );
+        $swiper_css = apply_filters( 'mga_swiper_css', plugin_dir_url( __FILE__ ) . 'assets/css/swiper-bundle.min.css' );
+        $swiper_js  = apply_filters( 'mga_swiper_js', plugin_dir_url( __FILE__ ) . 'assets/js/swiper-bundle.min.js' );
+        wp_enqueue_style( 'swiper-css', $swiper_css, [], '11.1.4' );
+        wp_enqueue_script( 'swiper-js', $swiper_js, [], '11.1.4', true );
 
         // Fichiers du plugin
         wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], '1.8');
