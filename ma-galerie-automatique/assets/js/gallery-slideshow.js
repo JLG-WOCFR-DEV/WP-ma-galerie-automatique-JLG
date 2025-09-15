@@ -20,6 +20,33 @@
 
         debug.init();
 
+        /**
+         * Swiper peut afficher des avertissements « Swiper Loop Warning » lorsque
+         * l'option `loop` est active mais que la configuration n'offre pas assez
+         * de diapositives. L'avertissement est inoffensif mais bruit la console.
+         * On ne neutralise donc le message que le temps de créer l'instance
+         * concernée, sans toucher au `console.warn` global du reste de l'application.
+         */
+        function createSwiperInstance(container, config) {
+            if (!config || !config.loop) {
+                return new Swiper(container, config);
+            }
+
+            const originalWarn = console.warn;
+            console.warn = function(...args) {
+                if (args.length > 0 && typeof args[0] === 'string' && args[0].includes('Swiper Loop Warning')) {
+                    return;
+                }
+                originalWarn.apply(console, args);
+            };
+
+            try {
+                return new Swiper(container, config);
+            } finally {
+                console.warn = originalWarn;
+            }
+        }
+
         // --- FONCTIONS UTILITAIRES ---
         function getHighResUrl(linkElement) {
             if (!linkElement) return null;
@@ -215,27 +242,20 @@
             const mainSwiperContainer = viewer.querySelector('.mga-main-swiper');
             const thumbsSwiperContainer = viewer.querySelector('.mga-thumbs-swiper');
 
-            // On intercepte console.warn pour masquer l'avertissement de Swiper
-            const originalWarn = console.warn;
-            console.warn = function(...args) {
-                if (args.length > 0 && typeof args[0] === 'string' && args[0].includes('Swiper Loop Warning')) {
-                    return; // On ne fait rien pour ce message spécifique
-                }
-                originalWarn.apply(console, args);
-            };
-
-            thumbsSwiper = new Swiper(thumbsSwiperContainer, { 
-                spaceBetween: 10, 
-                slidesPerView: 'auto', 
-                freeMode: true, 
+            thumbsSwiper = createSwiperInstance(thumbsSwiperContainer, {
+                spaceBetween: 10,
+                slidesPerView: 'auto',
+                freeMode: true,
                 watchSlidesProgress: true,
-                passiveListeners: true, 
+                passiveListeners: true,
             });
-            
-            mainSwiper = new Swiper(mainSwiperContainer, {
+
+            // L'instance principale peut activer `loop` en fonction des réglages.
+            // On passe par le wrapper pour atténuer l'avertissement Swiper localement.
+            mainSwiper = createSwiperInstance(mainSwiperContainer, {
                 zoom: true,
-                spaceBetween: 10, 
-                loop: !!settings.loop && images.length > 2, 
+                spaceBetween: 10,
+                loop: !!settings.loop && images.length > 2,
                 navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
                 thumbs: { swiper: thumbsSwiper },
                 autoplay: { 
@@ -280,9 +300,6 @@
                     sliderMove: () => { debug.log('Interaction manuelle DÉTECTÉE (drag).'); }
                 },
             });
-
-            // On restaure la fonction console.warn originale
-            console.warn = originalWarn;
 
             if (settings.autoplay_start) {
                 mainSwiper.autoplay.start();
