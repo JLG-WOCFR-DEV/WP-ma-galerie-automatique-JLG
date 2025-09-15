@@ -247,6 +247,7 @@
                 viewer.style.display = 'flex';
                 document.body.style.overflow = 'hidden';
                 logDebug('Galerie affichée avec succès.');
+                window.addEventListener('resize', handleResize);
             } catch (error) {
                 logDebug(`ERREUR dans openViewer: ${error.message}`, true);
                 console.error(error);
@@ -420,6 +421,5 @@
                 }
             }, 250);
         }
-        window.addEventListener('resize', handleResize);
     });
 })();
