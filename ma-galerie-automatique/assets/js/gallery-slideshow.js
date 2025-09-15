@@ -203,19 +203,41 @@
 
                 const mainWrapper = viewer.querySelector('#mga-main-wrapper');
                 const thumbsWrapper = viewer.querySelector('#mga-thumbs-wrapper');
-                mainWrapper.innerHTML = '';
-                thumbsWrapper.innerHTML = '';
+                mainWrapper.textContent = '';
+                thumbsWrapper.textContent = '';
 
                 images.forEach((img, index) => {
-                    mainWrapper.innerHTML += `
-                        <div class="swiper-slide" data-slide-index="${index}">
-                            <div class="mga-spinner" style="display: none;"></div>
-                            <div class="swiper-zoom-container">
-                                <img src="${img.highResUrl}" alt="${img.caption}" loading="lazy">
-                            </div>
-                        </div>`;
-                    
-                    thumbsWrapper.innerHTML += `<div class="swiper-slide"><img src="${img.thumbUrl}" alt="${img.caption}" loading="lazy"></div>`;
+                    const slide = document.createElement('div');
+                    slide.className = 'swiper-slide';
+                    slide.setAttribute('data-slide-index', index);
+
+                    const spinner = document.createElement('div');
+                    spinner.className = 'mga-spinner';
+                    spinner.style.display = 'none';
+                    slide.appendChild(spinner);
+
+                    const zoomContainer = document.createElement('div');
+                    zoomContainer.className = 'swiper-zoom-container';
+
+                    const mainImg = document.createElement('img');
+                    mainImg.setAttribute('loading', 'lazy');
+                    mainImg.setAttribute('src', img.highResUrl);
+                    mainImg.setAttribute('alt', img.caption);
+                    zoomContainer.appendChild(mainImg);
+
+                    slide.appendChild(zoomContainer);
+                    mainWrapper.appendChild(slide);
+
+                    const thumbSlide = document.createElement('div');
+                    thumbSlide.className = 'swiper-slide';
+
+                    const thumbImg = document.createElement('img');
+                    thumbImg.setAttribute('loading', 'lazy');
+                    thumbImg.setAttribute('src', img.thumbUrl);
+                    thumbImg.setAttribute('alt', img.caption);
+                    thumbSlide.appendChild(thumbImg);
+
+                    thumbsWrapper.appendChild(thumbSlide);
                 });
                 logDebug('Wrappers HTML remplis avec URLs optimisées.');
 
