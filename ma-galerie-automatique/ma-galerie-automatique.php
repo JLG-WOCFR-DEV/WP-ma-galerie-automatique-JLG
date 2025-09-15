@@ -33,58 +33,9 @@ register_uninstall_hook( __FILE__, 'mga_uninstall' );
  */
 function mga_enqueue_assets() {
     $post = get_post();
-    $force_enqueue = apply_filters( 'mga_force_enqueue', false, $post );
 
-    if ( ! is_singular() && ! $force_enqueue ) {
+    if ( ! mga_should_enqueue_assets( $post ) ) {
         return;
-    }
-
-    if ( ! $force_enqueue ) {
-        if ( ! $post instanceof WP_Post ) {
-            return;
-        }
-
-        $has_linked_images = false;
-
-        if ( function_exists( 'has_block' ) ) {
-            $block_names = apply_filters(
-                'mga_linked_image_blocks',
-                [ 'core/gallery', 'core/image' ]
-            );
-
-            foreach ( (array) $block_names as $block_name ) {
-                if ( ! is_string( $block_name ) || '' === $block_name ) {
-                    continue;
-                }
-
-                if ( has_block( $block_name, $post ) ) {
-                    $has_linked_images = true;
-                    break;
-                }
-            }
-        }
-
-        if ( ! $has_linked_images ) {
-            $content = $post->post_content;
-
-            if ( ! empty( $content ) ) {
-                $linked_image_pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>\\s*)?<img\\b[^>]*>#is';
-
-                if ( preg_match( $linked_image_pattern, $content ) ) {
-                    $has_linked_images = true;
-                }
-            }
-        }
-
-        if ( ! $has_linked_images && mga_post_has_eligible_images( $post ) ) {
-            $has_linked_images = true;
-        }
-
-        $has_linked_images = apply_filters( 'mga_post_has_linked_images', $has_linked_images, $post );
-
-        if ( ! $has_linked_images ) {
-            return;
-        }
     }
 
     // Récupérer les réglages sauvegardés
@@ -131,6 +82,78 @@ function mga_enqueue_assets() {
 }
 
 add_action( 'wp_enqueue_scripts', 'mga_enqueue_assets' );
+
+/**
+ * Détermine si les assets front doivent être chargés pour un contenu.
+ *
+ * La détection se fait par étapes : la fonction vérifie d'abord si un forçage
+ * est demandé via le filtre `mga_force_enqueue` et si le contexte est bien une
+ * vue singulière. Elle inspecte ensuite la présence de blocs supportant des
+ * images (galerie, image, etc.), recherche des liens vers des médias au moyen
+ * d'une expression régulière qui accepte les balises <picture>, puis s'appuie
+ * sur `mga_post_has_eligible_images()` comme dernier filet. Le résultat final
+ * peut être filtré par `mga_post_has_linked_images`.
+ *
+ * @param WP_Post|int|null $post Objet post, identifiant ou null pour le post courant.
+ *
+ * @return bool
+ */
+function mga_should_enqueue_assets( $post ) {
+    $post = get_post( $post );
+    $force_enqueue = apply_filters( 'mga_force_enqueue', false, $post );
+
+    if ( ! is_singular() && ! $force_enqueue ) {
+        return false;
+    }
+
+    if ( $force_enqueue ) {
+        return true;
+    }
+
+    if ( ! $post instanceof WP_Post ) {
+        return false;
+    }
+
+    $has_linked_images = false;
+
+    if ( function_exists( 'has_block' ) ) {
+        $block_names = apply_filters(
+            'mga_linked_image_blocks',
+            [ 'core/gallery', 'core/image' ]
+        );
+
+        foreach ( (array) $block_names as $block_name ) {
+            if ( ! is_string( $block_name ) || '' === $block_name ) {
+                continue;
+            }
+
+            if ( has_block( $block_name, $post ) ) {
+                $has_linked_images = true;
+                break;
+            }
+        }
+    }
+
+    if ( ! $has_linked_images ) {
+        $content = $post->post_content;
+
+        if ( ! empty( $content ) ) {
+            $linked_image_pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>\\s*)?<img\\b[^>]*>#is';
+
+            if ( preg_match( $linked_image_pattern, $content ) ) {
+                $has_linked_images = true;
+            }
+        }
+    }
+
+    if ( ! $has_linked_images && mga_post_has_eligible_images( $post ) ) {
+        $has_linked_images = true;
+    }
+
+    $has_linked_images = apply_filters( 'mga_post_has_linked_images', $has_linked_images, $post );
+
+    return (bool) $has_linked_images;
+}
 
 /**
  * Détermine si le contenu du post courant contient des images utilisables.
