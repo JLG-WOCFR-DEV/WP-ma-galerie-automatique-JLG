@@ -32,51 +32,103 @@ register_uninstall_hook( __FILE__, 'mga_uninstall' );
  * Charge les scripts et styles sur le site public.
  */
 function mga_enqueue_assets() {
-    if ( is_singular() ) {
-        // Récupérer les réglages sauvegardés
-        $defaults = mga_get_default_settings();
-        $saved_settings = get_option('mga_settings', $defaults);
-        // On s'assure que toutes les clés existent pour éviter les erreurs PHP
-        $settings = wp_parse_args($saved_settings, $defaults);
+    $post = get_post();
+    $force_enqueue = apply_filters( 'mga_force_enqueue', false, $post );
 
-        // Librairies (Mise à jour vers Swiper v11)
-        $swiper_css = apply_filters( 'mga_swiper_css', plugin_dir_url( __FILE__ ) . 'assets/css/swiper-bundle.min.css' );
-        $swiper_js  = apply_filters( 'mga_swiper_js', plugin_dir_url( __FILE__ ) . 'assets/js/swiper-bundle.min.js' );
-        wp_enqueue_style( 'swiper-css', $swiper_css, [], '11.1.4' );
-        wp_enqueue_script( 'swiper-js', $swiper_js, [], '11.1.4', true );
-
-        // Fichiers du plugin
-        wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
-        $script_dependencies = ['swiper-js'];
-        if ( ! empty( $settings['debug_mode'] ) ) {
-            wp_register_script('mga-debug-script', plugin_dir_url( __FILE__ ) . 'assets/js/debug.js', [], MGA_VERSION, true);
-            wp_enqueue_script('mga-debug-script');
-            $script_dependencies[] = 'mga-debug-script';
-        }
-        wp_enqueue_script('mga-gallery-script', plugin_dir_url( __FILE__ ) . 'assets/js/gallery-slideshow.js', $script_dependencies, MGA_VERSION, true);
-
-        // Passer les réglages au JavaScript
-        wp_localize_script('mga-gallery-script', 'mga_settings', $settings);
-        
-        // Générer les styles dynamiques
-        $accent_color = sanitize_hex_color($settings['accent_color']);
-        if ( ! $accent_color ) {
-            $accent_color = $defaults['accent_color'];
-        }
-
-        $dynamic_styles = "
-            :root {
-                --mga-thumb-size-desktop: " . intval($settings['thumb_size']) . "px;
-                --mga-thumb-size-mobile: " . intval($settings['thumb_size_mobile']) . "px;
-                --mga-accent-color: " . $accent_color . ";
-                --mga-bg-opacity: " . floatval($settings['bg_opacity']) . ";
-                --mga-z-index: " . intval($settings['z_index']) . ";
-            }
-        ";
-        wp_add_inline_style('mga-gallery-style', $dynamic_styles);
+    if ( ! is_singular() && ! $force_enqueue ) {
+        return;
     }
+
+    if ( ! $force_enqueue && ! mga_post_has_eligible_images( $post ) ) {
+        return;
+    }
+
+    // Récupérer les réglages sauvegardés
+    $defaults = mga_get_default_settings();
+    $saved_settings = get_option('mga_settings', $defaults);
+    // On s'assure que toutes les clés existent pour éviter les erreurs PHP
+    $settings = wp_parse_args($saved_settings, $defaults);
+
+    // Librairies (Mise à jour vers Swiper v11)
+    $swiper_css = apply_filters( 'mga_swiper_css', plugin_dir_url( __FILE__ ) . 'assets/css/swiper-bundle.min.css' );
+    $swiper_js  = apply_filters( 'mga_swiper_js', plugin_dir_url( __FILE__ ) . 'assets/js/swiper-bundle.min.js' );
+    wp_enqueue_style( 'swiper-css', $swiper_css, [], '11.1.4' );
+    wp_enqueue_script( 'swiper-js', $swiper_js, [], '11.1.4', true );
+
+    // Fichiers du plugin
+    wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
+    $script_dependencies = ['swiper-js'];
+    if ( ! empty( $settings['debug_mode'] ) ) {
+        wp_register_script('mga-debug-script', plugin_dir_url( __FILE__ ) . 'assets/js/debug.js', [], MGA_VERSION, true);
+        wp_enqueue_script('mga-debug-script');
+        $script_dependencies[] = 'mga-debug-script';
+    }
+    wp_enqueue_script('mga-gallery-script', plugin_dir_url( __FILE__ ) . 'assets/js/gallery-slideshow.js', $script_dependencies, MGA_VERSION, true);
+
+    // Passer les réglages au JavaScript
+    wp_localize_script('mga-gallery-script', 'mga_settings', $settings);
+
+    // Générer les styles dynamiques
+    $accent_color = sanitize_hex_color($settings['accent_color']);
+    if ( ! $accent_color ) {
+        $accent_color = $defaults['accent_color'];
+    }
+
+    $dynamic_styles = "
+        :root {
+            --mga-thumb-size-desktop: " . intval($settings['thumb_size']) . "px;
+            --mga-thumb-size-mobile: " . intval($settings['thumb_size_mobile']) . "px;
+            --mga-accent-color: " . $accent_color . ";
+            --mga-bg-opacity: " . floatval($settings['bg_opacity']) . ";
+            --mga-z-index: " . intval($settings['z_index']) . ";
+        }
+    ";
+    wp_add_inline_style('mga-gallery-style', $dynamic_styles);
 }
+
 add_action( 'wp_enqueue_scripts', 'mga_enqueue_assets' );
+
+/**
+ * Détermine si le contenu du post courant contient des images utilisables.
+ *
+ * @param WP_Post|int|null $post Objet post, identifiant, ou null pour utiliser le post courant.
+ *
+ * @return bool
+ */
+function mga_post_has_eligible_images( $post = null ) {
+    $post = get_post( $post );
+
+    if ( ! $post instanceof WP_Post ) {
+        return false;
+    }
+
+    if ( function_exists( 'get_post_galleries_images' ) ) {
+        $galleries = get_post_galleries_images( $post );
+
+        if ( ! empty( $galleries ) ) {
+            foreach ( $galleries as $images ) {
+                if ( ! empty( $images ) ) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    $content = $post->post_content;
+
+    if ( empty( $content ) ) {
+        return false;
+    }
+
+    $pattern = '#<a\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\s*<img\b[^>]*>#is';
+
+    if ( preg_match( $pattern, $content ) ) {
+        return true;
+    }
+
+    return false;
+}
+
 
 // ===== ADMIN =====
 
