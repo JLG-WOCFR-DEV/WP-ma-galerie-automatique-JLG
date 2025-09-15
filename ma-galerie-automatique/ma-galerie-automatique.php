@@ -44,11 +44,16 @@ function mga_enqueue_assets() {
         wp_localize_script('mga-gallery-script', 'mga_settings', $settings);
         
         // Générer les styles dynamiques
+        $accent_color = sanitize_hex_color($settings['accent_color']);
+        if ( ! $accent_color ) {
+            $accent_color = $defaults['accent_color'];
+        }
+
         $dynamic_styles = "
             :root {
                 --mga-thumb-size-desktop: " . intval($settings['thumb_size']) . "px;
                 --mga-thumb-size-mobile: " . intval($settings['thumb_size_mobile']) . "px;
-                --mga-accent-color: " . sanitize_hex_color($settings['accent_color']) . ";
+                --mga-accent-color: " . $accent_color . ";
                 --mga-bg-opacity: " . floatval($settings['bg_opacity']) . ";
                 --mga-z-index: " . intval($settings['z_index']) . ";
             }
@@ -112,7 +117,12 @@ function mga_sanitize_settings( $input ) {
     $output['delay'] = isset($input['delay']) ? intval($input['delay']) : $defaults['delay'];
     $output['thumb_size'] = isset($input['thumb_size']) ? intval($input['thumb_size']) : $defaults['thumb_size'];
     $output['thumb_size_mobile'] = isset($input['thumb_size_mobile']) ? intval($input['thumb_size_mobile']) : $defaults['thumb_size_mobile'];
-    $output['accent_color'] = isset($input['accent_color']) ? sanitize_hex_color($input['accent_color']) : $defaults['accent_color'];
+    if ( isset( $input['accent_color'] ) ) {
+        $sanitized_accent = sanitize_hex_color( $input['accent_color'] );
+        $output['accent_color'] = $sanitized_accent ? $sanitized_accent : $defaults['accent_color'];
+    } else {
+        $output['accent_color'] = $defaults['accent_color'];
+    }
     $output['bg_opacity'] = isset($input['bg_opacity']) ? max(min(floatval($input['bg_opacity']), 1), 0.5) : $defaults['bg_opacity'];
     $output['loop'] = isset($input['loop']);
     $output['autoplay_start'] = isset($input['autoplay_start']);
