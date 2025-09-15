@@ -394,7 +394,6 @@
         });
 
         function closeViewer(viewer) {
-            window.removeEventListener('resize', handleResize);
             if (document.fullscreenElement) document.exitFullscreen();
             if(mainSwiper && mainSwiper.autoplay) mainSwiper.autoplay.stop();
             viewer.style.display = 'none';
