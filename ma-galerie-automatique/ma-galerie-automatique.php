@@ -105,12 +105,12 @@ function mga_sanitize_settings( $input ) {
     $output['thumb_size'] = isset($input['thumb_size']) ? intval($input['thumb_size']) : $defaults['thumb_size'];
     $output['thumb_size_mobile'] = isset($input['thumb_size_mobile']) ? intval($input['thumb_size_mobile']) : $defaults['thumb_size_mobile'];
     $output['accent_color'] = isset($input['accent_color']) ? sanitize_hex_color($input['accent_color']) : $defaults['accent_color'];
-    $output['bg_opacity'] = isset($input['bg_opacity']) ? floatval($input['bg_opacity']) : $defaults['bg_opacity'];
+    $output['bg_opacity'] = isset($input['bg_opacity']) ? max(min(floatval($input['bg_opacity']), 1), 0.5) : $defaults['bg_opacity'];
     $output['loop'] = isset($input['loop']);
     $output['autoplay_start'] = isset($input['autoplay_start']);
     
     $allowed_bg_styles = ['echo', 'blur', 'texture'];
-    $output['background_style'] = isset($input['background_style']) && in_array($input['background_style'], $allowed_bg_styles) ? $input['background_style'] : $defaults['background_style'];
+    $output['background_style'] = isset($input['background_style']) && in_array($input['background_style'], $allowed_bg_styles, true) ? $input['background_style'] : $defaults['background_style'];
     
     $output['z_index'] = isset($input['z_index']) ? intval($input['z_index']) : $defaults['z_index'];
     $output['debug_mode'] = isset($input['debug_mode']);
