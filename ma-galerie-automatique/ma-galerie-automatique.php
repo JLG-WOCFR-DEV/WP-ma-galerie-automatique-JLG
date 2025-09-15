@@ -39,8 +39,52 @@ function mga_enqueue_assets() {
         return;
     }
 
-    if ( ! $force_enqueue && ! mga_post_has_eligible_images( $post ) ) {
-        return;
+    if ( ! $force_enqueue ) {
+        if ( ! $post instanceof WP_Post ) {
+            return;
+        }
+
+        $has_linked_images = false;
+
+        if ( function_exists( 'has_block' ) ) {
+            $block_names = apply_filters(
+                'mga_linked_image_blocks',
+                [ 'core/gallery', 'core/image' ]
+            );
+
+            foreach ( (array) $block_names as $block_name ) {
+                if ( ! is_string( $block_name ) || '' === $block_name ) {
+                    continue;
+                }
+
+                if ( has_block( $block_name, $post ) ) {
+                    $has_linked_images = true;
+                    break;
+                }
+            }
+        }
+
+        if ( ! $has_linked_images ) {
+            $content = $post->post_content;
+
+            if ( ! empty( $content ) ) {
+                $linked_image_pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>\\s*)?<img\\b[^>]*>#is';
+
+                if ( preg_match( $linked_image_pattern, $content ) ) {
+                    $has_linked_images = true;
+                }
+            }
+        }
+
+        if ( ! $has_linked_images && mga_post_has_eligible_images( $post ) ) {
+            $has_linked_images = true;
+        }
+
+        $has_linked_images = apply_filters( 'mga_post_has_linked_images', $has_linked_images, $post );
+
+        if ( ! $has_linked_images ) {
+            return;
+        }
     }
 
     // Récupérer les réglages sauvegardés
