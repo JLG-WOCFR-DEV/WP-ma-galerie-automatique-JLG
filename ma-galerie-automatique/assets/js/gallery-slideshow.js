@@ -147,16 +147,14 @@
             const targetLink = e.target.closest('a');
             if (targetLink && targetLink.querySelector('img')) {
                 debug.log(mga__( 'Clic sur un lien contenant une image.', 'lightbox-jlg' ));
-                e.preventDefault();
-                e.stopPropagation();
 
                 const galleryData = triggerLinks.map(link => {
                     const innerImg = link.querySelector('img');
                     if (!innerImg) return null;
 
                     const highResUrl = getHighResUrl(link);
-                    const thumbUrl = innerImg.src; 
-                    
+                    const thumbUrl = innerImg.src;
+
                     let caption = '';
                     const figure = link.closest('figure');
                     if (figure) {
@@ -166,17 +164,24 @@
                     if (!caption) {
                         caption = innerImg.alt || '';
                     }
-                    
+
                     return { highResUrl, thumbUrl, caption };
                 }).filter(item => item && item.highResUrl);
-                
+
                 debug.log(mgaSprintf(mga__( '%d images valides préparées pour la galerie.', 'lightbox-jlg' ), galleryData.length));
                 debug.table(galleryData);
 
                 const clickedHighResUrl = getHighResUrl(targetLink);
+                if (!clickedHighResUrl) {
+                    debug.log(mga__( "URL haute résolution introuvable pour le lien cliqué.", 'lightbox-jlg' ));
+                    return;
+                }
+
                 const startIndex = galleryData.findIndex(img => img.highResUrl === clickedHighResUrl);
-                
+
                 if (startIndex !== -1) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     openViewer(galleryData, startIndex);
                 } else {
                     debug.log(mga__( "ERREUR : L'image cliquée n'a pas été trouvée dans la galerie construite.", 'lightbox-jlg' ), true);
