@@ -313,7 +313,7 @@ function mga_sanitize_settings( $input ) {
  * Charge les fichiers pour la page d'admin.
  */
 function mga_admin_enqueue_assets($hook) {
-    if ($hook != 'toplevel_page_ma-galerie-automatique') return;
+    if ($hook !== 'toplevel_page_ma-galerie-automatique') return;
     wp_enqueue_style('mga-admin-style', plugin_dir_url(__FILE__) . 'assets/css/admin-style.css', [], MGA_VERSION);
     wp_enqueue_script('mga-admin-script', plugin_dir_url(__FILE__) . 'assets/js/admin-script.js', [ 'wp-i18n' ], MGA_VERSION, true);
     wp_set_script_translations( 'mga-admin-script', 'lightbox-jlg', plugin_dir_path( __FILE__ ) . 'languages' );
