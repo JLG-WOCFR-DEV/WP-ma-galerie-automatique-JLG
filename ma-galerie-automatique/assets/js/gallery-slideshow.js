@@ -30,6 +30,7 @@
         let thumbsSwiper = null;
         const preloadedUrls = new Set();
         let resizeTimeout;
+        let isResizeListenerAttached = false;
 
         debug.init();
 
@@ -244,7 +245,10 @@
                 viewer.style.display = 'flex';
                 document.body.style.overflow = 'hidden';
                 debug.log(mga__( 'Galerie affichée avec succès.', 'lightbox-jlg' ));
-                window.addEventListener('resize', handleResize);
+                if (!isResizeListenerAttached) {
+                    window.addEventListener('resize', handleResize);
+                    isResizeListenerAttached = true;
+                }
             } catch (error) {
                 debug.log(mgaSprintf(mga__( 'ERREUR dans openViewer : %s', 'lightbox-jlg' ), error.message), true);
                 console.error(error);
@@ -382,7 +386,11 @@
 
         function closeViewer(viewer) {
             if (document.fullscreenElement) document.exitFullscreen();
-            if(mainSwiper && mainSwiper.autoplay) mainSwiper.autoplay.stop();
+            if(mainSwiper && mainSwiper.autoplay) {
+                mainSwiper.autoplay.stop();
+            }
+            window.removeEventListener('resize', handleResize);
+            isResizeListenerAttached = false;
             viewer.style.display = 'none';
             document.body.style.overflow = '';
             debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
