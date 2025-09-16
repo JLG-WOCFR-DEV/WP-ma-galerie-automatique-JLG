@@ -89,10 +89,23 @@ function mga_enqueue_assets() {
     wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
     $script_dependencies = [ 'swiper-js', 'wp-i18n' ];
     if ( ! empty( $settings['debug_mode'] ) ) {
-        wp_register_script('mga-debug-script', plugin_dir_url( __FILE__ ) . 'assets/js/debug.js', [ 'wp-i18n' ], MGA_VERSION, true);
-        wp_enqueue_script('mga-debug-script');
-        wp_set_script_translations( 'mga-debug-script', 'lightbox-jlg', plugin_dir_path( __FILE__ ) . 'languages' );
-        $script_dependencies[] = 'mga-debug-script';
+        $can_view_debug = apply_filters(
+            'mga_user_can_view_debug',
+            is_user_logged_in() && current_user_can( 'manage_options' )
+        );
+
+        if ( $can_view_debug ) {
+            wp_register_script(
+                'mga-debug-script',
+                plugin_dir_url( __FILE__ ) . 'assets/js/debug.js',
+                [ 'wp-i18n' ],
+                MGA_VERSION,
+                true
+            );
+            wp_enqueue_script( 'mga-debug-script' );
+            wp_set_script_translations( 'mga-debug-script', 'lightbox-jlg', plugin_dir_path( __FILE__ ) . 'languages' );
+            $script_dependencies[] = 'mga-debug-script';
+        }
     }
     wp_enqueue_script('mga-gallery-script', plugin_dir_url( __FILE__ ) . 'assets/js/gallery-slideshow.js', $script_dependencies, MGA_VERSION, true);
     wp_set_script_translations( 'mga-gallery-script', 'lightbox-jlg', plugin_dir_path( __FILE__ ) . 'languages' );
