@@ -313,6 +313,7 @@ function mga_sanitize_settings( $input ) {
  * Charge les fichiers pour la page d'admin.
  */
 function mga_admin_enqueue_assets($hook) {
+    if ( ! current_user_can( 'manage_options' ) ) return;
     if ($hook !== 'toplevel_page_ma-galerie-automatique') return;
     wp_enqueue_style('mga-admin-style', plugin_dir_url(__FILE__) . 'assets/css/admin-style.css', [], MGA_VERSION);
     wp_enqueue_script('mga-admin-script', plugin_dir_url(__FILE__) . 'assets/js/admin-script.js', [ 'wp-i18n' ], MGA_VERSION, true);
