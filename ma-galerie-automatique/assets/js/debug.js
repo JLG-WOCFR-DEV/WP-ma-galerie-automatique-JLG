@@ -99,18 +99,44 @@
         startTimer();
     }
 
+    function normalizeMessage(message) {
+        if (typeof message === 'string') {
+            return message;
+        }
+        if (message instanceof Error && message.message) {
+            return message.message;
+        }
+        if (typeof message === 'object' && message !== null) {
+            try {
+                return JSON.stringify(message);
+            } catch (error) {
+                return String(message);
+            }
+        }
+        if (typeof message === 'undefined' || message === null) {
+            return '';
+        }
+        return String(message);
+    }
+
     function log(message, isError = false) {
         const time = (performance.now() / 1000).toFixed(3);
         const method = isError ? 'error' : 'log';
+        const normalizedMessage = normalizeMessage(message);
         if (typeof console !== 'undefined' && typeof console[method] === 'function') {
-            console[method](mgaSprintf(mga__( 'MGA [%1$ss] : %2$s', 'lightbox-jlg' ), time, message));
+            console[method](mgaSprintf(mga__( 'MGA [%1$ss] : %2$s', 'lightbox-jlg' ), time, normalizedMessage));
         }
         if (!ensureActive() || !state.logContainer) {
             return;
         }
         const entry = document.createElement('p');
         entry.style.cssText = `margin: 2px 5px; padding: 0; color: ${isError ? '#F44336' : '#4CAF50'}; font-size: 11px; word-break: break-all;`;
-        entry.innerHTML = `<span style="color:#888;">${mgaSprintf(mga__( '[%ss]', 'lightbox-jlg' ), time)}</span> > ${message}`;
+        const timestamp = document.createElement('span');
+        timestamp.style.color = '#888';
+        timestamp.textContent = mgaSprintf(mga__( '[%ss]', 'lightbox-jlg' ), time);
+        entry.appendChild(timestamp);
+        entry.appendChild(document.createTextNode(' > '));
+        entry.appendChild(document.createTextNode(normalizedMessage));
         state.logContainer.appendChild(entry);
         state.logContainer.scrollTop = state.logContainer.scrollHeight;
     }
