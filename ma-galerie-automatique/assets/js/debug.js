@@ -110,7 +110,15 @@
         }
         const entry = document.createElement('p');
         entry.style.cssText = `margin: 2px 5px; padding: 0; color: ${isError ? '#F44336' : '#4CAF50'}; font-size: 11px; word-break: break-all;`;
-        entry.innerHTML = `<span style="color:#888;">${mgaSprintf(mga__( '[%ss]', 'lightbox-jlg' ), time)}</span> > ${message}`;
+
+        const timestamp = document.createElement('span');
+        timestamp.style.color = '#888';
+        timestamp.textContent = mgaSprintf(mga__( '[%ss]', 'lightbox-jlg' ), time);
+
+        entry.appendChild(timestamp);
+        entry.appendChild(document.createTextNode(' > '));
+        entry.appendChild(document.createTextNode(String(message)));
+
         state.logContainer.appendChild(entry);
         state.logContainer.scrollTop = state.logContainer.scrollHeight;
     }
