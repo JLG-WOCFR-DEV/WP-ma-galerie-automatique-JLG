@@ -64,7 +64,7 @@
         // --- FONCTIONS UTILITAIRES ---
         function getHighResUrl(linkElement) {
             if (!linkElement) return null;
-            if (/\.(jpe?g|png|gif|webp)$/i.test(linkElement.href)) return linkElement.href;
+            if (/\.(jpe?g|png|gif|bmp|webp|avif|svg)$/i.test(linkElement.href)) return linkElement.href;
             const innerImg = linkElement.querySelector('img');
             if (innerImg && innerImg.srcset) {
                 const sources = innerImg.srcset.split(',').map(s => {
