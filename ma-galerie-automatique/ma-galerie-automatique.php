@@ -4,6 +4,8 @@
  * Description:       Transforme les galeries d'images en un slideshow plein écran avec de nombreuses options de personnalisation.
  * Version:           1.8
  * Author:            Jérôme Le Gousse
+ * Text Domain:       lightbox-jlg
+ * Domain Path:       /languages
  */
 
 // Sécurité
@@ -16,6 +18,15 @@ if ( ! defined( 'MGA_VERSION' ) ) {
 if ( ! defined( 'MGA_ADMIN_TEMPLATE_PATH' ) ) {
     define( 'MGA_ADMIN_TEMPLATE_PATH', plugin_dir_path( __FILE__ ) . 'includes/admin-page-template.php' );
 }
+
+/**
+ * Initialise la traduction du plugin.
+ */
+function mga_load_textdomain() {
+    load_plugin_textdomain( 'lightbox-jlg', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+}
+
+add_action( 'init', 'mga_load_textdomain' );
 
 /**
  * Supprime les données du plugin lors de la désinstallation.
@@ -52,13 +63,15 @@ function mga_enqueue_assets() {
 
     // Fichiers du plugin
     wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
-    $script_dependencies = ['swiper-js'];
+    $script_dependencies = [ 'swiper-js', 'wp-i18n' ];
     if ( ! empty( $settings['debug_mode'] ) ) {
-        wp_register_script('mga-debug-script', plugin_dir_url( __FILE__ ) . 'assets/js/debug.js', [], MGA_VERSION, true);
+        wp_register_script('mga-debug-script', plugin_dir_url( __FILE__ ) . 'assets/js/debug.js', [ 'wp-i18n' ], MGA_VERSION, true);
         wp_enqueue_script('mga-debug-script');
+        wp_set_script_translations( 'mga-debug-script', 'lightbox-jlg', plugin_dir_path( __FILE__ ) . 'languages' );
         $script_dependencies[] = 'mga-debug-script';
     }
     wp_enqueue_script('mga-gallery-script', plugin_dir_url( __FILE__ ) . 'assets/js/gallery-slideshow.js', $script_dependencies, MGA_VERSION, true);
+    wp_set_script_translations( 'mga-gallery-script', 'lightbox-jlg', plugin_dir_path( __FILE__ ) . 'languages' );
 
     // Passer les réglages au JavaScript
     wp_localize_script('mga-gallery-script', 'mga_settings', $settings);
@@ -204,8 +217,8 @@ function mga_post_has_eligible_images( $post = null ) {
  */
 function mga_add_admin_menu() {
     add_menu_page(
-        'Lightbox - JLG',
-        'Lightbox - JLG',
+        __( 'Lightbox - JLG', 'lightbox-jlg' ),
+        __( 'Lightbox - JLG', 'lightbox-jlg' ),
         'manage_options',
         'ma-galerie-automatique',
         'mga_options_page_html',
@@ -302,7 +315,8 @@ function mga_sanitize_settings( $input ) {
 function mga_admin_enqueue_assets($hook) {
     if ($hook != 'toplevel_page_ma-galerie-automatique') return;
     wp_enqueue_style('mga-admin-style', plugin_dir_url(__FILE__) . 'assets/css/admin-style.css', [], MGA_VERSION);
-    wp_enqueue_script('mga-admin-script', plugin_dir_url(__FILE__) . 'assets/js/admin-script.js', [], MGA_VERSION, true);
+    wp_enqueue_script('mga-admin-script', plugin_dir_url(__FILE__) . 'assets/js/admin-script.js', [ 'wp-i18n' ], MGA_VERSION, true);
+    wp_set_script_translations( 'mga-admin-script', 'lightbox-jlg', plugin_dir_path( __FILE__ ) . 'languages' );
 }
 add_action('admin_enqueue_scripts', 'mga_admin_enqueue_assets');
 

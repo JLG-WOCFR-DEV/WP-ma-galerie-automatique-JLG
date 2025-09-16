@@ -1,6 +1,19 @@
 (function(global) {
     "use strict";
 
+    const mgaI18n = global.wp && global.wp.i18n ? global.wp.i18n : null;
+    const mga__ = mgaI18n && typeof mgaI18n.__ === 'function' ? mgaI18n.__ : ( text ) => text;
+    const mgaSprintf = mgaI18n && typeof mgaI18n.sprintf === 'function'
+        ? mgaI18n.sprintf
+        : ( format, ...args ) => {
+            let index = 0;
+            return format.replace(/%s/g, () => {
+                const replacement = typeof args[index] !== 'undefined' ? args[index] : '';
+                index += 1;
+                return replacement;
+            });
+        };
+
     const state = {
         panel: null,
         logContainer: null,
@@ -26,14 +39,14 @@
         panel.id = 'mga-debug-panel';
         panel.style.cssText = 'position: fixed; bottom: 10px; right: 10px; background: #23282d; color: #fff; border: 2px solid #0073aa; padding: 15px; font-family: monospace; font-size: 12px; z-index: 999999; max-width: 450px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);';
         panel.innerHTML = `
-            <h4 style="margin: 0 0 10px; padding: 0 0 10px; border-bottom: 1px solid #444; font-size: 14px;">Debug MGA Performance</h4>
+            <h4 style="margin: 0 0 10px; padding: 0 0 10px; border-bottom: 1px solid #444; font-size: 14px;">${mga__( 'Debug MGA Performance', 'lightbox-jlg' )}</h4>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                <div><strong>Chronomètre réel:</strong><div id="mga-debug-realtime" style="font-size: 16px; color: #4CAF50;">0.00s</div></div>
-                <div><strong>Timer Autoplay:</strong><div id="mga-debug-autoplay-time" style="font-size: 16px; color: #FFC107;">N/A</div></div>
+                <div><strong>${mga__( 'Chronomètre réel :', 'lightbox-jlg' )}</strong><div id="mga-debug-realtime" style="font-size: 16px; color: #4CAF50;">${mgaSprintf( mga__( '%ss', 'lightbox-jlg' ), '0.00' )}</div></div>
+                <div><strong>${mga__( 'Timer Autoplay :', 'lightbox-jlg' )}</strong><div id="mga-debug-autoplay-time" style="font-size: 16px; color: #FFC107;">${mga__( 'N/A', 'lightbox-jlg' )}</div></div>
             </div>
-            <button id="mga-force-open" style="background: #0073aa; color: white; border: none; padding: 8px 12px; cursor: pointer; margin-top: 10px; width: 100%;">Forcer l'ouverture (Test)</button>
+            <button id="mga-force-open" style="background: #0073aa; color: white; border: none; padding: 8px 12px; cursor: pointer; margin-top: 10px; width: 100%;">${mga__( "Forcer l'ouverture (Test)", 'lightbox-jlg' )}</button>
             <div id="mga-log-container" style="margin-top: 15px; max-height: 200px; overflow-y: auto; background: #111; padding: 5px;">
-                 <h5 style="margin:0 0 5px; padding:0; color: #ccc;">Journal d'événements :</h5>
+                 <h5 style="margin:0 0 5px; padding:0; color: #ccc;">${mga__( "Journal d'événements :", 'lightbox-jlg' )}</h5>
                  <div id="mga-debug-log"></div>
             </div>
         `;
@@ -61,7 +74,11 @@
         stopTimer();
         state.startTime = performance.now();
         state.timerInterval = setInterval(() => {
-            updateInfo('mga-debug-realtime', ((performance.now() - state.startTime) / 1000).toFixed(2) + 's', '#4CAF50');
+            updateInfo(
+                'mga-debug-realtime',
+                mgaSprintf(mga__( '%ss', 'lightbox-jlg' ), ((performance.now() - state.startTime) / 1000).toFixed(2)),
+                '#4CAF50'
+            );
         }, 100);
     }
 
@@ -86,14 +103,14 @@
         const time = (performance.now() / 1000).toFixed(3);
         const method = isError ? 'error' : 'log';
         if (typeof console !== 'undefined' && typeof console[method] === 'function') {
-            console[method](`MGA [${time}s]: ${message}`);
+            console[method](mgaSprintf(mga__( 'MGA [%1$ss] : %2$s', 'lightbox-jlg' ), time, message));
         }
         if (!ensureActive() || !state.logContainer) {
             return;
         }
         const entry = document.createElement('p');
         entry.style.cssText = `margin: 2px 5px; padding: 0; color: ${isError ? '#F44336' : '#4CAF50'}; font-size: 11px; word-break: break-all;`;
-        entry.innerHTML = `<span style="color:#888;">[${time}s]</span> > ${message}`;
+        entry.innerHTML = `<span style="color:#888;">${mgaSprintf(mga__( '[%ss]', 'lightbox-jlg' ), time)}</span> > ${message}`;
         state.logContainer.appendChild(entry);
         state.logContainer.scrollTop = state.logContainer.scrollHeight;
     }

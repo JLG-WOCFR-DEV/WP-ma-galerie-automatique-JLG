@@ -1,3 +1,16 @@
+const mgaAdminI18n = window.wp && window.wp.i18n ? window.wp.i18n : null;
+const mgaAdmin__ = mgaAdminI18n && typeof mgaAdminI18n.__ === 'function' ? mgaAdminI18n.__ : ( text ) => text;
+const mgaAdminSprintf = mgaAdminI18n && typeof mgaAdminI18n.sprintf === 'function'
+    ? mgaAdminI18n.sprintf
+    : ( format, ...args ) => {
+        let index = 0;
+        return format.replace(/%s/g, () => {
+            const replacement = typeof args[index] !== 'undefined' ? args[index] : '';
+            index += 1;
+            return replacement;
+        });
+    };
+
 document.addEventListener('DOMContentLoaded', function() {
     const navTabs = document.querySelectorAll('.mga-admin-wrap .nav-tab');
     const tabContents = document.querySelectorAll('.mga-admin-wrap .tab-content');
@@ -15,7 +28,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Live update for range sliders
     const thumbSizeSlider = document.getElementById('mga_thumb_size');
     const thumbSizeValue = document.getElementById('mga_thumb_size_value');
-    if(thumbSizeSlider) thumbSizeSlider.addEventListener('input', () => thumbSizeValue.textContent = thumbSizeSlider.value + 'px');
+    if (thumbSizeSlider) {
+        thumbSizeSlider.addEventListener('input', () => {
+            thumbSizeValue.textContent = mgaAdminSprintf(mgaAdmin__('%spx', 'lightbox-jlg'), thumbSizeSlider.value);
+        });
+    }
 
     const opacitySlider = document.getElementById('mga_bg_opacity');
     const opacityValue = document.getElementById('mga_bg_opacity_value');
