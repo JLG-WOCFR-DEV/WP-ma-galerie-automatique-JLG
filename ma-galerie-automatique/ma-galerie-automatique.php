@@ -37,6 +37,29 @@ function mga_uninstall() {
 
 register_uninstall_hook( __FILE__, 'mga_uninstall' );
 
+/**
+ * Initialise les réglages lors de l'activation du plugin.
+ */
+function mga_activate() {
+    $defaults = mga_get_default_settings();
+    $existing_settings = get_option( 'mga_settings', false );
+
+    if ( false === $existing_settings ) {
+        add_option( 'mga_settings', $defaults );
+        return;
+    }
+
+    if ( is_array( $existing_settings ) ) {
+        $merged_settings = wp_parse_args( $existing_settings, $defaults );
+        update_option( 'mga_settings', mga_sanitize_settings( $merged_settings ) );
+        return;
+    }
+
+    update_option( 'mga_settings', $defaults );
+}
+
+register_activation_hook( __FILE__, 'mga_activate' );
+
 // ===== FRONT-END =====
 
 /**
