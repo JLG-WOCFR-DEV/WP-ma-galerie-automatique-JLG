@@ -52,8 +52,11 @@ function mga_enqueue_assets() {
     // Récupérer les réglages sauvegardés
     $defaults = mga_get_default_settings();
     $saved_settings = get_option('mga_settings', $defaults);
+    $saved_settings = mga_sanitize_settings( $saved_settings );
     // On s'assure que toutes les clés existent pour éviter les erreurs PHP
     $settings = wp_parse_args($saved_settings, $defaults);
+    $resanitized_settings = mga_sanitize_settings( $settings );
+    $settings = $resanitized_settings;
 
     // Librairies (Mise à jour vers Swiper v11)
     $swiper_css = apply_filters( 'mga_swiper_css', plugin_dir_url( __FILE__ ) . 'assets/css/swiper-bundle.min.css' );
@@ -74,7 +77,7 @@ function mga_enqueue_assets() {
     wp_set_script_translations( 'mga-gallery-script', 'lightbox-jlg', plugin_dir_path( __FILE__ ) . 'languages' );
 
     // Passer les réglages au JavaScript
-    wp_localize_script('mga-gallery-script', 'mga_settings', $settings);
+    wp_localize_script('mga-gallery-script', 'mga_settings', $resanitized_settings);
 
     // Générer les styles dynamiques
     $accent_color = sanitize_hex_color($settings['accent_color']);
@@ -291,8 +294,8 @@ function mga_sanitize_settings( $input ) {
         $output['accent_color'] = $defaults['accent_color'];
     }
     $output['bg_opacity'] = isset($input['bg_opacity']) ? max(min(floatval($input['bg_opacity']), 1), 0.5) : $defaults['bg_opacity'];
-    $output['loop'] = isset($input['loop']);
-    $output['autoplay_start'] = isset($input['autoplay_start']);
+    $output['loop'] = ! empty( $input['loop'] );
+    $output['autoplay_start'] = ! empty( $input['autoplay_start'] );
     
     $allowed_bg_styles = ['echo', 'blur', 'texture'];
     $output['background_style'] = isset($input['background_style']) && in_array($input['background_style'], $allowed_bg_styles, true) ? $input['background_style'] : $defaults['background_style'];
@@ -304,7 +307,7 @@ function mga_sanitize_settings( $input ) {
     } else {
         $output['z_index'] = $defaults['z_index'];
     }
-    $output['debug_mode'] = isset($input['debug_mode']);
+    $output['debug_mode'] = ! empty( $input['debug_mode'] );
 
     return $output;
 }
