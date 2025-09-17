@@ -249,21 +249,42 @@ function mga_blocks_contain_linked_media( array $blocks, array $allowed_block_na
  * @return bool
  */
 function mga_block_attributes_link_to_media( array $attrs ) {
-    foreach ( $attrs as $key => $value ) {
-        if ( is_string( $key ) && in_array( $key, [ 'linkDestination', 'linkTo' ], true ) ) {
-            if ( is_string( $value ) && 'media' === $value ) {
+    $media_destination_keys = [ 'linkDestination', 'linkTo' ];
+    $link_url_keys          = [ 'href', 'linkUrl', 'linkHref', 'imageLink', 'link' ];
+
+    foreach ( $media_destination_keys as $destination_key ) {
+        if ( isset( $attrs[ $destination_key ] ) && is_string( $attrs[ $destination_key ] ) ) {
+            if ( 'media' === $attrs[ $destination_key ] ) {
                 return true;
             }
         }
+    }
 
-        if ( is_string( $value ) ) {
-            if ( mga_is_image_url( $value ) ) {
+    foreach ( $link_url_keys as $link_key ) {
+        if ( ! isset( $attrs[ $link_key ] ) ) {
+            continue;
+        }
+
+        $link_value = $attrs[ $link_key ];
+
+        if ( is_string( $link_value ) && mga_is_image_url( $link_value ) ) {
+            return true;
+        }
+
+        if ( is_array( $link_value ) ) {
+            if ( isset( $link_value['url'] ) && is_string( $link_value['url'] ) && mga_is_image_url( $link_value['url'] ) ) {
                 return true;
             }
-        } elseif ( is_array( $value ) ) {
-            if ( mga_block_attributes_link_to_media( $value ) ) {
+
+            if ( mga_block_attributes_link_to_media( $link_value ) ) {
                 return true;
             }
+        }
+    }
+
+    foreach ( $attrs as $value ) {
+        if ( is_array( $value ) && mga_block_attributes_link_to_media( $value ) ) {
+            return true;
         }
     }
 
