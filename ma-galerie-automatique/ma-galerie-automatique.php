@@ -171,19 +171,18 @@ function mga_should_enqueue_assets( $post ) {
         [ 'core/gallery', 'core/image' ]
     );
 
-    if ( function_exists( 'parse_blocks' ) && ! empty( $post->post_content ) && ! empty( $block_names ) ) {
-        $parsed_blocks = parse_blocks( $post->post_content );
-        $has_linked_images = mga_blocks_contain_linked_media( $parsed_blocks, (array) $block_names );
-    } elseif ( function_exists( 'has_block' ) ) {
-        foreach ( (array) $block_names as $block_name ) {
-            if ( ! is_string( $block_name ) || '' === $block_name ) {
-                continue;
-            }
+    if ( ! empty( $post->post_content ) && ! empty( $block_names ) ) {
+        $parsed_blocks = [];
 
-            if ( has_block( $block_name, $post ) ) {
-                $has_linked_images = true;
-                break;
-            }
+        if ( function_exists( 'parse_blocks' ) ) {
+            $parsed_blocks = parse_blocks( $post->post_content );
+        } elseif ( class_exists( 'WP_Block_Parser' ) ) {
+            $parser = new WP_Block_Parser();
+            $parsed_blocks = $parser->parse( $post->post_content );
+        }
+
+        if ( ! empty( $parsed_blocks ) ) {
+            $has_linked_images = mga_blocks_contain_linked_media( $parsed_blocks, (array) $block_names );
         }
     }
 
