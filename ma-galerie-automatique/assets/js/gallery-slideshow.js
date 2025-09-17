@@ -34,6 +34,8 @@
         let isResizeListenerAttached = false;
         let initialBodyOverflow = null;
         let bodyOverflowWasModified = false;
+        let lastFocusedElementBeforeViewer = null;
+        let viewerFocusTrapHandler = null;
 
         debug.init();
 
@@ -215,6 +217,9 @@
                     </div>`;
                 document.body.insertAdjacentHTML('beforeend', viewerHTML);
                 viewer = document.getElementById('mga-viewer');
+                if (viewer) {
+                    viewer.setAttribute('tabindex', '-1');
+                }
                 if (viewer) debug.log(mga__( 'Viewer créé et ajouté au body avec succès.', 'lightbox-jlg' ));
                 else debug.log(mga__( 'ERREUR CRITIQUE : Échec de la création du viewer !', 'lightbox-jlg' ), true);
             }
@@ -247,6 +252,7 @@
                 { highResUrl: 'https://placehold.co/800x600/0073aa/ffffff?text=Image+Test+1', thumbUrl: 'https://placehold.co/150x150/0073aa/ffffff?text=Thumb+1', caption: mga__( 'Ceci est la première image de test.', 'lightbox-jlg' ) },
                 { highResUrl: 'https://placehold.co/800x600/F44336/ffffff?text=Image+Test+2', thumbUrl: 'https://placehold.co/150x150/F44336/ffffff?text=Thumb+2', caption: mga__( 'Ceci est la seconde image de test.', 'lightbox-jlg' ) }
             ];
+            lastFocusedElementBeforeViewer = document.activeElement;
             openViewer(testImages, 0);
         });
 
@@ -291,6 +297,7 @@
                 if (startIndex !== -1) {
                     e.preventDefault();
                     e.stopPropagation();
+                    lastFocusedElementBeforeViewer = document.activeElement;
                     openViewer(galleryData, startIndex);
                 } else {
                     debug.log(mga__( "ERREUR : L'image cliquée n'a pas été trouvée dans la galerie construite.", 'lightbox-jlg' ), true);
@@ -357,6 +364,10 @@
                 mainSwiper.slideToLoop(startIndex, 0);
                 updateInfo(viewer, images, startIndex);
                 viewer.style.display = 'flex';
+                if (!lastFocusedElementBeforeViewer) {
+                    lastFocusedElementBeforeViewer = document.activeElement;
+                }
+                setupViewerFocusManagement(viewer);
                 const previousOverflow = document.body.style.overflow;
                 initialBodyOverflow = previousOverflow;
                 if (previousOverflow !== 'hidden') {
@@ -373,6 +384,66 @@
             } catch (error) {
                 debug.log(mgaSprintf(mga__( 'ERREUR dans openViewer : %s', 'lightbox-jlg' ), error.message), true);
                 console.error(error);
+            }
+        }
+
+        function getFocusableViewerElements(viewer) {
+            const selectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+            return Array.from(viewer.querySelectorAll(selectors)).filter(element => {
+                if (element.disabled) return false;
+                if (element.getAttribute('aria-hidden') === 'true') return false;
+                const rect = element.getBoundingClientRect();
+                return !!(rect.width || rect.height || element.getClientRects().length);
+            });
+        }
+
+        function setupViewerFocusManagement(viewer) {
+            if (!viewer.hasAttribute('tabindex')) {
+                viewer.setAttribute('tabindex', '-1');
+            }
+
+            if (viewerFocusTrapHandler) {
+                viewer.removeEventListener('keydown', viewerFocusTrapHandler, true);
+            }
+
+            viewerFocusTrapHandler = function(e) {
+                if (e.key !== 'Tab') return;
+
+                const focusable = getFocusableViewerElements(viewer);
+
+                if (!focusable.length) {
+                    e.preventDefault();
+                    viewer.focus({ preventScroll: true });
+                    return;
+                }
+
+                const currentIndex = focusable.indexOf(document.activeElement);
+                let nextIndex = currentIndex;
+
+                if (e.shiftKey) {
+                    if (currentIndex <= 0) {
+                        nextIndex = focusable.length - 1;
+                    } else {
+                        nextIndex = currentIndex - 1;
+                    }
+                } else {
+                    if (currentIndex === -1 || currentIndex === focusable.length - 1) {
+                        nextIndex = 0;
+                    } else {
+                        nextIndex = currentIndex + 1;
+                    }
+                }
+
+                e.preventDefault();
+                focusable[nextIndex].focus({ preventScroll: true });
+            };
+
+            viewer.addEventListener('keydown', viewerFocusTrapHandler, true);
+
+            const closeButton = viewer.querySelector('#mga-close');
+            const target = closeButton && closeButton.offsetParent !== null ? closeButton : viewer;
+            if (target && typeof target.focus === 'function') {
+                target.focus({ preventScroll: true });
             }
         }
 
@@ -512,6 +583,10 @@
             }
             window.removeEventListener('resize', handleResize);
             isResizeListenerAttached = false;
+            if (viewerFocusTrapHandler) {
+                viewer.removeEventListener('keydown', viewerFocusTrapHandler, true);
+                viewerFocusTrapHandler = null;
+            }
             viewer.style.display = 'none';
             if (bodyOverflowWasModified) {
                 document.body.style.overflow = initialBodyOverflow;
@@ -520,6 +595,10 @@
             bodyOverflowWasModified = false;
             debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
             debug.stopTimer();
+            if (lastFocusedElementBeforeViewer && typeof lastFocusedElementBeforeViewer.focus === 'function') {
+                lastFocusedElementBeforeViewer.focus({ preventScroll: true });
+            }
+            lastFocusedElementBeforeViewer = null;
         }
 
         function handleResize() {
