@@ -362,6 +362,9 @@
 
                 initSwiper(viewer, images);
                 mainSwiper.slideToLoop(startIndex, 0);
+                if (settings.background_style === 'echo' && images[startIndex] && images[startIndex].highResUrl) {
+                    updateEchoBackground(viewer, images[startIndex].highResUrl);
+                }
                 updateInfo(viewer, images, startIndex);
                 viewer.style.display = 'flex';
                 if (!lastFocusedElementBeforeViewer) {
