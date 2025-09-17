@@ -42,28 +42,78 @@
         /**
          * Swiper peut afficher des avertissements « Swiper Loop Warning » lorsque
          * l'option `loop` est active mais que la configuration n'offre pas assez
-         * de diapositives. L'avertissement est inoffensif mais bruit la console.
-         * On ne neutralise donc le message que le temps de créer l'instance
-         * concernée, sans toucher au `console.warn` global du reste de l'application.
+         * de diapositives. Plutôt que de modifier `console.warn`, on vérifie
+         * localement que la configuration dispose d'un nombre de diapositives
+         * suffisant. Si ce n'est pas le cas, on désactive la boucle pour cette
+         * instance uniquement et on trace l'information via le logger de debug.
          */
         function createSwiperInstance(container, config) {
             if (!config || !config.loop) {
                 return new Swiper(container, config);
             }
 
-            const originalWarn = console.warn;
-            console.warn = function(...args) {
-                if (args.length > 0 && typeof args[0] === 'string' && args[0].includes('Swiper Loop Warning')) {
-                    return;
+            const slidesCount = container ? container.querySelectorAll('.swiper-slide').length : 0;
+
+            const resolveMaxSlidesPerView = (swiperConfig) => {
+                const values = [];
+                const collect = (value) => {
+                    if (typeof value === 'number' && !Number.isNaN(value)) {
+                        values.push(Math.ceil(value));
+                    }
+                };
+
+                collect(swiperConfig.slidesPerView);
+
+                if (swiperConfig.breakpoints && typeof swiperConfig.breakpoints === 'object') {
+                    Object.values(swiperConfig.breakpoints).forEach(bpConfig => {
+                        if (bpConfig && typeof bpConfig === 'object') {
+                            collect(bpConfig.slidesPerView);
+                        }
+                    });
                 }
-                originalWarn.apply(console, args);
+
+                return values.length ? Math.max(...values) : 1;
             };
 
-            try {
+            const maxSlidesPerView = resolveMaxSlidesPerView(config);
+            const explicitLoopedSlides = typeof config.loopedSlides === 'number' ? Math.max(0, Math.floor(config.loopedSlides)) : maxSlidesPerView;
+            const additionalSlides = typeof config.loopAdditionalSlides === 'number' ? Math.max(0, Math.floor(config.loopAdditionalSlides)) : 0;
+            const slidesPerGroup = typeof config.slidesPerGroup === 'number' ? Math.max(1, Math.floor(config.slidesPerGroup)) : 1;
+            const centeredSlidesBonus = config.centeredSlides ? 1 : 0;
+
+            const computedLoopedSlides = explicitLoopedSlides + additionalSlides;
+            const minimumSlidesRequired = Math.max(computedLoopedSlides + 1, slidesPerGroup + centeredSlidesBonus + 1, 2);
+
+            if (slidesCount >= minimumSlidesRequired) {
                 return new Swiper(container, config);
-            } finally {
-                console.warn = originalWarn;
             }
+
+            const safeConfig = Object.assign({}, config);
+            let safeLoopedSlides = explicitLoopedSlides;
+            let safeAdditionalSlides = additionalSlides;
+
+            if (slidesCount > 1) {
+                safeLoopedSlides = Math.min(explicitLoopedSlides, Math.max(slidesCount - 1, 1));
+                const remainingCapacity = Math.max(slidesCount - 1 - safeLoopedSlides, 0);
+                safeAdditionalSlides = Math.min(additionalSlides, remainingCapacity);
+            } else {
+                safeConfig.loop = false;
+            }
+
+            safeConfig.loopedSlides = safeLoopedSlides;
+            safeConfig.loopAdditionalSlides = safeAdditionalSlides;
+
+            const logMessage = safeConfig.loop
+                ? `Loop ajustée (instance locale) : ${slidesCount} slide(s), boucle recalibrée à ${safeLoopedSlides} + ${safeAdditionalSlides} slide(s) additionnelles.`
+                : `Loop désactivée (instance locale) : ${slidesCount} slide disponible, boucle inutilisable.`;
+
+            if (debug && typeof debug.log === 'function') {
+                debug.log(logMessage);
+            } else if (typeof console !== 'undefined' && typeof console.info === 'function') {
+                console.info(logMessage);
+            }
+
+            return new Swiper(container, safeConfig);
         }
 
         // --- FONCTIONS UTILITAIRES ---
