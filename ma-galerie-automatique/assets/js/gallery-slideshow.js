@@ -34,6 +34,8 @@
         let isResizeListenerAttached = false;
         let initialBodyOverflow = null;
         let bodyOverflowWasModified = false;
+        let previouslyFocusedElement = null;
+        let focusTrapHandler = null;
 
         debug.init();
 
@@ -299,15 +301,71 @@
             }
         }, true);
 
+        function getFocusableElements(viewer) {
+            const selectors = [
+                'button',
+                '[href]',
+                'input',
+                'select',
+                'textarea',
+                '[tabindex]:not([tabindex="-1"])'
+            ];
+
+            return Array.from(viewer.querySelectorAll(selectors.join(','))).filter(element => {
+                if (element.disabled || element.getAttribute('aria-hidden') === 'true') {
+                    return false;
+                }
+                const style = window.getComputedStyle(element);
+                return style.display !== 'none' && style.visibility !== 'hidden';
+            });
+        }
+
+        function attachFocusTrap(viewer) {
+            focusTrapHandler = function(e) {
+                if (e.key !== 'Tab') return;
+
+                const focusableElements = getFocusableElements(viewer);
+                if (!focusableElements.length) {
+                    e.preventDefault();
+                    viewer.focus();
+                    return;
+                }
+
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+                const activeElement = document.activeElement;
+
+                if (e.shiftKey) {
+                    if (activeElement === firstElement || !viewer.contains(activeElement)) {
+                        e.preventDefault();
+                        lastElement.focus();
+                    }
+                } else if (activeElement === lastElement || !viewer.contains(activeElement)) {
+                    e.preventDefault();
+                    firstElement.focus();
+                }
+            };
+
+            viewer.addEventListener('keydown', focusTrapHandler);
+        }
+
+        function detachFocusTrap(viewer) {
+            if (focusTrapHandler) {
+                viewer.removeEventListener('keydown', focusTrapHandler);
+                focusTrapHandler = null;
+            }
+        }
+
         function openViewer(images, startIndex) {
             debug.log(mgaSprintf(mga__( 'openViewer appelé avec %1$d images, index %2$d.', 'lightbox-jlg' ), images.length, startIndex));
             const viewer = getViewer();
             if (!viewer) return;
 
+            previouslyFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
             viewer.className = 'mga-viewer';
             if (settings.background_style === 'blur') viewer.classList.add('mga-has-blur');
             if (settings.background_style === 'texture') viewer.classList.add('mga-has-texture');
-            
+
             try {
                 if (mainSwiper) mainSwiper.destroy(true, true);
                 if (thumbsSwiper) thumbsSwiper.destroy(true, true);
@@ -357,6 +415,14 @@
                 mainSwiper.slideToLoop(startIndex, 0);
                 updateInfo(viewer, images, startIndex);
                 viewer.style.display = 'flex';
+                viewer.setAttribute('tabindex', '-1');
+                attachFocusTrap(viewer);
+                const closeButton = viewer.querySelector('#mga-close');
+                if (closeButton) {
+                    closeButton.focus();
+                } else {
+                    viewer.focus();
+                }
                 const previousOverflow = document.body.style.overflow;
                 initialBodyOverflow = previousOverflow;
                 if (previousOverflow !== 'hidden') {
@@ -512,6 +578,7 @@
             }
             window.removeEventListener('resize', handleResize);
             isResizeListenerAttached = false;
+            detachFocusTrap(viewer);
             viewer.style.display = 'none';
             if (bodyOverflowWasModified) {
                 document.body.style.overflow = initialBodyOverflow;
@@ -520,6 +587,10 @@
             bodyOverflowWasModified = false;
             debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
             debug.stopTimer();
+            if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
+                previouslyFocusedElement.focus();
+            }
+            previouslyFocusedElement = null;
         }
 
         function handleResize() {
