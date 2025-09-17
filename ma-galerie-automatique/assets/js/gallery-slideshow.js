@@ -32,6 +32,8 @@
         const preloadedUrls = new Set();
         let resizeTimeout;
         let isResizeListenerAttached = false;
+        let initialBodyOverflow = null;
+        let bodyOverflowWasModified = false;
 
         debug.init();
 
@@ -355,7 +357,14 @@
                 mainSwiper.slideToLoop(startIndex, 0);
                 updateInfo(viewer, images, startIndex);
                 viewer.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
+                const previousOverflow = document.body.style.overflow;
+                initialBodyOverflow = previousOverflow;
+                if (previousOverflow !== 'hidden') {
+                    document.body.style.overflow = 'hidden';
+                    bodyOverflowWasModified = true;
+                } else {
+                    bodyOverflowWasModified = false;
+                }
                 debug.log(mga__( 'Galerie affichée avec succès.', 'lightbox-jlg' ));
                 if (!isResizeListenerAttached) {
                     window.addEventListener('resize', handleResize);
@@ -504,7 +513,11 @@
             window.removeEventListener('resize', handleResize);
             isResizeListenerAttached = false;
             viewer.style.display = 'none';
-            document.body.style.overflow = '';
+            if (bodyOverflowWasModified) {
+                document.body.style.overflow = initialBodyOverflow;
+            }
+            initialBodyOverflow = null;
+            bodyOverflowWasModified = false;
             debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
             debug.stopTimer();
         }
