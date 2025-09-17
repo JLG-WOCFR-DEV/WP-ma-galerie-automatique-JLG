@@ -166,12 +166,15 @@ function mga_should_enqueue_assets( $post ) {
 
     $has_linked_images = false;
 
-    if ( function_exists( 'has_block' ) ) {
-        $block_names = apply_filters(
-            'mga_linked_image_blocks',
-            [ 'core/gallery', 'core/image' ]
-        );
+    $block_names = apply_filters(
+        'mga_linked_image_blocks',
+        [ 'core/gallery', 'core/image' ]
+    );
 
+    if ( function_exists( 'parse_blocks' ) && ! empty( $post->post_content ) && ! empty( $block_names ) ) {
+        $parsed_blocks = parse_blocks( $post->post_content );
+        $has_linked_images = mga_blocks_contain_linked_media( $parsed_blocks, (array) $block_names );
+    } elseif ( function_exists( 'has_block' ) ) {
         foreach ( (array) $block_names as $block_name ) {
             if ( ! is_string( $block_name ) || '' === $block_name ) {
                 continue;
@@ -203,6 +206,98 @@ function mga_should_enqueue_assets( $post ) {
     $has_linked_images = apply_filters( 'mga_post_has_linked_images', $has_linked_images, $post );
 
     return (bool) $has_linked_images;
+}
+
+/**
+ * Parcourt les blocs parsés pour trouver une image liée à un média.
+ *
+ * @param array $blocks              Liste de blocs issus de parse_blocks().
+ * @param array $allowed_block_names Noms de blocs à inspecter.
+ *
+ * @return bool
+ */
+function mga_blocks_contain_linked_media( array $blocks, array $allowed_block_names ) {
+    foreach ( $blocks as $block ) {
+        if ( ! is_array( $block ) ) {
+            continue;
+        }
+
+        $block_name = isset( $block['blockName'] ) ? $block['blockName'] : null;
+
+        if ( $block_name && in_array( $block_name, $allowed_block_names, true ) ) {
+            $attrs = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [];
+
+            if ( mga_block_attributes_link_to_media( $attrs ) ) {
+                return true;
+            }
+        }
+
+        if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+            if ( mga_blocks_contain_linked_media( $block['innerBlocks'], $allowed_block_names ) ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Vérifie si les attributs d'un bloc contiennent un lien vers un média.
+ *
+ * @param array $attrs Attributs du bloc.
+ *
+ * @return bool
+ */
+function mga_block_attributes_link_to_media( array $attrs ) {
+    foreach ( $attrs as $key => $value ) {
+        if ( is_string( $key ) && in_array( $key, [ 'linkDestination', 'linkTo' ], true ) ) {
+            if ( is_string( $value ) && 'media' === $value ) {
+                return true;
+            }
+        }
+
+        if ( is_string( $value ) ) {
+            if ( mga_is_image_url( $value ) ) {
+                return true;
+            }
+        } elseif ( is_array( $value ) ) {
+            if ( mga_block_attributes_link_to_media( $value ) ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Détermine si une URL pointe vers une image en se basant sur son extension.
+ *
+ * @param string $url URL à vérifier.
+ *
+ * @return bool
+ */
+function mga_is_image_url( $url ) {
+    if ( ! is_string( $url ) || '' === $url ) {
+        return false;
+    }
+
+    $parsed_url = wp_parse_url( $url );
+
+    if ( empty( $parsed_url['path'] ) ) {
+        return false;
+    }
+
+    $extension = strtolower( pathinfo( $parsed_url['path'], PATHINFO_EXTENSION ) );
+
+    if ( '' === $extension ) {
+        return false;
+    }
+
+    $allowed_extensions = [ 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'avif', 'svg' ];
+
+    return in_array( $extension, $allowed_extensions, true );
 }
 
 /**
