@@ -16,6 +16,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         const settings = window.mga_settings || {};
+        const IMAGE_FILE_PATTERN = /\.(jpe?g|png|gif|bmp|webp|avif|svg)(?:\?.*)?(?:#.*)?$/i;
         const noop = () => {};
         const debug = window.mgaDebug || {
             enabled: false,
@@ -62,21 +63,125 @@
         }
 
         // --- FONCTIONS UTILITAIRES ---
-        function getHighResUrl(linkElement) {
-            if (!linkElement) return null;
-            if (/\.(jpe?g|png|gif|bmp|webp|avif|svg)$/i.test(linkElement.href)) return linkElement.href;
-            const innerImg = linkElement.querySelector('img');
-            if (innerImg && innerImg.srcset) {
-                const sources = innerImg.srcset.split(',').map(s => {
-                    const parts = s.trim().split(' ');
-                    return { url: parts[0], width: parseInt(parts[1], 10) || 0 };
-                }).filter(source => source.url && source.width > 0);
-                if (sources.length > 0) {
-                    sources.sort((a, b) => b.width - a.width);
-                    return sources[0].url;
+        function isExplicitFallbackAllowed(linkElement) {
+            if (!linkElement) return false;
+            if (linkElement.hasAttribute('data-mga-allow-fallback')) return true;
+            if (linkElement.dataset) {
+                const allowFlag = linkElement.dataset.mgaAllowFallback;
+                if (typeof allowFlag !== 'undefined' && allowFlag !== '0' && allowFlag !== 'false') {
+                    return true;
+                }
+                if (linkElement.dataset.mgaHighres) {
+                    return true;
                 }
             }
-            if (innerImg) return innerImg.src;
+            const rel = linkElement.getAttribute('rel');
+            if (rel && rel.split(/\s+/).includes('mga-allow-fallback')) {
+                return true;
+            }
+            return false;
+        }
+
+        function getImageDataAttributes(innerImg) {
+            if (!innerImg) return null;
+            const attributes = [
+                'data-mga-highres',
+                'data-full-url',
+                'data-large-file',
+                'data-orig-file',
+                'data-src',
+                'data-lazy-src'
+            ];
+            for (const attr of attributes) {
+                const value = innerImg.getAttribute(attr);
+                if (value) {
+                    return value;
+                }
+            }
+            if (innerImg.dataset) {
+                const datasetCandidates = ['mgaHighres', 'fullUrl', 'largeFile', 'origFile', 'src', 'lazySrc'];
+                for (const candidate of datasetCandidates) {
+                    if (innerImg.dataset[candidate]) {
+                        return innerImg.dataset[candidate];
+                    }
+                }
+            }
+            return null;
+        }
+
+        function parseSrcset(innerImg) {
+            if (!innerImg || !innerImg.srcset) {
+                return null;
+            }
+
+            const entries = innerImg.srcset
+                .split(',')
+                .map(entry => entry.trim())
+                .filter(entry => entry.length > 0)
+                .map(entry => {
+                    const parts = entry.split(/\s+/);
+                    const candidateUrl = parts[0];
+                    let score = 0;
+                    if (parts[1]) {
+                        const descriptor = parts[1].trim();
+                        if (/^[0-9]+w$/i.test(descriptor)) {
+                            score = parseInt(descriptor, 10);
+                        } else if (/^[0-9]*\.?[0-9]+x$/i.test(descriptor)) {
+                            score = parseFloat(descriptor) * 1000;
+                        }
+                    }
+                    return { url: candidateUrl, score };
+                })
+                .filter(candidate => candidate.url);
+
+            if (!entries.length) {
+                return null;
+            }
+
+            entries.sort((a, b) => b.score - a.score);
+            return entries[0].url;
+        }
+
+        function getHighResUrl(linkElement) {
+            if (!linkElement) return null;
+
+            if (linkElement.dataset && linkElement.dataset.mgaHighres) {
+                return linkElement.dataset.mgaHighres;
+            }
+
+            const innerImg = linkElement.querySelector('img');
+            if (!innerImg) return null;
+
+            const dataAttrUrl = getImageDataAttributes(innerImg);
+            if (dataAttrUrl) {
+                return dataAttrUrl;
+            }
+
+            const href = linkElement.getAttribute('href') || '';
+            const isMediaHref = IMAGE_FILE_PATTERN.test(href);
+            const fallbackAllowed = isMediaHref || isExplicitFallbackAllowed(linkElement);
+
+            if (!fallbackAllowed) {
+                return null;
+            }
+
+            const srcsetUrl = parseSrcset(innerImg);
+            if (srcsetUrl) {
+                return srcsetUrl;
+            }
+
+            if (innerImg.currentSrc) {
+                return innerImg.currentSrc;
+            }
+
+            if (innerImg.src) {
+                return innerImg.src;
+            }
+
+            if (isMediaHref) {
+                return href;
+            }
+
             return null;
         }
 
@@ -148,11 +253,19 @@
             if (targetLink && targetLink.querySelector('img')) {
                 debug.log(mga__( 'Clic sur un lien contenant une image.', 'lightbox-jlg' ));
 
+                const clickedHighResUrl = getHighResUrl(targetLink);
+                if (!clickedHighResUrl) {
+                    debug.log(mga__( "URL haute résolution introuvable pour le lien cliqué.", 'lightbox-jlg' ));
+                    return;
+                }
+
                 const galleryData = triggerLinks.map(link => {
                     const innerImg = link.querySelector('img');
                     if (!innerImg) return null;
 
                     const highResUrl = getHighResUrl(link);
+                    if (!highResUrl) return null;
+
                     const thumbUrl = innerImg.src;
 
                     let caption = '';
@@ -166,16 +279,10 @@
                     }
 
                     return { highResUrl, thumbUrl, caption };
-                }).filter(item => item && item.highResUrl);
+                }).filter(Boolean);
 
                 debug.log(mgaSprintf(mga__( '%d images valides préparées pour la galerie.', 'lightbox-jlg' ), galleryData.length));
                 debug.table(galleryData);
-
-                const clickedHighResUrl = getHighResUrl(targetLink);
-                if (!clickedHighResUrl) {
-                    debug.log(mga__( "URL haute résolution introuvable pour le lien cliqué.", 'lightbox-jlg' ));
-                    return;
-                }
 
                 const startIndex = galleryData.findIndex(img => img.highResUrl === clickedHighResUrl);
 
