@@ -566,7 +566,42 @@
             if (e.target.closest('#mga-close')) closeViewer(viewer);
             if (e.target.closest('#mga-play-pause')) { if (mainSwiper && mainSwiper.autoplay && mainSwiper.autoplay.running) mainSwiper.autoplay.stop(); else if (mainSwiper && mainSwiper.autoplay) mainSwiper.autoplay.start(); }
             if (e.target.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
-            if (e.target.closest('#mga-fullscreen')) { if (!document.fullscreenElement) viewer.requestFullscreen().catch(err => debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true)); else document.exitFullscreen(); }
+            if (e.target.closest('#mga-fullscreen')) {
+                const requestFullscreen = viewer.requestFullscreen
+                    || viewer.webkitRequestFullscreen
+                    || viewer.mozRequestFullScreen
+                    || viewer.msRequestFullscreen;
+                const exitFullscreen = document.exitFullscreen
+                    || document.webkitExitFullscreen
+                    || document.mozCancelFullScreen
+                    || document.msExitFullscreen;
+
+                if (!document.fullscreenElement) {
+                    if (requestFullscreen) {
+                        try {
+                            const result = requestFullscreen.call(viewer);
+                            if (result && typeof result.catch === 'function') {
+                                result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true));
+                            }
+                        } catch (err) {
+                            debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true);
+                        }
+                    } else {
+                        debug.log(mga__( 'API plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
+                    }
+                } else if (exitFullscreen) {
+                    try {
+                        const result = exitFullscreen.call(document);
+                        if (result && typeof result.catch === 'function') {
+                            result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
+                        }
+                    } catch (err) {
+                        debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true);
+                    }
+                } else {
+                    debug.log(mga__( 'API de fermeture du plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
+                }
+            }
         });
         
         document.addEventListener('keydown', (e) => { 
@@ -580,7 +615,24 @@
         });
 
         function closeViewer(viewer) {
-            if (document.fullscreenElement) document.exitFullscreen();
+            if (document.fullscreenElement) {
+                const exitFullscreen = document.exitFullscreen
+                    || document.webkitExitFullscreen
+                    || document.mozCancelFullScreen
+                    || document.msExitFullscreen;
+                if (exitFullscreen) {
+                    try {
+                        const result = exitFullscreen.call(document);
+                        if (result && typeof result.catch === 'function') {
+                            result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
+                        }
+                    } catch (err) {
+                        debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true);
+                    }
+                } else {
+                    debug.log(mga__( 'API de fermeture du plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
+                }
+            }
             if(mainSwiper && mainSwiper.autoplay) {
                 mainSwiper.autoplay.stop();
             }
