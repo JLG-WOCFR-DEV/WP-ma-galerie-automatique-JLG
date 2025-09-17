@@ -29,15 +29,6 @@ function mga_load_textdomain() {
 add_action( 'init', 'mga_load_textdomain' );
 
 /**
- * Supprime les données du plugin lors de la désinstallation.
- */
-function mga_uninstall() {
-    delete_option( 'mga_settings' );
-}
-
-register_uninstall_hook( __FILE__, 'mga_uninstall' );
-
-/**
  * Initialise les réglages lors de l'activation du plugin.
  */
 function mga_activate() {
