@@ -23,12 +23,14 @@ Lightbox - JLG est un plugin WordPress qui transforme les galeries d'images en d
 - **Z‑index** de la galerie et **mode débogage**.
 
 ## Fonctionnalités
+La visionneuse plein écran pilotée par `assets/js/gallery-slideshow.js` et mise en forme par `assets/css/gallery-slideshow.css` offre les contrôles suivants :
 - **Compteur et légendes dynamiques** : chaque image affiche automatiquement sa légende ou, à défaut, son texte alternatif, accompagné du compteur « image actuelle / total ».
-- **Lecture/Pause avec minuterie circulaire** : le bouton principal fusionne icônes lecture/pause et minuterie SVG pour visualiser en temps réel le délai avant la prochaine diapositive, pilotés par `assets/js/gallery-slideshow.js` et stylisés par `assets/css/gallery-slideshow.css`.
+- **Lecture/Pause avec minuterie circulaire** : le bouton principal fusionne icônes lecture/pause et minuterie SVG pour visualiser en temps réel le délai avant la prochaine diapositive.
 - **Zoom réactif** : le bouton loupe active le zoom Swiper pour inspecter les détails, tout en autorisant le glisser tactile pour se déplacer dans l’image.
 - **Affichage plein écran** : un bouton dédié bascule le navigateur en mode plein écran et l’icône « Fermer » ou la touche Échap permet de revenir à la page.
 - **Navigation clavier et commandes rapides** : les flèches du clavier, les boutons latéraux et les interactions tactiles permettent d’avancer ou de reculer, même en mode boucle.
 - **Miniatures synchronisées** : un carrousel de vignettes met en évidence la diapositive active et permet de changer d’image d’un clic ou d’un tap.
+- **Arrière-plan immersif et préchargement** : un effet d’écho flouté anime le fond tandis que les visuels suivants sont préchargés pour fluidifier la lecture.
 
 ### Mode débogage
 - **Activation** : cochez **Activer le mode débogage** dans les réglages du plugin (onglet **Réglages → Ma Galerie Automatique**), case ajoutée par `includes/admin-page-template.php`.
