@@ -416,7 +416,7 @@ function mga_sanitize_settings( $input ) {
     if ( isset( $input['delay'] ) ) {
         $delay = intval( $input['delay'] );
         $bounded_delay = max( 1, min( 30, $delay ) );
-        $output['delay'] = ( $delay === $bounded_delay ) ? $delay : $defaults['delay'];
+        $output['delay'] = $bounded_delay;
     } else {
         $output['delay'] = $defaults['delay'];
     }
@@ -424,7 +424,7 @@ function mga_sanitize_settings( $input ) {
     if ( isset( $input['thumb_size'] ) ) {
         $thumb_size = intval( $input['thumb_size'] );
         $bounded_thumb_size = max( 50, min( 150, $thumb_size ) );
-        $output['thumb_size'] = ( $thumb_size === $bounded_thumb_size ) ? $thumb_size : $defaults['thumb_size'];
+        $output['thumb_size'] = $bounded_thumb_size;
     } else {
         $output['thumb_size'] = $defaults['thumb_size'];
     }
@@ -432,7 +432,7 @@ function mga_sanitize_settings( $input ) {
     if ( isset( $input['thumb_size_mobile'] ) ) {
         $thumb_size_mobile = intval( $input['thumb_size_mobile'] );
         $bounded_thumb_mobile = max( 40, min( 100, $thumb_size_mobile ) );
-        $output['thumb_size_mobile'] = ( $thumb_size_mobile === $bounded_thumb_mobile ) ? $thumb_size_mobile : $defaults['thumb_size_mobile'];
+        $output['thumb_size_mobile'] = $bounded_thumb_mobile;
     } else {
         $output['thumb_size_mobile'] = $defaults['thumb_size_mobile'];
     }
@@ -452,7 +452,7 @@ function mga_sanitize_settings( $input ) {
     if ( isset( $input['z_index'] ) ) {
         $raw_z_index = intval( $input['z_index'] );
         $sanitized_z_index = max( 0, $raw_z_index );
-        $output['z_index'] = ( $raw_z_index === $sanitized_z_index ) ? $sanitized_z_index : $defaults['z_index'];
+        $output['z_index'] = $sanitized_z_index;
     } else {
         $output['z_index'] = $defaults['z_index'];
     }
