@@ -54,7 +54,7 @@ Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
 
 ### `mga_swiper_css`
 - **Rôle** : modifier l'URL de la feuille de style utilisée par Swiper.
-- **Moment** : appliqué lorsque les assets publics sont chargés via `wp_enqueue_scripts`.
+- **Moment** : filtré dans `mga_enqueue_assets()` au moment où les assets publics sont enfilés via `wp_enqueue_scripts`.
 - **Exemple** : remplacer le fichier local par une version CDN.
   ```php
   add_filter( 'mga_swiper_css', fn() => 'https://cdn.example.com/swiper@11/swiper-bundle.min.css' );
@@ -62,7 +62,7 @@ Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
 
 ### `mga_swiper_js`
 - **Rôle** : remplacer le script JavaScript de Swiper avant son enfilement.
-- **Moment** : déclenché lors du chargement des scripts frontaux du plugin.
+- **Moment** : appelé dans `mga_enqueue_assets()` juste avant l'enfilement du script Swiper côté visiteur.
 - **Exemple** : pointer vers un script hébergé sur un CDN.
   ```php
   add_filter( 'mga_swiper_js', fn() => 'https://cdn.example.com/swiper@11/swiper-bundle.min.js' );
@@ -70,7 +70,7 @@ Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
 
 ### `mga_user_can_view_debug`
 - **Rôle** : contrôler quels utilisateurs peuvent voir les outils de débogage.
-- **Moment** : évalué quand l'option de débogage est active et avant d'ajouter le script `debug.js` à la file de chargement.
+- **Moment** : évalué dans `mga_enqueue_assets()` lorsque l'option de débogage est active, juste avant l'ajout du script `debug.js`.
 - **Exemple** : autoriser aussi les éditeurs à accéder aux informations de diagnostic.
   ```php
   add_filter( 'mga_user_can_view_debug', function ( $can_view ) {
@@ -80,7 +80,7 @@ Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
 
 ### `mga_force_enqueue`
 - **Rôle** : forcer le chargement des assets même si aucune image éligible n'est détectée.
-- **Moment** : exécuté au début de la détection dans `mga_should_enqueue_assets()`.
+- **Moment** : appelé tout au début de `mga_should_enqueue_assets()` avant les vérifications de contexte.
 - **Exemple** : activer systématiquement la lightbox sur un type de contenu personnalisé.
   ```php
   add_filter( 'mga_force_enqueue', function ( $force, $post ) {
@@ -90,7 +90,7 @@ Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
 
 ### `mga_linked_image_blocks`
 - **Rôle** : définir la liste des blocs Gutenberg inspectés pour trouver des images liées.
-- **Moment** : utilisé lors de l'analyse du contenu dans `mga_should_enqueue_assets()`.
+- **Moment** : utilisé dans `mga_should_enqueue_assets()` pendant l'analyse des blocs du contenu.
 - **Exemple** : restreindre la détection aux galeries natives.
   ```php
   add_filter( 'mga_linked_image_blocks', fn() => [ 'core/gallery' ] );
@@ -98,7 +98,7 @@ Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
 
 ### `mga_post_has_linked_images`
 - **Rôle** : ajuster le résultat final de la détection d'images utilisables.
-- **Moment** : appliqué juste avant de retourner la décision de chargement des assets.
+- **Moment** : appliqué dans `mga_should_enqueue_assets()` juste avant de retourner la décision de chargement des assets.
 - **Exemple** : exclure les pièces jointes ou d'autres contenus spécifiques.
   ```php
   add_filter( 'mga_post_has_linked_images', function ( $has_images, $post ) {
