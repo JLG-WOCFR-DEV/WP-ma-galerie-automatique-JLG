@@ -567,19 +567,32 @@
             if (e.target.closest('#mga-play-pause')) { if (mainSwiper && mainSwiper.autoplay && mainSwiper.autoplay.running) mainSwiper.autoplay.stop(); else if (mainSwiper && mainSwiper.autoplay) mainSwiper.autoplay.start(); }
             if (e.target.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
             if (e.target.closest('#mga-fullscreen')) {
-                const requestFullscreen = viewer.requestFullscreen
-                    || viewer.webkitRequestFullscreen
-                    || viewer.mozRequestFullScreen
-                    || viewer.msRequestFullscreen;
-                const exitFullscreen = document.exitFullscreen
-                    || document.webkitExitFullscreen
-                    || document.mozCancelFullScreen
-                    || document.msExitFullscreen;
+                let requestFullscreen = null;
+                if (typeof viewer.requestFullscreen === 'function') {
+                    requestFullscreen = viewer.requestFullscreen.bind(viewer);
+                } else if (typeof viewer.webkitRequestFullscreen === 'function') {
+                    requestFullscreen = viewer.webkitRequestFullscreen.bind(viewer);
+                } else if (typeof viewer.mozRequestFullScreen === 'function') {
+                    requestFullscreen = viewer.mozRequestFullScreen.bind(viewer);
+                } else if (typeof viewer.msRequestFullscreen === 'function') {
+                    requestFullscreen = viewer.msRequestFullscreen.bind(viewer);
+                }
+
+                let exitFullscreen = null;
+                if (typeof document.exitFullscreen === 'function') {
+                    exitFullscreen = document.exitFullscreen.bind(document);
+                } else if (typeof document.webkitExitFullscreen === 'function') {
+                    exitFullscreen = document.webkitExitFullscreen.bind(document);
+                } else if (typeof document.mozCancelFullScreen === 'function') {
+                    exitFullscreen = document.mozCancelFullScreen.bind(document);
+                } else if (typeof document.msExitFullscreen === 'function') {
+                    exitFullscreen = document.msExitFullscreen.bind(document);
+                }
 
                 if (!document.fullscreenElement) {
                     if (requestFullscreen) {
                         try {
-                            const result = requestFullscreen.call(viewer);
+                            const result = requestFullscreen();
                             if (result && typeof result.catch === 'function') {
                                 result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true));
                             }
@@ -591,7 +604,7 @@
                     }
                 } else if (exitFullscreen) {
                     try {
-                        const result = exitFullscreen.call(document);
+                        const result = exitFullscreen();
                         if (result && typeof result.catch === 'function') {
                             result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
                         }
@@ -616,13 +629,19 @@
 
         function closeViewer(viewer) {
             if (document.fullscreenElement) {
-                const exitFullscreen = document.exitFullscreen
-                    || document.webkitExitFullscreen
-                    || document.mozCancelFullScreen
-                    || document.msExitFullscreen;
+                let exitFullscreen = null;
+                if (typeof document.exitFullscreen === 'function') {
+                    exitFullscreen = document.exitFullscreen.bind(document);
+                } else if (typeof document.webkitExitFullscreen === 'function') {
+                    exitFullscreen = document.webkitExitFullscreen.bind(document);
+                } else if (typeof document.mozCancelFullScreen === 'function') {
+                    exitFullscreen = document.mozCancelFullScreen.bind(document);
+                } else if (typeof document.msExitFullscreen === 'function') {
+                    exitFullscreen = document.msExitFullscreen.bind(document);
+                }
                 if (exitFullscreen) {
                     try {
-                        const result = exitFullscreen.call(document);
+                        const result = exitFullscreen();
                         if (result && typeof result.catch === 'function') {
                             result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
                         }
