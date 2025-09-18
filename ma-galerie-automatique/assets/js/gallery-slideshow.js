@@ -126,6 +126,58 @@
         }
 
         // --- FONCTIONS UTILITAIRES ---
+        function resolveFullscreenApi(target) {
+            const requestMethods = [
+                'requestFullscreen',
+                'webkitRequestFullscreen',
+                'mozRequestFullScreen',
+                'msRequestFullscreen',
+            ];
+            const exitMethods = [
+                'exitFullscreen',
+                'webkitExitFullscreen',
+                'mozCancelFullScreen',
+                'msExitFullscreen',
+            ];
+            const elementProps = [
+                'fullscreenElement',
+                'webkitFullscreenElement',
+                'mozFullScreenElement',
+                'msFullscreenElement',
+            ];
+
+            const resolved = {
+                request: null,
+                exit: null,
+                element: null,
+            };
+
+            if (target) {
+                for (const method of requestMethods) {
+                    if (typeof target[method] === 'function') {
+                        resolved.request = target[method].bind(target);
+                        break;
+                    }
+                }
+            }
+
+            for (const method of exitMethods) {
+                if (typeof document[method] === 'function') {
+                    resolved.exit = document[method].bind(document);
+                    break;
+                }
+            }
+
+            for (const prop of elementProps) {
+                if (document[prop]) {
+                    resolved.element = document[prop];
+                    break;
+                }
+            }
+
+            return resolved;
+        }
+
         function isExplicitFallbackAllowed(linkElement) {
             if (!linkElement) return false;
             if (linkElement.hasAttribute('data-mga-allow-fallback')) return true;
@@ -658,32 +710,12 @@
             if (e.target.closest('#mga-play-pause')) { if (mainSwiper && mainSwiper.autoplay && mainSwiper.autoplay.running) mainSwiper.autoplay.stop(); else if (mainSwiper && mainSwiper.autoplay) mainSwiper.autoplay.start(); }
             if (e.target.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
             if (e.target.closest('#mga-fullscreen')) {
-                let requestFullscreen = null;
-                if (typeof viewer.requestFullscreen === 'function') {
-                    requestFullscreen = viewer.requestFullscreen.bind(viewer);
-                } else if (typeof viewer.webkitRequestFullscreen === 'function') {
-                    requestFullscreen = viewer.webkitRequestFullscreen.bind(viewer);
-                } else if (typeof viewer.mozRequestFullScreen === 'function') {
-                    requestFullscreen = viewer.mozRequestFullScreen.bind(viewer);
-                } else if (typeof viewer.msRequestFullscreen === 'function') {
-                    requestFullscreen = viewer.msRequestFullscreen.bind(viewer);
-                }
+                const fullscreenApi = resolveFullscreenApi(viewer);
 
-                let exitFullscreen = null;
-                if (typeof document.exitFullscreen === 'function') {
-                    exitFullscreen = document.exitFullscreen.bind(document);
-                } else if (typeof document.webkitExitFullscreen === 'function') {
-                    exitFullscreen = document.webkitExitFullscreen.bind(document);
-                } else if (typeof document.mozCancelFullScreen === 'function') {
-                    exitFullscreen = document.mozCancelFullScreen.bind(document);
-                } else if (typeof document.msExitFullscreen === 'function') {
-                    exitFullscreen = document.msExitFullscreen.bind(document);
-                }
-
-                if (!document.fullscreenElement) {
-                    if (requestFullscreen) {
+                if (!fullscreenApi.element) {
+                    if (fullscreenApi.request) {
                         try {
-                            const result = requestFullscreen();
+                            const result = fullscreenApi.request();
                             if (result && typeof result.catch === 'function') {
                                 result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true));
                             }
@@ -693,9 +725,9 @@
                     } else {
                         debug.log(mga__( 'API plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
                     }
-                } else if (exitFullscreen) {
+                } else if (fullscreenApi.exit) {
                     try {
-                        const result = exitFullscreen();
+                        const result = fullscreenApi.exit();
                         if (result && typeof result.catch === 'function') {
                             result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
                         }
@@ -719,20 +751,11 @@
         });
 
         function closeViewer(viewer) {
-            if (document.fullscreenElement) {
-                let exitFullscreen = null;
-                if (typeof document.exitFullscreen === 'function') {
-                    exitFullscreen = document.exitFullscreen.bind(document);
-                } else if (typeof document.webkitExitFullscreen === 'function') {
-                    exitFullscreen = document.webkitExitFullscreen.bind(document);
-                } else if (typeof document.mozCancelFullScreen === 'function') {
-                    exitFullscreen = document.mozCancelFullScreen.bind(document);
-                } else if (typeof document.msExitFullscreen === 'function') {
-                    exitFullscreen = document.msExitFullscreen.bind(document);
-                }
-                if (exitFullscreen) {
+            const fullscreenApi = resolveFullscreenApi(viewer);
+            if (fullscreenApi.element) {
+                if (fullscreenApi.exit) {
                     try {
-                        const result = exitFullscreen();
+                        const result = fullscreenApi.exit();
                         if (result && typeof result.catch === 'function') {
                             result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
                         }
