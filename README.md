@@ -55,17 +55,17 @@ Le modèle de la page d'administration se trouve dans `includes/admin-page-templ
 Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
 
 ### `mga_swiper_css`
-- **Rôle** : modifier l'URL de la feuille de style utilisée par Swiper.
+- **Rôle** : modifier l'URL de la feuille de style utilisée par Swiper (locale par défaut).
 - **Moment** : filtré dans `mga_enqueue_assets()` au moment où les assets publics sont enfilés via `wp_enqueue_scripts`.
-- **Exemple** : remplacer le fichier local par une version CDN.
+- **Astuce** : pointez vers un CDN si vous souhaitez déléguer le chargement à un fournisseur externe.
   ```php
   add_filter( 'mga_swiper_css', fn() => 'https://cdn.example.com/swiper@11/swiper-bundle.min.css' );
   ```
 
 ### `mga_swiper_js`
-- **Rôle** : remplacer le script JavaScript de Swiper avant son enfilement.
+- **Rôle** : remplacer le script JavaScript de Swiper avant son enfilement (la version locale est chargée par défaut).
 - **Moment** : appelé dans `mga_enqueue_assets()` juste avant l'enfilement du script Swiper côté visiteur.
-- **Exemple** : pointer vers un script hébergé sur un CDN.
+- **Astuce** : utilisez un CDN si vous préférez mutualiser la bibliothèque.
   ```php
   add_filter( 'mga_swiper_js', fn() => 'https://cdn.example.com/swiper@11/swiper-bundle.min.js' );
   ```
