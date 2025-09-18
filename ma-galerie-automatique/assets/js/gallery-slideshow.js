@@ -473,7 +473,12 @@
 
                 initSwiper(viewer, images);
                 if (!mainSwiper) {
-                    debug.log(mga__( 'Visionneuse annulée : Swiper n’a pas pu être initialisé.', 'lightbox-jlg' ), true);
+                    const cancelMessage = mga__( 'Visionneuse annulée : Swiper n’a pas pu être initialisé.', 'lightbox-jlg' );
+                    if (debug && typeof debug.log === 'function') {
+                        debug.log(cancelMessage, true);
+                    } else if (typeof console !== 'undefined' && typeof console.error === 'function') {
+                        console.error(cancelMessage);
+                    }
                     viewer.style.display = 'none';
                     return;
                 }
@@ -584,7 +589,12 @@
             });
 
             if (!thumbsSwiper) {
-                debug.log(mga__( 'Initialisation des miniatures Swiper impossible. La visionneuse fonctionnera sans elles.', 'lightbox-jlg' ), true);
+                const thumbsMessage = mga__( 'Initialisation des miniatures Swiper impossible. La visionneuse fonctionnera sans elles.', 'lightbox-jlg' );
+                if (debug && typeof debug.log === 'function') {
+                    debug.log(thumbsMessage, true);
+                } else if (typeof console !== 'undefined' && typeof console.error === 'function') {
+                    console.error(thumbsMessage);
+                }
             }
 
             // L'instance principale peut activer `loop` en fonction des réglages.
@@ -644,7 +654,12 @@
             mainSwiper = createSwiperInstance(mainSwiperContainer, mainSwiperConfig);
 
             if (!mainSwiper) {
-                debug.log(mga__( 'Initialisation du Swiper principal impossible. Visionneuse indisponible.', 'lightbox-jlg' ), true);
+                const mainMessage = mga__( 'Initialisation du Swiper principal impossible. Visionneuse indisponible.', 'lightbox-jlg' );
+                if (debug && typeof debug.log === 'function') {
+                    debug.log(mainMessage, true);
+                } else if (typeof console !== 'undefined' && typeof console.error === 'function') {
+                    console.error(mainMessage);
+                }
                 return;
             }
 
