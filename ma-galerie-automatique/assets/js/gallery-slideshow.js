@@ -126,6 +126,35 @@
         }
 
         // --- FONCTIONS UTILITAIRES ---
+        function resolveFullscreenApi(target) {
+            const doc = document;
+            const request = target && (
+                (typeof target.requestFullscreen === 'function' && target.requestFullscreen.bind(target)) ||
+                (typeof target.webkitRequestFullscreen === 'function' && target.webkitRequestFullscreen.bind(target)) ||
+                (typeof target.mozRequestFullScreen === 'function' && target.mozRequestFullScreen.bind(target)) ||
+                (typeof target.msRequestFullscreen === 'function' && target.msRequestFullscreen.bind(target))
+            );
+
+            const exit = (
+                (typeof doc.exitFullscreen === 'function' && doc.exitFullscreen.bind(doc)) ||
+                (typeof doc.webkitExitFullscreen === 'function' && doc.webkitExitFullscreen.bind(doc)) ||
+                (typeof doc.mozCancelFullScreen === 'function' && doc.mozCancelFullScreen.bind(doc)) ||
+                (typeof doc.msExitFullscreen === 'function' && doc.msExitFullscreen.bind(doc))
+            );
+
+            const element = doc.fullscreenElement
+                || doc.webkitFullscreenElement
+                || doc.mozFullScreenElement
+                || doc.msFullscreenElement
+                || null;
+
+            return {
+                request: request || null,
+                exit: exit || null,
+                element,
+            };
+        }
+
         function isExplicitFallbackAllowed(linkElement) {
             if (!linkElement) return false;
             if (linkElement.hasAttribute('data-mga-allow-fallback')) return true;
@@ -658,32 +687,12 @@
             if (e.target.closest('#mga-play-pause')) { if (mainSwiper && mainSwiper.autoplay && mainSwiper.autoplay.running) mainSwiper.autoplay.stop(); else if (mainSwiper && mainSwiper.autoplay) mainSwiper.autoplay.start(); }
             if (e.target.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
             if (e.target.closest('#mga-fullscreen')) {
-                let requestFullscreen = null;
-                if (typeof viewer.requestFullscreen === 'function') {
-                    requestFullscreen = viewer.requestFullscreen.bind(viewer);
-                } else if (typeof viewer.webkitRequestFullscreen === 'function') {
-                    requestFullscreen = viewer.webkitRequestFullscreen.bind(viewer);
-                } else if (typeof viewer.mozRequestFullScreen === 'function') {
-                    requestFullscreen = viewer.mozRequestFullScreen.bind(viewer);
-                } else if (typeof viewer.msRequestFullscreen === 'function') {
-                    requestFullscreen = viewer.msRequestFullscreen.bind(viewer);
-                }
+                const fullscreenApi = resolveFullscreenApi(viewer);
 
-                let exitFullscreen = null;
-                if (typeof document.exitFullscreen === 'function') {
-                    exitFullscreen = document.exitFullscreen.bind(document);
-                } else if (typeof document.webkitExitFullscreen === 'function') {
-                    exitFullscreen = document.webkitExitFullscreen.bind(document);
-                } else if (typeof document.mozCancelFullScreen === 'function') {
-                    exitFullscreen = document.mozCancelFullScreen.bind(document);
-                } else if (typeof document.msExitFullscreen === 'function') {
-                    exitFullscreen = document.msExitFullscreen.bind(document);
-                }
-
-                if (!document.fullscreenElement) {
-                    if (requestFullscreen) {
+                if (!fullscreenApi.element) {
+                    if (fullscreenApi.request) {
                         try {
-                            const result = requestFullscreen();
+                            const result = fullscreenApi.request();
                             if (result && typeof result.catch === 'function') {
                                 result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true));
                             }
@@ -693,9 +702,9 @@
                     } else {
                         debug.log(mga__( 'API plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
                     }
-                } else if (exitFullscreen) {
+                } else if (fullscreenApi.exit) {
                     try {
-                        const result = exitFullscreen();
+                        const result = fullscreenApi.exit();
                         if (result && typeof result.catch === 'function') {
                             result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
                         }
@@ -719,20 +728,11 @@
         });
 
         function closeViewer(viewer) {
-            if (document.fullscreenElement) {
-                let exitFullscreen = null;
-                if (typeof document.exitFullscreen === 'function') {
-                    exitFullscreen = document.exitFullscreen.bind(document);
-                } else if (typeof document.webkitExitFullscreen === 'function') {
-                    exitFullscreen = document.webkitExitFullscreen.bind(document);
-                } else if (typeof document.mozCancelFullScreen === 'function') {
-                    exitFullscreen = document.mozCancelFullScreen.bind(document);
-                } else if (typeof document.msExitFullscreen === 'function') {
-                    exitFullscreen = document.msExitFullscreen.bind(document);
-                }
-                if (exitFullscreen) {
+            const fullscreenApi = resolveFullscreenApi(viewer);
+            if (fullscreenApi.element) {
+                if (fullscreenApi.exit) {
                     try {
-                        const result = exitFullscreen();
+                        const result = fullscreenApi.exit();
                         if (result && typeof result.catch === 'function') {
                             result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
                         }
