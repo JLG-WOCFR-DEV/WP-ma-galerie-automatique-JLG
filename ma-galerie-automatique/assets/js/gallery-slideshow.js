@@ -802,11 +802,12 @@
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
                 if (mainSwiper && mainSwiper.el && !mainSwiper.destroyed) {
-                    const wasRunning = mainSwiper.autoplay.running;
+                    const autoplayInstance = mainSwiper.autoplay;
+                    const wasRunning = Boolean(autoplayInstance && autoplayInstance.running);
                     debug.log(mga__( 'Redimensionnement détecté. Mise à jour de Swiper.', 'lightbox-jlg' ));
                     mainSwiper.update();
                     if(thumbsSwiper && !thumbsSwiper.destroyed) thumbsSwiper.update();
-                    if (wasRunning) {
+                    if (wasRunning && mainSwiper.autoplay && typeof mainSwiper.autoplay.start === 'function') {
                         mainSwiper.autoplay.start();
                         debug.log(mga__( 'Autoplay relancé après redimensionnement.', 'lightbox-jlg' ));
                     }
