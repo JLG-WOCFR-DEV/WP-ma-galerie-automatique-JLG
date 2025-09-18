@@ -54,6 +54,9 @@ Le modèle de la page d'administration se trouve dans `includes/admin-page-templ
 
 Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
 
+> 💡 Par défaut, le plugin charge les fichiers `swiper-bundle.min.css` et `swiper-bundle.min.js` présents dans `assets/vendor/swiper/`.
+> Si vous préférez déléguer le chargement à un CDN, vous pouvez utiliser les filtres ci-dessous.
+
 ### `mga_swiper_css`
 - **Rôle** : modifier l'URL de la feuille de style utilisée par Swiper.
 - **Moment** : filtré dans `mga_enqueue_assets()` au moment où les assets publics sont enfilés via `wp_enqueue_scripts`.
