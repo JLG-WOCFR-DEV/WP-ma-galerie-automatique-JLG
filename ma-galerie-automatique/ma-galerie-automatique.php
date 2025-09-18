@@ -71,10 +71,24 @@ function mga_enqueue_assets() {
     $settings = mga_sanitize_settings( $settings );
 
     // Librairies (Mise à jour vers Swiper v11)
-    $swiper_css = apply_filters( 'mga_swiper_css', plugin_dir_url( __FILE__ ) . 'assets/css/swiper-bundle.min.css' );
-    $swiper_js  = apply_filters( 'mga_swiper_js', plugin_dir_url( __FILE__ ) . 'assets/js/swiper-bundle.min.js' );
-    wp_enqueue_style( 'swiper-css', $swiper_css, [], '11.1.4' );
-    wp_enqueue_script( 'swiper-js', $swiper_js, [], '11.1.4', true );
+    $swiper_version = '11.1.4';
+    $default_swiper_css = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.css';
+    $default_swiper_js  = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.js';
+
+    $swiper_css = apply_filters(
+        'mga_swiper_css',
+        $default_swiper_css,
+        $swiper_version
+    );
+
+    $swiper_js = apply_filters(
+        'mga_swiper_js',
+        $default_swiper_js,
+        $swiper_version
+    );
+
+    wp_enqueue_style( 'swiper-css', $swiper_css, [], $swiper_version );
+    wp_enqueue_script( 'swiper-js', $swiper_js, [], $swiper_version, true );
 
     // Fichiers du plugin
     wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
