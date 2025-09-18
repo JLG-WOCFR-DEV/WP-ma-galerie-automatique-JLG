@@ -48,6 +48,15 @@
          * instance uniquement et on trace l'information via le logger de debug.
          */
         function createSwiperInstance(container, config) {
+            if (typeof Swiper !== 'function') {
+                const message = mga__( 'ERREUR : La dépendance Swiper est introuvable. Initialisation annulée.', 'lightbox-jlg' );
+                if (debug && typeof debug.log === 'function') {
+                    debug.log(message, true);
+                } else if (typeof console !== 'undefined' && typeof console.error === 'function') {
+                    console.error(message);
+                }
+                return null;
+            }
             if (!config || !config.loop) {
                 return new Swiper(container, config);
             }
@@ -366,8 +375,14 @@
             if (settings.background_style === 'texture') viewer.classList.add('mga-has-texture');
             
             try {
-                if (mainSwiper) mainSwiper.destroy(true, true);
-                if (thumbsSwiper) thumbsSwiper.destroy(true, true);
+                if (mainSwiper) {
+                    mainSwiper.destroy(true, true);
+                }
+                if (thumbsSwiper) {
+                    thumbsSwiper.destroy(true, true);
+                }
+                mainSwiper = null;
+                thumbsSwiper = null;
                 preloadedUrls.clear();
 
                 const mainWrapper = viewer.querySelector('#mga-main-wrapper');
@@ -411,7 +426,17 @@
                 debug.log(mga__( 'Wrappers HTML remplis avec URLs optimisées.', 'lightbox-jlg' ));
 
                 initSwiper(viewer, images);
-                mainSwiper.slideToLoop(startIndex, 0);
+                if (!mainSwiper) {
+                    debug.log(mga__( 'Visionneuse annulée : Swiper n’a pas pu être initialisé.', 'lightbox-jlg' ), true);
+                    viewer.style.display = 'none';
+                    return;
+                }
+
+                if (typeof mainSwiper.slideToLoop === 'function') {
+                    mainSwiper.slideToLoop(startIndex, 0);
+                } else if (typeof mainSwiper.slideTo === 'function') {
+                    mainSwiper.slideTo(startIndex, 0);
+                }
                 if (settings.background_style === 'echo' && images[startIndex] && images[startIndex].highResUrl) {
                     updateEchoBackground(viewer, images[startIndex].highResUrl);
                 }
@@ -512,17 +537,20 @@
                 passiveListeners: true,
             });
 
+            if (!thumbsSwiper) {
+                debug.log(mga__( 'Initialisation des miniatures Swiper impossible. La visionneuse fonctionnera sans elles.', 'lightbox-jlg' ), true);
+            }
+
             // L'instance principale peut activer `loop` en fonction des réglages.
             // On passe par le wrapper pour atténuer l'avertissement Swiper localement.
-            mainSwiper = createSwiperInstance(mainSwiperContainer, {
+            const mainSwiperConfig = {
                 zoom: true,
                 spaceBetween: 10,
                 loop: !!settings.loop && images.length > 2,
                 navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
-                thumbs: { swiper: thumbsSwiper },
-                autoplay: { 
-                    delay: parseInt(settings.delay, 10) * 1000 || 4000, 
-                    disableOnInteraction: false, 
+                autoplay: {
+                    delay: parseInt(settings.delay, 10) * 1000 || 4000,
+                    disableOnInteraction: false,
                     pauseOnMouseEnter: false,
                 },
                 on: {
@@ -561,9 +589,22 @@
                     touchStart: () => { debug.log(mga__( 'Interaction manuelle DÉTECTÉE (touch).', 'lightbox-jlg' )); },
                     sliderMove: () => { debug.log(mga__( 'Interaction manuelle DÉTECTÉE (drag).', 'lightbox-jlg' )); }
                 },
-            });
+            };
 
-            if (settings.autoplay_start) {
+            if (thumbsSwiper) {
+                mainSwiperConfig.thumbs = { swiper: thumbsSwiper };
+            }
+
+            mainSwiper = createSwiperInstance(mainSwiperContainer, mainSwiperConfig);
+
+            if (!mainSwiper) {
+                debug.log(mga__( 'Initialisation du Swiper principal impossible. Visionneuse indisponible.', 'lightbox-jlg' ), true);
+                return;
+            }
+
+            if (!mainSwiper.autoplay) {
+                debug.log(mga__( 'L’extension autoplay de Swiper est indisponible.', 'lightbox-jlg' ), true);
+            } else if (settings.autoplay_start) {
                 mainSwiper.autoplay.start();
             } else {
                  mainSwiper.autoplay.stop();
