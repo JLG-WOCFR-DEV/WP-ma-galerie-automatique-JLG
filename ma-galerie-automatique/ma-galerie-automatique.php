@@ -430,6 +430,10 @@ function mga_get_default_settings() {
  * Nettoie les données envoyées.
  */
 function mga_sanitize_settings( $input ) {
+    if ( ! is_array( $input ) ) {
+        $input = [];
+    }
+
     $defaults = mga_get_default_settings();
     $output = [];
 
