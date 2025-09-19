@@ -80,25 +80,15 @@ function mga_enqueue_assets() {
     $cdn_swiper_css = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.css';
     $cdn_swiper_js  = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.js';
 
-    $default_swiper_css = $local_swiper_css_url;
-    if ( ! file_exists( $local_swiper_css_path ) || filesize( $local_swiper_css_path ) < 1000 ) {
-        $default_swiper_css = $cdn_swiper_css;
-    }
-
-    $default_swiper_js = $local_swiper_js_url;
-    if ( ! file_exists( $local_swiper_js_path ) || filesize( $local_swiper_js_path ) < 1000 ) {
-        $default_swiper_js = $cdn_swiper_js;
-    }
-
     $swiper_css = apply_filters(
         'mga_swiper_css',
-        $default_swiper_css,
+        file_exists( $local_swiper_css_path ) ? $local_swiper_css_url : $cdn_swiper_css,
         $swiper_version
     );
 
     $swiper_js = apply_filters(
         'mga_swiper_js',
-        $default_swiper_js,
+        file_exists( $local_swiper_js_path ) ? $local_swiper_js_url : $cdn_swiper_js,
         $swiper_version
     );
 
