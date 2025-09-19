@@ -348,8 +348,31 @@
         }
         debug.updateInfo('mga-debug-content-area', foundSelector, '#4CAF50');
         
-        const triggerLinks = Array.from(contentArea.querySelectorAll('a')).filter(a => a.querySelector('img'));
-        debug.updateInfo('mga-debug-trigger-img', triggerLinks.length);
+        const getTriggerLinks = (shouldUpdateDebug = true) => {
+            const links = Array.from(contentArea.querySelectorAll('a')).filter(a => a.querySelector('img'));
+            if (shouldUpdateDebug) {
+                debug.updateInfo('mga-debug-trigger-img', links.length);
+            }
+            return links;
+        };
+
+        const triggerObserverCleanup = (() => {
+            if (typeof MutationObserver !== 'function') {
+                return () => {};
+            }
+
+            const observer = new MutationObserver(() => {
+                getTriggerLinks();
+            });
+
+            observer.observe(contentArea, { childList: true, subtree: true });
+
+            return () => observer.disconnect();
+        })();
+
+        getTriggerLinks();
+
+        window.addEventListener('beforeunload', triggerObserverCleanup);
 
         debug.onForceOpen(() => {
             debug.log(mga__( "Clic sur 'Forcer l'ouverture'.", 'lightbox-jlg' ));
@@ -371,6 +394,8 @@
                     debug.log(mga__( "URL haute résolution introuvable pour le lien cliqué.", 'lightbox-jlg' ));
                     return;
                 }
+
+                const triggerLinks = getTriggerLinks();
 
                 const galleryData = triggerLinks.map(link => {
                     const innerImg = link.querySelector('img');
