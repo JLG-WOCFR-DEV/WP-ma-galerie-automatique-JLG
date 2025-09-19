@@ -426,7 +426,6 @@
 
                 if (startIndex !== -1) {
                     e.preventDefault();
-                    e.stopPropagation();
                     lastFocusedElementBeforeViewer = document.activeElement;
                     openViewer(galleryData, startIndex);
                 } else {
@@ -434,7 +433,7 @@
                     debug.log(mgaSprintf(mga__( 'URL cliquée recherchée : %s', 'lightbox-jlg' ), clickedHighResUrl), true);
                 }
             }
-        }, true);
+        });
 
         function openViewer(images, startIndex) {
             debug.log(mgaSprintf(mga__( 'openViewer appelé avec %1$d images, index %2$d.', 'lightbox-jlg' ), images.length, startIndex));
