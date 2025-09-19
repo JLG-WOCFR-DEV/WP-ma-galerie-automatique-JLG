@@ -40,9 +40,27 @@
         panel.style.cssText = 'position: fixed; bottom: 10px; right: 10px; background: #23282d; color: #fff; border: 2px solid #0073aa; padding: 15px; font-family: monospace; font-size: 12px; z-index: 999999; max-width: 450px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);';
         panel.innerHTML = `
             <h4 style="margin: 0 0 10px; padding: 0 0 10px; border-bottom: 1px solid #444; font-size: 14px;">${mga__( 'Debug MGA Performance', 'lightbox-jlg' )}</h4>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                <div><strong>${mga__( 'Chronomètre réel :', 'lightbox-jlg' )}</strong><div id="mga-debug-realtime" style="font-size: 16px; color: #4CAF50;">${mgaSprintf( mga__( '%ss', 'lightbox-jlg' ), '0.00' )}</div></div>
-                <div><strong>${mga__( 'Timer Autoplay :', 'lightbox-jlg' )}</strong><div id="mga-debug-autoplay-time" style="font-size: 16px; color: #FFC107;">${mga__( 'N/A', 'lightbox-jlg' )}</div></div>
+            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px;">
+                <div style="background: #1c1f23; padding: 6px 8px; border-radius: 4px; grid-column: 1 / -1;">
+                    <strong style="display: block; margin-bottom: 4px; color: #ccc;">${mga__( 'Statut :', 'lightbox-jlg' )}</strong>
+                    <div id="mga-debug-status" style="font-size: 14px; color: #4CAF50;">${mga__( 'Inconnu', 'lightbox-jlg' )}</div>
+                </div>
+                <div style="background: #1c1f23; padding: 6px 8px; border-radius: 4px;">
+                    <strong style="display: block; margin-bottom: 4px; color: #ccc;">${mga__( 'Chronomètre réel :', 'lightbox-jlg' )}</strong>
+                    <div id="mga-debug-realtime" style="font-size: 16px; color: #4CAF50;">${mgaSprintf( mga__( '%ss', 'lightbox-jlg' ), '0.00' )}</div>
+                </div>
+                <div style="background: #1c1f23; padding: 6px 8px; border-radius: 4px;">
+                    <strong style="display: block; margin-bottom: 4px; color: #ccc;">${mga__( 'Timer Autoplay :', 'lightbox-jlg' )}</strong>
+                    <div id="mga-debug-autoplay-time" style="font-size: 16px; color: #FFC107;">${mga__( 'N/A', 'lightbox-jlg' )}</div>
+                </div>
+                <div style="background: #1c1f23; padding: 6px 8px; border-radius: 4px;">
+                    <strong style="display: block; margin-bottom: 4px; color: #ccc;">${mga__( 'Zone de contenu :', 'lightbox-jlg' )}</strong>
+                    <div id="mga-debug-content-area" style="font-size: 13px; color: #03A9F4; word-break: break-all;">${mga__( 'N/A', 'lightbox-jlg' )}</div>
+                </div>
+                <div style="background: #1c1f23; padding: 6px 8px; border-radius: 4px;">
+                    <strong style="display: block; margin-bottom: 4px; color: #ccc;">${mga__( 'Images déclencheuses :', 'lightbox-jlg' )}</strong>
+                    <div id="mga-debug-trigger-img" style="font-size: 14px; color: #FFC107;">${mga__( '0', 'lightbox-jlg' )}</div>
+                </div>
             </div>
             <button id="mga-force-open" style="background: #0073aa; color: white; border: none; padding: 8px 12px; cursor: pointer; margin-top: 10px; width: 100%;">${mga__( "Forcer l'ouverture (Test)", 'lightbox-jlg' )}</button>
             <div id="mga-log-container" style="margin-top: 15px; max-height: 200px; overflow-y: auto; background: #111; padding: 5px;">
