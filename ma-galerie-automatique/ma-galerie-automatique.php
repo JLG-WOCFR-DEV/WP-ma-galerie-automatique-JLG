@@ -80,17 +80,17 @@ function mga_enqueue_assets() {
     $cdn_swiper_css = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.css';
     $cdn_swiper_js  = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.js';
 
-    $swiper_css = apply_filters(
-        'mga_swiper_css',
-        file_exists( $local_swiper_css_path ) ? $local_swiper_css_url : $cdn_swiper_css,
-        $swiper_version
-    );
+    $swiper_css = $local_swiper_css_url;
+    if ( ! file_exists( $local_swiper_css_path ) ) {
+        $swiper_css = $cdn_swiper_css;
+    }
+    $swiper_css = apply_filters( 'mga_swiper_css', $swiper_css, $swiper_version );
 
-    $swiper_js = apply_filters(
-        'mga_swiper_js',
-        file_exists( $local_swiper_js_path ) ? $local_swiper_js_url : $cdn_swiper_js,
-        $swiper_version
-    );
+    $swiper_js = $local_swiper_js_url;
+    if ( ! file_exists( $local_swiper_js_path ) ) {
+        $swiper_js = $cdn_swiper_js;
+    }
+    $swiper_js = apply_filters( 'mga_swiper_js', $swiper_js, $swiper_version );
 
     wp_enqueue_style( 'swiper-css', $swiper_css, [], $swiper_version );
     wp_enqueue_script( 'swiper-js', $swiper_js, [], $swiper_version, true );
