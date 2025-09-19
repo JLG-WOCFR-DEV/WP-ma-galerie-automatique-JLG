@@ -210,7 +210,7 @@ function mga_should_enqueue_assets( $post ) {
         $content = $post->post_content;
 
         if ( ! empty( $content ) ) {
-            $linked_image_pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>\\s*)?<img\\b[^>]*>#is';
+            $linked_image_pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
 
             if ( preg_match( $linked_image_pattern, $content ) ) {
                 $has_linked_images = true;
@@ -372,7 +372,7 @@ function mga_post_has_eligible_images( $post = null ) {
         return false;
     }
 
-    $pattern = '#<a\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\s*<img\b[^>]*>#is';
+    $pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
 
     if ( preg_match( $pattern, $content ) ) {
         return true;
