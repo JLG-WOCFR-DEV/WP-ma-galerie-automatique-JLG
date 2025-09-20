@@ -394,8 +394,29 @@
         });
 
         contentArea.addEventListener('click', function (e) {
+            if (e.defaultPrevented) {
+                return;
+            }
+
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+                return;
+            }
+
             const targetLink = e.target.closest('a');
-            if (targetLink && targetLink.querySelector('img')) {
+            if (!targetLink) {
+                return;
+            }
+
+            const linkTarget = targetLink.getAttribute('target');
+            if (typeof linkTarget === 'string' && linkTarget.toLowerCase() === '_blank') {
+                return;
+            }
+
+            if (targetLink.hasAttribute('download')) {
+                return;
+            }
+
+            if (targetLink.querySelector('img')) {
                 debug.log(mga__( 'Clic sur un lien contenant une image.', 'lightbox-jlg' ));
 
                 const clickedHighResUrl = getHighResUrl(targetLink);
