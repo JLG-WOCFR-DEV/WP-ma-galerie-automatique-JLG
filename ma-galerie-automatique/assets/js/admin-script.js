@@ -28,9 +28,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Live update for range sliders
     const thumbSizeSlider = document.getElementById('mga_thumb_size');
     const thumbSizeValue = document.getElementById('mga_thumb_size_value');
-    if (thumbSizeSlider) {
+    const thumbSizeMobileSlider = document.getElementById('mga_thumb_size_mobile');
+    const thumbSizeMobileValue = document.getElementById('mga_thumb_size_mobile_value');
+    if (thumbSizeSlider && thumbSizeValue) {
         thumbSizeSlider.addEventListener('input', () => {
             thumbSizeValue.textContent = mgaAdminSprintf(mgaAdmin__('%spx', 'lightbox-jlg'), thumbSizeSlider.value);
+        });
+    }
+    if (thumbSizeMobileSlider && thumbSizeMobileValue) {
+        thumbSizeMobileSlider.addEventListener('input', () => {
+            thumbSizeMobileValue.textContent = mgaAdminSprintf(mgaAdmin__('%spx', 'lightbox-jlg'), thumbSizeMobileSlider.value);
         });
     }
 
