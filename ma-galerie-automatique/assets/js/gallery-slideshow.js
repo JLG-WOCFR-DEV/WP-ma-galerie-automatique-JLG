@@ -258,6 +258,48 @@
             return firstEntry ? firstEntry.value : null;
         }
 
+        function sanitizeThumbnailUrl(candidate) {
+            if (typeof candidate !== 'string') {
+                return '';
+            }
+
+            const trimmed = candidate.trim();
+            if (!trimmed) {
+                return '';
+            }
+
+            if (/^(?:about:|javascript:)/i.test(trimmed)) {
+                return '';
+            }
+
+            if (/^(?:data:|blob:)/i.test(trimmed)) {
+                return '';
+            }
+
+            return trimmed;
+        }
+
+        function resolveThumbnailUrl(innerImg) {
+            if (!innerImg) {
+                return '';
+            }
+
+            const preferredSources = [
+                typeof innerImg.currentSrc === 'string' ? innerImg.currentSrc : '',
+                typeof innerImg.src === 'string' ? innerImg.src : '',
+            ];
+
+            for (const source of preferredSources) {
+                const sanitized = sanitizeThumbnailUrl(source);
+                if (sanitized) {
+                    return sanitized;
+                }
+            }
+
+            const dataAttributeUrl = getImageDataAttributes(innerImg, { excludeLarge: true });
+            return sanitizeThumbnailUrl(dataAttributeUrl);
+        }
+
         function parseSrcset(innerImg) {
             if (!innerImg || !innerImg.srcset) {
                 return null;
@@ -475,18 +517,7 @@
                     const highResUrl = getHighResUrl(link);
                     if (!highResUrl) return null;
 
-                    let thumbUrl = '';
-                    const currentSrc = typeof innerImg.currentSrc === 'string' ? innerImg.currentSrc.trim() : '';
-                    const fallbackSrc = typeof innerImg.src === 'string' ? innerImg.src.trim() : '';
-
-                    if (currentSrc) {
-                        thumbUrl = currentSrc;
-                    } else if (fallbackSrc) {
-                        thumbUrl = fallbackSrc;
-                    } else {
-                        const dataAttributeUrl = getImageDataAttributes(innerImg, { excludeLarge: true });
-                        thumbUrl = dataAttributeUrl ? dataAttributeUrl.trim() : '';
-                    }
+                    const thumbUrl = resolveThumbnailUrl(innerImg);
 
                     if (!thumbUrl) {
                         return null;
