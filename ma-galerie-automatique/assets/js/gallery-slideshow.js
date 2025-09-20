@@ -434,7 +434,14 @@
                     const highResUrl = getHighResUrl(link);
                     if (!highResUrl) return null;
 
-                    const thumbUrl = innerImg.src;
+                    let thumbUrl = getImageDataAttributes(innerImg);
+                    if (!thumbUrl && innerImg.currentSrc) {
+                        thumbUrl = innerImg.currentSrc;
+                    }
+                    if (!thumbUrl && innerImg.src) {
+                        thumbUrl = innerImg.src;
+                    }
+                    if (!thumbUrl) return null;
 
                     let caption = '';
                     const figure = link.closest('figure');
