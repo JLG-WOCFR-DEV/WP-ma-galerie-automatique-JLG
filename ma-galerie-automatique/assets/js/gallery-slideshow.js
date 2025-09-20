@@ -434,7 +434,16 @@
                     const highResUrl = getHighResUrl(link);
                     if (!highResUrl) return null;
 
-                    const thumbUrl = innerImg.src;
+                    let thumbUrl = getImageDataAttributes(innerImg);
+                    if (typeof thumbUrl === 'string') {
+                        thumbUrl = thumbUrl.trim();
+                    }
+                    if (!thumbUrl) {
+                        thumbUrl = innerImg.currentSrc || innerImg.src || '';
+                    }
+                    if (!thumbUrl) {
+                        return null;
+                    }
 
                     let caption = '';
                     const figure = link.closest('figure');
