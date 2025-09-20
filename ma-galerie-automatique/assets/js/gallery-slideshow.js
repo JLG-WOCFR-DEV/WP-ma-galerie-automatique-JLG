@@ -25,6 +25,7 @@
             updateInfo: noop,
             onForceOpen: noop,
             stopTimer: noop,
+            restartTimer: noop,
             table: noop,
         };
         let mainSwiper = null;
@@ -523,6 +524,9 @@
 
         function openViewer(images, startIndex) {
             debug.log(mgaSprintf(mga__( 'openViewer appelé avec %1$d images, index %2$d.', 'lightbox-jlg' ), images.length, startIndex));
+            if (debug && typeof debug.restartTimer === 'function') {
+                debug.restartTimer();
+            }
             const viewer = getViewer();
             if (!viewer) return;
 

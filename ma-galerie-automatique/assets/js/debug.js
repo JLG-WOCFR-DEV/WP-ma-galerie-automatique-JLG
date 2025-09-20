@@ -100,6 +100,10 @@
         }, 100);
     }
 
+    function restartTimer() {
+        startTimer();
+    }
+
     function stopTimer() {
         if (state.timerInterval) {
             clearInterval(state.timerInterval);
@@ -195,6 +199,7 @@
         updateInfo,
         onForceOpen,
         stopTimer,
+        restartTimer,
         table,
     };
 })(window);
