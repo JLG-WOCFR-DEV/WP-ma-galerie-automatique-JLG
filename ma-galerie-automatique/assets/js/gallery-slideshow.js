@@ -356,9 +356,13 @@
             return links;
         };
 
-        const triggerObserverCleanup = (() => {
+        const { cleanup: triggerObserverCleanup, active: hasActiveObserver } = (() => {
             if (typeof MutationObserver !== 'function') {
-                return () => {};
+                return { cleanup: noop, active: false };
+            }
+
+            if (!debug.enabled) {
+                return { cleanup: noop, active: false };
             }
 
             const observer = new MutationObserver(() => {
@@ -367,12 +371,17 @@
 
             observer.observe(contentArea, { childList: true, subtree: true });
 
-            return () => observer.disconnect();
+            return {
+                cleanup: () => observer.disconnect(),
+                active: true,
+            };
         })();
 
         getTriggerLinks();
 
-        window.addEventListener('beforeunload', triggerObserverCleanup);
+        if (hasActiveObserver) {
+            window.addEventListener('beforeunload', triggerObserverCleanup);
+        }
 
         debug.onForceOpen(() => {
             debug.log(mga__( "Clic sur 'Forcer l'ouverture'.", 'lightbox-jlg' ));
