@@ -225,13 +225,52 @@ function mga_should_enqueue_assets( $post ) {
  *
  * @return bool
  */
-function mga_blocks_contain_linked_media( array $blocks, array $allowed_block_names ) {
+function mga_blocks_contain_linked_media( array $blocks, array $allowed_block_names, &$visited_block_ids = null ) {
+    if ( ! is_array( $visited_block_ids ) ) {
+        $visited_block_ids = [];
+    }
+
     foreach ( $blocks as $block ) {
         if ( ! is_array( $block ) ) {
             continue;
         }
 
         $block_name = isset( $block['blockName'] ) ? $block['blockName'] : null;
+
+        if ( 'core/block' === $block_name ) {
+            $attrs = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [];
+            $ref   = isset( $attrs['ref'] ) ? absint( $attrs['ref'] ) : 0;
+
+            if ( $ref && ! in_array( $ref, $visited_block_ids, true ) ) {
+                $visited_block_ids[] = $ref;
+
+                $reusable_block = get_post( $ref );
+
+                if (
+                    $reusable_block instanceof WP_Post
+                    && 'wp_block' === $reusable_block->post_type
+                    && ! empty( $reusable_block->post_content )
+                ) {
+                    $parsed_reusable_blocks = [];
+
+                    if ( function_exists( 'parse_blocks' ) ) {
+                        $parsed_reusable_blocks = parse_blocks( $reusable_block->post_content );
+                    } elseif ( class_exists( 'WP_Block_Parser' ) ) {
+                        $parser = new WP_Block_Parser();
+                        $parsed_reusable_blocks = $parser->parse( $reusable_block->post_content );
+                    }
+
+                    if (
+                        ! empty( $parsed_reusable_blocks )
+                        && mga_blocks_contain_linked_media( $parsed_reusable_blocks, $allowed_block_names, $visited_block_ids )
+                    ) {
+                        return true;
+                    }
+                }
+            }
+
+            continue;
+        }
 
         if ( $block_name && in_array( $block_name, $allowed_block_names, true ) ) {
             $attrs = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [];
@@ -242,7 +281,7 @@ function mga_blocks_contain_linked_media( array $blocks, array $allowed_block_na
         }
 
         if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
-            if ( mga_blocks_contain_linked_media( $block['innerBlocks'], $allowed_block_names ) ) {
+            if ( mga_blocks_contain_linked_media( $block['innerBlocks'], $allowed_block_names, $visited_block_ids ) ) {
                 return true;
             }
         }
