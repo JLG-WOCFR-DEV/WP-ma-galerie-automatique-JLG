@@ -299,7 +299,7 @@
             if (!viewer) {
                 debug.log(mga__( 'Viewer non trouvé. Création à la volée...', 'lightbox-jlg' ));
                 const viewerHTML = `
-                    <div id="mga-viewer" class="mga-viewer" style="display: none;" role="dialog" aria-modal="true">
+                    <div id="mga-viewer" class="mga-viewer" style="display: none;" role="dialog" aria-modal="true" aria-label="${mga__( 'Visionneuse d’images', 'lightbox-jlg' )}">
                         <div class="mga-echo-bg"></div>
                         
                         <div class="mga-header">
