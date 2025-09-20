@@ -191,9 +191,12 @@
             return false;
         }
 
-        function getImageDataAttributes(innerImg) {
+        function getImageDataAttributes(innerImg, options = {}) {
             if (!innerImg) return null;
-            const attributes = [
+
+            const { excludeLarge = false } = options;
+
+            const attributePriority = [
                 'data-mga-highres',
                 'data-full-url',
                 'data-large-file',
@@ -201,21 +204,58 @@
                 'data-src',
                 'data-lazy-src'
             ];
-            for (const attr of attributes) {
+            const datasetToAttributesMap = {
+                mgaHighres: 'data-mga-highres',
+                fullUrl: 'data-full-url',
+                largeFile: 'data-large-file',
+                origFile: 'data-orig-file',
+                src: 'data-src',
+                lazySrc: 'data-lazy-src'
+            };
+            const collected = [];
+
+            for (const attr of attributePriority) {
                 const value = innerImg.getAttribute(attr);
                 if (value) {
-                    return value;
+                    collected.push({ key: attr, value: value.trim() });
                 }
             }
+
             if (innerImg.dataset) {
-                const datasetCandidates = ['mgaHighres', 'fullUrl', 'largeFile', 'origFile', 'src', 'lazySrc'];
-                for (const candidate of datasetCandidates) {
-                    if (innerImg.dataset[candidate]) {
-                        return innerImg.dataset[candidate];
+                for (const [datasetKey, attributeName] of Object.entries(datasetToAttributesMap)) {
+                    const datasetValue = innerImg.dataset[datasetKey];
+                    if (datasetValue && !collected.some(item => item.key === attributeName)) {
+                        collected.push({ key: attributeName, value: datasetValue.trim() });
                     }
                 }
             }
-            return null;
+
+            if (!collected.length) {
+                return null;
+            }
+
+            if (excludeLarge) {
+                const largeKeys = new Set(['data-full-url', 'data-large-file', 'data-orig-file']);
+                const lightweightPreference = ['data-src', 'data-lazy-src', 'data-mga-highres'];
+                const hasLightweightAlternative = collected.some(item => !largeKeys.has(item.key));
+
+                if (hasLightweightAlternative) {
+                    for (const preferredKey of lightweightPreference) {
+                        const candidate = collected.find(item => item.key === preferredKey && item.value);
+                        if (candidate) {
+                            return candidate.value;
+                        }
+                    }
+
+                    const fallbackCandidate = collected.find(item => !largeKeys.has(item.key) && item.value);
+                    if (fallbackCandidate) {
+                        return fallbackCandidate.value;
+                    }
+                }
+            }
+
+            const firstEntry = collected.find(item => item.value);
+            return firstEntry ? firstEntry.value : null;
         }
 
         function parseSrcset(innerImg) {
@@ -435,9 +475,18 @@
                     const highResUrl = getHighResUrl(link);
                     if (!highResUrl) return null;
 
-                    const dataAttributeUrl = getImageDataAttributes(innerImg);
-                    const thumbUrlCandidate = dataAttributeUrl || innerImg.currentSrc || innerImg.src || '';
-                    const thumbUrl = thumbUrlCandidate ? thumbUrlCandidate.trim() : '';
+                    let thumbUrl = '';
+                    const currentSrc = typeof innerImg.currentSrc === 'string' ? innerImg.currentSrc.trim() : '';
+                    const fallbackSrc = typeof innerImg.src === 'string' ? innerImg.src.trim() : '';
+
+                    if (currentSrc) {
+                        thumbUrl = currentSrc;
+                    } else if (fallbackSrc) {
+                        thumbUrl = fallbackSrc;
+                    } else {
+                        const dataAttributeUrl = getImageDataAttributes(innerImg, { excludeLarge: true });
+                        thumbUrl = dataAttributeUrl ? dataAttributeUrl.trim() : '';
+                    }
 
                     if (!thumbUrl) {
                         return null;
