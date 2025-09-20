@@ -280,6 +280,30 @@
             return trimmed;
         }
 
+        function sanitizeHighResUrl(candidate) {
+            if (typeof candidate !== 'string') {
+                return '';
+            }
+
+            const trimmed = candidate.trim();
+            if (!trimmed) {
+                return '';
+            }
+
+            if (/^\/\//.test(trimmed)) {
+                return '';
+            }
+
+            if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+                if (!/^https?:/i.test(trimmed)) {
+                    return '';
+                }
+                return trimmed;
+            }
+
+            return trimmed;
+        }
+
         function resolveThumbnailUrl(innerImg) {
             if (!innerImg) {
                 return '';
@@ -338,15 +362,19 @@
             if (!linkElement) return null;
 
             if (linkElement.dataset && linkElement.dataset.mgaHighres) {
-                return linkElement.dataset.mgaHighres;
+                const sanitizedDatasetUrl = sanitizeHighResUrl(linkElement.dataset.mgaHighres);
+                if (sanitizedDatasetUrl) {
+                    return sanitizedDatasetUrl;
+                }
             }
 
             const innerImg = linkElement.querySelector('img');
             if (!innerImg) return null;
 
             const dataAttrUrl = getImageDataAttributes(innerImg);
-            if (dataAttrUrl) {
-                return dataAttrUrl;
+            const sanitizedDataAttrUrl = sanitizeHighResUrl(dataAttrUrl);
+            if (sanitizedDataAttrUrl) {
+                return sanitizedDataAttrUrl;
             }
 
             const href = linkElement.getAttribute('href') || '';
@@ -357,21 +385,26 @@
                 return null;
             }
 
-            const srcsetUrl = parseSrcset(innerImg);
+            const srcsetUrl = sanitizeHighResUrl(parseSrcset(innerImg));
             if (srcsetUrl) {
                 return srcsetUrl;
             }
 
-            if (innerImg.currentSrc) {
-                return innerImg.currentSrc;
+            const currentSrc = sanitizeHighResUrl(innerImg.currentSrc);
+            if (currentSrc) {
+                return currentSrc;
             }
 
-            if (innerImg.src) {
-                return innerImg.src;
+            const fallbackSrc = sanitizeHighResUrl(innerImg.src);
+            if (fallbackSrc) {
+                return fallbackSrc;
             }
 
             if (isMediaHref) {
-                return href;
+                const sanitizedHref = sanitizeHighResUrl(href);
+                if (sanitizedHref) {
+                    return sanitizedHref;
+                }
             }
 
             return null;
