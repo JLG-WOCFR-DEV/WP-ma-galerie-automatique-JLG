@@ -195,6 +195,7 @@
         updateInfo,
         onForceOpen,
         stopTimer,
+        restartTimer: startTimer,
         table,
     };
 })(window);
