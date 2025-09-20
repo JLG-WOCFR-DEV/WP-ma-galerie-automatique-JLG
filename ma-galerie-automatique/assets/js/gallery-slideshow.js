@@ -14,7 +14,7 @@
             });
         };
 
-    document.addEventListener('DOMContentLoaded', function() {
+    function initGalleryViewer() {
         const settings = window.mga_settings || {};
         const IMAGE_FILE_PATTERN = /\.(jpe?g|png|gif|bmp|webp|avif|svg)(?:\?.*)?(?:#.*)?$/i;
         const noop = () => {};
@@ -992,5 +992,11 @@
                 }
             }, 250);
         }
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initGalleryViewer);
+    } else {
+        initGalleryViewer();
+    }
 })();
