@@ -553,17 +553,24 @@
 
                 const triggerLinks = getTriggerLinks();
 
-                const galleryData = triggerLinks.map(link => {
+                const clickedTriggerIndex = triggerLinks.indexOf(targetLink);
+                if (clickedTriggerIndex === -1) {
+                    debug.log(mga__( "ERREUR : Lien déclencheur introuvable dans la collection actuelle.", 'lightbox-jlg' ), true);
+                    return;
+                }
+
+                const galleryData = [];
+                triggerLinks.forEach((link, index) => {
                     const innerImg = link.querySelector('img');
-                    if (!innerImg) return null;
+                    if (!innerImg) return;
 
                     const highResUrl = getHighResUrl(link);
-                    if (!highResUrl) return null;
+                    if (!highResUrl) return;
 
                     const thumbUrl = resolveThumbnailUrl(innerImg);
 
                     if (!thumbUrl) {
-                        return null;
+                        return;
                     }
 
                     let caption = '';
@@ -576,13 +583,13 @@
                         caption = innerImg.alt || '';
                     }
 
-                    return { highResUrl, thumbUrl, caption };
-                }).filter(Boolean);
+                    galleryData.push({ highResUrl, thumbUrl, caption, triggerIndex: index });
+                });
 
                 debug.log(mgaSprintf(mga__( '%d images valides préparées pour la galerie.', 'lightbox-jlg' ), galleryData.length));
                 debug.table(galleryData);
 
-                const startIndex = galleryData.findIndex(img => img.highResUrl === clickedHighResUrl);
+                const startIndex = galleryData.findIndex(img => img.triggerIndex === clickedTriggerIndex);
 
                 if (startIndex !== -1) {
                     e.preventDefault();
