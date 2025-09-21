@@ -808,7 +808,7 @@
             const mainSwiperConfig = {
                 zoom: true,
                 spaceBetween: 10,
-                loop: !!settings.loop && images.length > 2,
+                loop: !!settings.loop,
                 navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
                 autoplay: {
                     delay: parseInt(settings.delay, 10) * 1000 || 4000,
