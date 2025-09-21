@@ -515,8 +515,12 @@
                 { highResUrl: 'https://placehold.co/800x600/0073aa/ffffff?text=Image+Test+1', thumbUrl: 'https://placehold.co/150x150/0073aa/ffffff?text=Thumb+1', caption: mga__( 'Ceci est la première image de test.', 'lightbox-jlg' ) },
                 { highResUrl: 'https://placehold.co/800x600/F44336/ffffff?text=Image+Test+2', thumbUrl: 'https://placehold.co/150x150/F44336/ffffff?text=Thumb+2', caption: mga__( 'Ceci est la seconde image de test.', 'lightbox-jlg' ) }
             ];
-            lastFocusedElementBeforeViewer = document.activeElement;
-            openViewer(testImages, 0);
+            const previouslyFocusedElement = document.activeElement;
+            lastFocusedElementBeforeViewer = previouslyFocusedElement;
+            const viewerOpened = openViewer(testImages, 0);
+            if (!viewerOpened) {
+                lastFocusedElementBeforeViewer = null;
+            }
         });
 
         contentArea.addEventListener('click', function (e) {
@@ -592,9 +596,14 @@
                 const startIndex = galleryData.findIndex(img => img.triggerIndex === clickedTriggerIndex);
 
                 if (startIndex !== -1) {
-                    e.preventDefault();
-                    lastFocusedElementBeforeViewer = document.activeElement;
-                    openViewer(galleryData, startIndex);
+                    const previouslyFocusedElement = document.activeElement;
+                    lastFocusedElementBeforeViewer = previouslyFocusedElement;
+                    const viewerOpened = openViewer(galleryData, startIndex);
+                    if (viewerOpened) {
+                        e.preventDefault();
+                    } else {
+                        lastFocusedElementBeforeViewer = null;
+                    }
                 } else {
                     debug.log(mga__( "ERREUR : L'image cliquée n'a pas été trouvée dans la galerie construite.", 'lightbox-jlg' ), true);
                     debug.log(mgaSprintf(mga__( 'URL cliquée recherchée : %s', 'lightbox-jlg' ), clickedHighResUrl), true);
@@ -608,12 +617,12 @@
                 debug.restartTimer();
             }
             const viewer = getViewer();
-            if (!viewer) return;
+            if (!viewer) return false;
 
             viewer.className = 'mga-viewer';
             if (settings.background_style === 'blur') viewer.classList.add('mga-has-blur');
             if (settings.background_style === 'texture') viewer.classList.add('mga-has-texture');
-            
+
             try {
                 if (mainSwiper) {
                     mainSwiper.destroy(true, true);
@@ -674,7 +683,7 @@
                         console.error(cancelMessage);
                     }
                     viewer.style.display = 'none';
-                    return;
+                    return false;
                 }
 
                 if (typeof mainSwiper.slideToLoop === 'function') {
@@ -704,9 +713,12 @@
                     window.addEventListener('resize', handleResize);
                     isResizeListenerAttached = true;
                 }
+                return true;
             } catch (error) {
                 debug.log(mgaSprintf(mga__( 'ERREUR dans openViewer : %s', 'lightbox-jlg' ), error.message), true);
                 console.error(error);
+                viewer.style.display = 'none';
+                return false;
             }
         }
 
