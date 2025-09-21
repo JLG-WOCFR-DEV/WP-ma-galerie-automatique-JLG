@@ -368,7 +368,11 @@
         function getHighResUrl(linkElement) {
             if (!linkElement) return null;
 
-            if (linkElement.dataset && linkElement.dataset.mgaHighres) {
+            const href = linkElement.getAttribute('href') || '';
+            const isMediaHref = IMAGE_FILE_PATTERN.test(href);
+            const fallbackAllowed = isMediaHref || isExplicitFallbackAllowed(linkElement);
+
+            if (fallbackAllowed && linkElement.dataset && linkElement.dataset.mgaHighres) {
                 const sanitizedDatasetUrl = sanitizeHighResUrl(linkElement.dataset.mgaHighres);
                 if (sanitizedDatasetUrl) {
                     return sanitizedDatasetUrl;
@@ -378,15 +382,13 @@
             const innerImg = linkElement.querySelector('img');
             if (!innerImg) return null;
 
-            const dataAttrUrl = getImageDataAttributes(innerImg);
-            const sanitizedDataAttrUrl = sanitizeHighResUrl(dataAttrUrl);
-            if (sanitizedDataAttrUrl) {
-                return sanitizedDataAttrUrl;
+            if (fallbackAllowed) {
+                const dataAttrUrl = getImageDataAttributes(innerImg);
+                const sanitizedDataAttrUrl = sanitizeHighResUrl(dataAttrUrl);
+                if (sanitizedDataAttrUrl) {
+                    return sanitizedDataAttrUrl;
+                }
             }
-
-            const href = linkElement.getAttribute('href') || '';
-            const isMediaHref = IMAGE_FILE_PATTERN.test(href);
-            const fallbackAllowed = isMediaHref || isExplicitFallbackAllowed(linkElement);
 
             if (!fallbackAllowed) {
                 return null;
