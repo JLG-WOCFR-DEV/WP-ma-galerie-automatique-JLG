@@ -291,7 +291,14 @@
             }
 
             if (/^\/\//.test(trimmed)) {
-                return '';
+                const location = typeof window !== 'undefined' ? window.location : null;
+                const protocol = location && typeof location.protocol === 'string'
+                    ? location.protocol.toLowerCase()
+                    : '';
+                if (protocol === 'http:' || protocol === 'https:') {
+                    return `${protocol}${trimmed}`;
+                }
+                return `https:${trimmed}`;
             }
 
             if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
