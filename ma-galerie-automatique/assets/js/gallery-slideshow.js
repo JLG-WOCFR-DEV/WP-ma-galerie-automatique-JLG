@@ -423,35 +423,181 @@
             let viewer = document.getElementById('mga-viewer');
             if (!viewer) {
                 debug.log(mga__( 'Viewer non trouvé. Création à la volée...', 'lightbox-jlg' ));
-                const viewerHTML = `
-                    <div id="mga-viewer" class="mga-viewer" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="mga-viewer-title">
-                        <span id="mga-viewer-title" class="mga-screen-reader-text">${mga__( 'Visionneuse d’images', 'lightbox-jlg' )}</span>
-                        <div class="mga-echo-bg"></div>
-                        
-                        <div class="mga-header">
-                            <div id="mga-counter" class="mga-counter"></div>
-                            <div class="mga-caption-container"><p id="mga-caption" class="mga-caption"></p></div>
-                            <div class="mga-toolbar">
-                                <button id="mga-play-pause" class="mga-toolbar-button" aria-label="${mga__( 'Play/Pause', 'lightbox-jlg' )}">
-                                    <svg class="mga-timer-svg" viewBox="0 0 36 36"><path class="mga-timer-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /><path class="mga-timer-progress" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /></svg>
-                                    <svg class="mga-icon mga-play-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                                    <svg class="mga-icon mga-pause-icon" style="display:none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                                </button>
-                                <button id="mga-zoom" class="mga-toolbar-button" aria-label="${mga__( 'Zoom', 'lightbox-jlg' )}"><svg class="mga-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/><path d="M10 9h-1v-1H8v1H7v1h1v1h1v-1h1V9z"/></svg></button>
-                                <button id="mga-fullscreen" class="mga-toolbar-button" aria-label="${mga__( 'Plein écran', 'lightbox-jlg' )}"><svg class="mga-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5V14h-2v3zM14 5v2h3v3h2V5h-5z"/></svg></button>
-                                <button id="mga-close" class="mga-toolbar-button" aria-label="${mga__( 'Fermer', 'lightbox-jlg' )}"><svg class="mga-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
-                            </div>
-                        </div>
 
-                        <div class="swiper mga-main-swiper"><div class="swiper-wrapper" id="mga-main-wrapper"></div><div class="swiper-button-next"></div><div class="swiper-button-prev"></div></div>
-                        <div class="swiper mga-thumbs-swiper"><div class="swiper-wrapper" id="mga-thumbs-wrapper"></div></div>
-                    </div>`;
-                document.body.insertAdjacentHTML('beforeend', viewerHTML);
-                viewer = document.getElementById('mga-viewer');
-                if (viewer) {
-                    viewer.setAttribute('tabindex', '-1');
+                const SVG_NS = 'http://www.w3.org/2000/svg';
+                const createSvgElement = (tag, attributes = {}) => {
+                    const element = document.createElementNS(SVG_NS, tag);
+                    Object.keys(attributes).forEach(attr => {
+                        element.setAttribute(attr, attributes[attr]);
+                    });
+                    return element;
+                };
+
+                viewer = document.createElement('div');
+                viewer.id = 'mga-viewer';
+                viewer.className = 'mga-viewer';
+                viewer.style.display = 'none';
+                viewer.setAttribute('role', 'dialog');
+                viewer.setAttribute('aria-modal', 'true');
+                viewer.setAttribute('aria-labelledby', 'mga-viewer-title');
+                viewer.setAttribute('tabindex', '-1');
+
+                const viewerTitle = document.createElement('span');
+                viewerTitle.id = 'mga-viewer-title';
+                viewerTitle.className = 'mga-screen-reader-text';
+                viewerTitle.textContent = mga__( 'Visionneuse d’images', 'lightbox-jlg' );
+                viewer.appendChild(viewerTitle);
+
+                const echoBg = document.createElement('div');
+                echoBg.className = 'mga-echo-bg';
+                viewer.appendChild(echoBg);
+
+                const header = document.createElement('div');
+                header.className = 'mga-header';
+                viewer.appendChild(header);
+
+                const counter = document.createElement('div');
+                counter.id = 'mga-counter';
+                counter.className = 'mga-counter';
+                header.appendChild(counter);
+
+                const captionContainer = document.createElement('div');
+                captionContainer.className = 'mga-caption-container';
+                header.appendChild(captionContainer);
+
+                const caption = document.createElement('p');
+                caption.id = 'mga-caption';
+                caption.className = 'mga-caption';
+                captionContainer.appendChild(caption);
+
+                const toolbar = document.createElement('div');
+                toolbar.className = 'mga-toolbar';
+                header.appendChild(toolbar);
+
+                const playPauseButton = document.createElement('button');
+                playPauseButton.id = 'mga-play-pause';
+                playPauseButton.className = 'mga-toolbar-button';
+                playPauseButton.setAttribute('aria-label', mga__( 'Play/Pause', 'lightbox-jlg' ));
+                toolbar.appendChild(playPauseButton);
+
+                const timerSvg = createSvgElement('svg', { class: 'mga-timer-svg', viewBox: '0 0 36 36' });
+                const timerBgPath = createSvgElement('path', {
+                    class: 'mga-timer-bg',
+                    d: 'M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831',
+                });
+                const timerProgressPath = createSvgElement('path', {
+                    class: 'mga-timer-progress',
+                    d: 'M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831',
+                });
+                timerSvg.appendChild(timerBgPath);
+                timerSvg.appendChild(timerProgressPath);
+                playPauseButton.appendChild(timerSvg);
+
+                const playIcon = createSvgElement('svg', {
+                    class: 'mga-icon mga-play-icon',
+                    viewBox: '0 0 24 24',
+                    fill: 'currentColor',
+                });
+                const playPath = createSvgElement('path', { d: 'M8 5v14l11-7z' });
+                playIcon.appendChild(playPath);
+                playPauseButton.appendChild(playIcon);
+
+                const pauseIcon = createSvgElement('svg', {
+                    class: 'mga-icon mga-pause-icon',
+                    viewBox: '0 0 24 24',
+                    fill: 'currentColor',
+                });
+                pauseIcon.style.display = 'none';
+                const pausePath = createSvgElement('path', { d: 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' });
+                pauseIcon.appendChild(pausePath);
+                playPauseButton.appendChild(pauseIcon);
+
+                const zoomButton = document.createElement('button');
+                zoomButton.id = 'mga-zoom';
+                zoomButton.className = 'mga-toolbar-button';
+                zoomButton.setAttribute('aria-label', mga__( 'Zoom', 'lightbox-jlg' ));
+                toolbar.appendChild(zoomButton);
+
+                const zoomIcon = createSvgElement('svg', {
+                    class: 'mga-icon',
+                    viewBox: '0 0 24 24',
+                    fill: 'currentColor',
+                });
+                const zoomPrimaryPath = createSvgElement('path', {
+                    d: 'M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+                });
+                const zoomSecondaryPath = createSvgElement('path', {
+                    d: 'M10 9h-1v-1H8v1H7v1h1v1h1v-1h1V9z',
+                });
+                zoomIcon.appendChild(zoomPrimaryPath);
+                zoomIcon.appendChild(zoomSecondaryPath);
+                zoomButton.appendChild(zoomIcon);
+
+                const fullscreenButton = document.createElement('button');
+                fullscreenButton.id = 'mga-fullscreen';
+                fullscreenButton.className = 'mga-toolbar-button';
+                fullscreenButton.setAttribute('aria-label', mga__( 'Plein écran', 'lightbox-jlg' ));
+                toolbar.appendChild(fullscreenButton);
+
+                const fullscreenIcon = createSvgElement('svg', {
+                    class: 'mga-icon',
+                    viewBox: '0 0 24 24',
+                    fill: 'currentColor',
+                });
+                const fullscreenPath = createSvgElement('path', {
+                    d: 'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5V14h-2v3zM14 5v2h3v3h2V5h-5z',
+                });
+                fullscreenIcon.appendChild(fullscreenPath);
+                fullscreenButton.appendChild(fullscreenIcon);
+
+                const closeButton = document.createElement('button');
+                closeButton.id = 'mga-close';
+                closeButton.className = 'mga-toolbar-button';
+                closeButton.setAttribute('aria-label', mga__( 'Fermer', 'lightbox-jlg' ));
+                toolbar.appendChild(closeButton);
+
+                const closeIcon = createSvgElement('svg', {
+                    class: 'mga-icon',
+                    viewBox: '0 0 24 24',
+                    fill: 'currentColor',
+                });
+                const closePath = createSvgElement('path', {
+                    d: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+                });
+                closeIcon.appendChild(closePath);
+                closeButton.appendChild(closeIcon);
+
+                const mainSwiper = document.createElement('div');
+                mainSwiper.className = 'swiper mga-main-swiper';
+                viewer.appendChild(mainSwiper);
+
+                const mainWrapper = document.createElement('div');
+                mainWrapper.className = 'swiper-wrapper';
+                mainWrapper.id = 'mga-main-wrapper';
+                mainSwiper.appendChild(mainWrapper);
+
+                const nextButton = document.createElement('div');
+                nextButton.className = 'swiper-button-next';
+                mainSwiper.appendChild(nextButton);
+
+                const prevButton = document.createElement('div');
+                prevButton.className = 'swiper-button-prev';
+                mainSwiper.appendChild(prevButton);
+
+                const thumbsSwiper = document.createElement('div');
+                thumbsSwiper.className = 'swiper mga-thumbs-swiper';
+                viewer.appendChild(thumbsSwiper);
+
+                const thumbsWrapper = document.createElement('div');
+                thumbsWrapper.className = 'swiper-wrapper';
+                thumbsWrapper.id = 'mga-thumbs-wrapper';
+                thumbsSwiper.appendChild(thumbsWrapper);
+
+                if (document.body && typeof document.body.appendChild === 'function') {
+                    document.body.appendChild(viewer);
                 }
-                if (viewer) debug.log(mga__( 'Viewer créé et ajouté au body avec succès.', 'lightbox-jlg' ));
+
+                if (viewer && viewer.parentNode) debug.log(mga__( 'Viewer créé et ajouté au body avec succès.', 'lightbox-jlg' ));
                 else debug.log(mga__( 'ERREUR CRITIQUE : Échec de la création du viewer !', 'lightbox-jlg' ), true);
             }
             return viewer;
