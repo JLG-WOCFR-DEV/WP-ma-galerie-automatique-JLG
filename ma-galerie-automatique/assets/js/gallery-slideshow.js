@@ -607,9 +607,11 @@
         debug.log(mga__( 'Script initialisé et prêt.', 'lightbox-jlg' ));
         debug.updateInfo('mga-debug-status', mga__( 'Prêt', 'lightbox-jlg' ), '#4CAF50');
 
-        const contentSelectors = ['.wp-block-post-content', '.entry-content', '.post-content'];
-        let contentArea = document.body;
-        let foundSelector = mga__( '<body> (fallback)', 'lightbox-jlg' );
+        const defaultContentSelectors = ['.wp-block-post-content', '.entry-content', '.post-content'];
+        const configuredSelectors = Array.isArray(settings.contentSelectors) ? settings.contentSelectors : [];
+        const contentSelectors = configuredSelectors.concat(defaultContentSelectors).filter(Boolean);
+        let contentArea = null;
+        let foundSelector = mga__( 'Aucune zone détectée', 'lightbox-jlg' );
         for (const selector of contentSelectors) {
             const area = document.querySelector(selector);
             if (area) {
@@ -618,6 +620,18 @@
                 break;
             }
         }
+
+        if (!contentArea && settings.allowBodyFallback === true && document.body) {
+            contentArea = document.body;
+            foundSelector = mga__( '<body> (opt-in fallback)', 'lightbox-jlg' );
+        }
+
+        if (!contentArea) {
+            debug.updateInfo('mga-debug-content-area', foundSelector, '#F44336');
+            debug.log(mga__( 'Aucune zone de contenu valide détectée. Initialisation du diaporama interrompue.', 'lightbox-jlg' ), true);
+            return;
+        }
+
         debug.updateInfo('mga-debug-content-area', foundSelector, '#4CAF50');
         
         const getTriggerLinks = (shouldUpdateDebug = true) => {
