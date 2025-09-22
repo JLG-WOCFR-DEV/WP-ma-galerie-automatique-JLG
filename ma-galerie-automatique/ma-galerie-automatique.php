@@ -92,12 +92,12 @@ function mga_enqueue_assets() {
     }
     $swiper_js = apply_filters( 'mga_swiper_js', $swiper_js, $swiper_version );
 
-    wp_enqueue_style( 'swiper-css', $swiper_css, [], $swiper_version );
-    wp_enqueue_script( 'swiper-js', $swiper_js, [], $swiper_version, true );
+    wp_enqueue_style( 'mga-swiper-css', $swiper_css, [], $swiper_version );
+    wp_enqueue_script( 'mga-swiper-js', $swiper_js, [], $swiper_version, true );
 
     // Fichiers du plugin
     wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
-    $script_dependencies = [ 'swiper-js', 'wp-i18n' ];
+    $script_dependencies = [ 'mga-swiper-js', 'wp-i18n' ];
     if ( ! empty( $settings['debug_mode'] ) ) {
         $can_view_debug = apply_filters(
             'mga_user_can_view_debug',
