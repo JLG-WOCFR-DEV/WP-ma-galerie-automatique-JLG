@@ -371,6 +371,7 @@
             const href = linkElement.getAttribute('href') || '';
             const isMediaHref = IMAGE_FILE_PATTERN.test(href);
             const fallbackAllowed = isMediaHref || isExplicitFallbackAllowed(linkElement);
+            const sanitizedHref = isMediaHref ? sanitizeHighResUrl(href) : null;
 
             if (fallbackAllowed && linkElement.dataset && linkElement.dataset.mgaHighres) {
                 const sanitizedDatasetUrl = sanitizeHighResUrl(linkElement.dataset.mgaHighres);
@@ -399,6 +400,10 @@
                 return srcsetUrl;
             }
 
+            if (sanitizedHref) {
+                return sanitizedHref;
+            }
+
             const currentSrc = sanitizeHighResUrl(innerImg.currentSrc);
             if (currentSrc) {
                 return currentSrc;
@@ -407,13 +412,6 @@
             const fallbackSrc = sanitizeHighResUrl(innerImg.src);
             if (fallbackSrc) {
                 return fallbackSrc;
-            }
-
-            if (isMediaHref) {
-                const sanitizedHref = sanitizeHighResUrl(href);
-                if (sanitizedHref) {
-                    return sanitizedHref;
-                }
             }
 
             return null;
