@@ -137,6 +137,7 @@
             focusSupportsOptionsCache = false;
 
             if (
+                typeof window === 'undefined' ||
                 typeof document === 'undefined' ||
                 typeof document.createElement !== 'function' ||
                 typeof HTMLElement === 'undefined' ||
@@ -146,41 +147,30 @@
                 return focusSupportsOptionsCache;
             }
 
-            const body = document.body;
-
-            if (!body || typeof body.appendChild !== 'function') {
-                return focusSupportsOptionsCache;
-            }
-
-            let supports = false;
             const testElement = document.createElement('button');
+            const root = document.body || document.documentElement;
 
             try {
                 testElement.type = 'button';
-                testElement.style.position = 'absolute';
-                testElement.style.width = '1px';
-                testElement.style.height = '1px';
-                testElement.style.padding = '0';
-                testElement.style.border = '0';
-                testElement.style.opacity = '0';
-                testElement.style.pointerEvents = 'none';
-                body.appendChild(testElement);
+
+                if (root && typeof root.appendChild === 'function') {
+                    root.appendChild(testElement);
+                }
 
                 HTMLElement.prototype.focus.call(testElement, {
                     get preventScroll() {
-                        supports = true;
+                        focusSupportsOptionsCache = true;
                         return true;
                     },
                 });
             } catch (error) {
-                supports = false;
+                focusSupportsOptionsCache = false;
             } finally {
-                if (testElement.parentNode) {
+                if (testElement.parentNode && typeof testElement.parentNode.removeChild === 'function') {
                     testElement.parentNode.removeChild(testElement);
                 }
             }
 
-            focusSupportsOptionsCache = supports;
             return focusSupportsOptionsCache;
         }
 
