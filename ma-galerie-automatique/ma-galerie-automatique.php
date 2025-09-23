@@ -42,7 +42,7 @@ function mga_activate() {
 
     if ( is_array( $existing_settings ) ) {
         $merged_settings = wp_parse_args( $existing_settings, $defaults );
-        update_option( 'mga_settings', mga_sanitize_settings( $merged_settings ) );
+        update_option( 'mga_settings', mga_sanitize_settings( $merged_settings, $existing_settings ) );
         return;
     }
 
@@ -68,7 +68,7 @@ function mga_enqueue_assets() {
     $saved_settings = get_option( 'mga_settings', [] );
     // On s'assure que toutes les clés existent pour éviter les erreurs PHP
     $settings = wp_parse_args( (array) $saved_settings, $defaults );
-    $settings = mga_sanitize_settings( $settings );
+    $settings = mga_sanitize_settings( $settings, $saved_settings );
 
     // Librairies (Mise à jour vers Swiper v11)
     $swiper_version = '11.1.4';
@@ -460,14 +460,20 @@ function mga_get_default_settings() {
 /**
  * Nettoie les données envoyées.
  */
-function mga_sanitize_settings( $input ) {
+function mga_sanitize_settings( $input, $existing_settings = null ) {
     if ( ! is_array( $input ) ) {
         $input = [];
     }
 
     $defaults = mga_get_default_settings();
     $output = [];
-    $existing_settings = get_option( 'mga_settings', [] );
+    if ( null === $existing_settings ) {
+        $existing_settings = get_option( 'mga_settings', [] );
+    }
+
+    if ( ! is_array( $existing_settings ) ) {
+        $existing_settings = [];
+    }
 
     if ( isset( $input['delay'] ) ) {
         $delay = intval( $input['delay'] );
