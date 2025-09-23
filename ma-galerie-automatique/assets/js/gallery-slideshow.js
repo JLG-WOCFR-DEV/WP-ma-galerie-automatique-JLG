@@ -677,7 +677,27 @@
         let contentArea = null;
         let foundSelector = mga__( 'Aucune zone détectée', 'lightbox-jlg' );
         for (const selector of contentSelectors) {
-            const area = document.querySelector(selector);
+            let area = null;
+
+            try {
+                area = document.querySelector(selector);
+            } catch (error) {
+                const errorMessage = mgaSprintf(
+                    mga__( 'Sélecteur CSS invalide ignoré : %s', 'lightbox-jlg' ),
+                    selector
+                );
+                const errorDetails = error && error.message ? ` (${error.message})` : '';
+                const logMessage = `${errorMessage}${errorDetails}`;
+
+                if (debug && typeof debug.log === 'function') {
+                    debug.log(logMessage, true);
+                } else if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+                    console.warn(logMessage);
+                }
+
+                continue;
+            }
+
             if (area) {
                 contentArea = area;
                 foundSelector = selector;
