@@ -43,5 +43,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const opacitySlider = document.getElementById('mga_bg_opacity');
     const opacityValue = document.getElementById('mga_bg_opacity_value');
-    if(opacitySlider) opacitySlider.addEventListener('input', () => opacityValue.textContent = opacitySlider.value);
+    if (opacitySlider && opacityValue) {
+        opacitySlider.addEventListener('input', () => {
+            opacityValue.textContent = opacitySlider.value;
+        });
+    }
 });
