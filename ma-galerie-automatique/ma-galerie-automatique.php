@@ -514,40 +514,35 @@ function mga_sanitize_settings( $input ) {
     }
     $output['debug_mode'] = ! empty( $input['debug_mode'] );
 
-    $existing_selectors = [];
+    $sanitize_selectors = static function ( $selectors ) {
+        $sanitized = [];
+
+        foreach ( (array) $selectors as $selector ) {
+            $sanitized_selector = trim( sanitize_text_field( (string) $selector ) );
+
+            if ( '' !== $sanitized_selector ) {
+                $sanitized[] = $sanitized_selector;
+            }
+        }
+
+        return $sanitized;
+    };
+
+    $existing_selectors = $sanitize_selectors( $defaults['contentSelectors'] );
 
     if ( isset( $existing_settings['contentSelectors'] ) && is_array( $existing_settings['contentSelectors'] ) ) {
-        foreach ( $existing_settings['contentSelectors'] as $selector ) {
-            $sanitized_selector = trim( sanitize_text_field( (string) $selector ) );
-
-            if ( '' !== $sanitized_selector ) {
-                $existing_selectors[] = $sanitized_selector;
-            }
-        }
-    } elseif ( is_array( $defaults['contentSelectors'] ) ) {
-        foreach ( $defaults['contentSelectors'] as $selector ) {
-            $sanitized_selector = trim( sanitize_text_field( (string) $selector ) );
-
-            if ( '' !== $sanitized_selector ) {
-                $existing_selectors[] = $sanitized_selector;
-            }
-        }
+        $existing_selectors = $sanitize_selectors( $existing_settings['contentSelectors'] );
     }
 
-    $content_selectors = $existing_selectors;
-
-    if ( array_key_exists( 'contentSelectors', $input ) && is_array( $input['contentSelectors'] ) ) {
-        $content_selectors = [];
-
-        foreach ( $input['contentSelectors'] as $selector ) {
-            $sanitized_selector = trim( sanitize_text_field( (string) $selector ) );
-
-            if ( '' !== $sanitized_selector ) {
-                $content_selectors[] = $sanitized_selector;
-            }
+    if ( array_key_exists( 'contentSelectors', $input ) ) {
+        if ( is_array( $input['contentSelectors'] ) ) {
+            $output['contentSelectors'] = $sanitize_selectors( $input['contentSelectors'] );
+        } else {
+            $output['contentSelectors'] = $existing_selectors;
         }
+    } else {
+        $output['contentSelectors'] = $existing_selectors;
     }
-    $output['contentSelectors'] = $content_selectors;
     $output['allowBodyFallback'] = isset( $input['allowBodyFallback'] )
         ? (bool) $input['allowBodyFallback']
         : (bool) $defaults['allowBodyFallback'];
