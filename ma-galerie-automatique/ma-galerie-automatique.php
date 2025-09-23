@@ -452,6 +452,8 @@ function mga_get_default_settings() {
         'background_style' => 'echo',
         'z_index' => 99999,
         'debug_mode' => false,
+        'contentSelectors' => [],
+        'allowBodyFallback' => true,
     ];
 }
 
@@ -510,6 +512,21 @@ function mga_sanitize_settings( $input ) {
         $output['z_index'] = $defaults['z_index'];
     }
     $output['debug_mode'] = ! empty( $input['debug_mode'] );
+
+    $content_selectors = is_array( $defaults['contentSelectors'] ) ? $defaults['contentSelectors'] : [];
+    if ( isset( $input['contentSelectors'] ) && is_array( $input['contentSelectors'] ) ) {
+        foreach ( $input['contentSelectors'] as $selector ) {
+            $sanitized_selector = trim( sanitize_text_field( (string) $selector ) );
+
+            if ( '' !== $sanitized_selector ) {
+                $content_selectors[] = $sanitized_selector;
+            }
+        }
+    }
+    $output['contentSelectors'] = $content_selectors;
+    $output['allowBodyFallback'] = isset( $input['allowBodyFallback'] )
+        ? (bool) $input['allowBodyFallback']
+        : (bool) $defaults['allowBodyFallback'];
 
     return $output;
 }
