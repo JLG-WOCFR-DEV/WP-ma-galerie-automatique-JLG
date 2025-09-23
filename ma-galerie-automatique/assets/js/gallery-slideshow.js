@@ -127,6 +127,82 @@
         }
 
         // --- FONCTIONS UTILITAIRES ---
+        let focusSupportsOptionsCache = null;
+
+        function detectFocusOptionsSupport() {
+            if (focusSupportsOptionsCache !== null) {
+                return focusSupportsOptionsCache;
+            }
+
+            focusSupportsOptionsCache = false;
+
+            if (
+                typeof document === 'undefined' ||
+                typeof document.createElement !== 'function' ||
+                typeof HTMLElement === 'undefined' ||
+                !HTMLElement.prototype ||
+                typeof HTMLElement.prototype.focus !== 'function'
+            ) {
+                return focusSupportsOptionsCache;
+            }
+
+            const body = document.body;
+
+            if (!body || typeof body.appendChild !== 'function') {
+                return focusSupportsOptionsCache;
+            }
+
+            let supports = false;
+            const testElement = document.createElement('button');
+
+            try {
+                testElement.type = 'button';
+                testElement.style.position = 'absolute';
+                testElement.style.width = '1px';
+                testElement.style.height = '1px';
+                testElement.style.padding = '0';
+                testElement.style.border = '0';
+                testElement.style.opacity = '0';
+                testElement.style.pointerEvents = 'none';
+                body.appendChild(testElement);
+
+                HTMLElement.prototype.focus.call(testElement, {
+                    get preventScroll() {
+                        supports = true;
+                        return true;
+                    },
+                });
+            } catch (error) {
+                supports = false;
+            } finally {
+                if (testElement.parentNode) {
+                    testElement.parentNode.removeChild(testElement);
+                }
+            }
+
+            focusSupportsOptionsCache = supports;
+            return focusSupportsOptionsCache;
+        }
+
+        function safeFocus(element, options = { preventScroll: true }) {
+            if (!element || typeof element.focus !== 'function') {
+                return;
+            }
+
+            const canUseOptions = options && detectFocusOptionsSupport();
+
+            if (canUseOptions) {
+                try {
+                    element.focus(options);
+                    return;
+                } catch (error) {
+                    // Fallback to focusing without options if an error occurs.
+                }
+            }
+
+            element.focus();
+        }
+
         function resolveFullscreenApi(target) {
             const doc = document;
             const apiMap = [
@@ -906,7 +982,7 @@
 
                 if (!focusable.length) {
                     e.preventDefault();
-                    viewer.focus({ preventScroll: true });
+                    safeFocus(viewer);
                     return;
                 }
 
@@ -928,7 +1004,7 @@
                 }
 
                 e.preventDefault();
-                focusable[nextIndex].focus({ preventScroll: true });
+                safeFocus(focusable[nextIndex]);
             };
 
             viewer.addEventListener('keydown', viewerFocusTrapHandler, true);
@@ -936,7 +1012,7 @@
             const closeButton = viewer.querySelector('#mga-close');
             const target = closeButton && closeButton.offsetParent !== null ? closeButton : viewer;
             if (target && typeof target.focus === 'function') {
-                target.focus({ preventScroll: true });
+                safeFocus(target);
             }
         }
 
@@ -1157,7 +1233,7 @@
             debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
             debug.stopTimer();
             if (lastFocusedElementBeforeViewer && typeof lastFocusedElementBeforeViewer.focus === 'function') {
-                lastFocusedElementBeforeViewer.focus({ preventScroll: true });
+                safeFocus(lastFocusedElementBeforeViewer);
             }
             lastFocusedElementBeforeViewer = null;
         }
