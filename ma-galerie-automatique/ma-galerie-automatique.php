@@ -467,6 +467,7 @@ function mga_sanitize_settings( $input ) {
 
     $defaults = mga_get_default_settings();
     $output = [];
+    $existing_settings = get_option( 'mga_settings', [] );
 
     if ( isset( $input['delay'] ) ) {
         $delay = intval( $input['delay'] );
@@ -513,8 +514,31 @@ function mga_sanitize_settings( $input ) {
     }
     $output['debug_mode'] = ! empty( $input['debug_mode'] );
 
-    $content_selectors = is_array( $defaults['contentSelectors'] ) ? $defaults['contentSelectors'] : [];
-    if ( isset( $input['contentSelectors'] ) && is_array( $input['contentSelectors'] ) ) {
+    $existing_selectors = [];
+
+    if ( isset( $existing_settings['contentSelectors'] ) && is_array( $existing_settings['contentSelectors'] ) ) {
+        foreach ( $existing_settings['contentSelectors'] as $selector ) {
+            $sanitized_selector = trim( sanitize_text_field( (string) $selector ) );
+
+            if ( '' !== $sanitized_selector ) {
+                $existing_selectors[] = $sanitized_selector;
+            }
+        }
+    } elseif ( is_array( $defaults['contentSelectors'] ) ) {
+        foreach ( $defaults['contentSelectors'] as $selector ) {
+            $sanitized_selector = trim( sanitize_text_field( (string) $selector ) );
+
+            if ( '' !== $sanitized_selector ) {
+                $existing_selectors[] = $sanitized_selector;
+            }
+        }
+    }
+
+    $content_selectors = $existing_selectors;
+
+    if ( array_key_exists( 'contentSelectors', $input ) && is_array( $input['contentSelectors'] ) ) {
+        $content_selectors = [];
+
         foreach ( $input['contentSelectors'] as $selector ) {
             $sanitized_selector = trim( sanitize_text_field( (string) $selector ) );
 
