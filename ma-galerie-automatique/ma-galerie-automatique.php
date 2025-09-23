@@ -453,7 +453,7 @@ function mga_get_default_settings() {
         'z_index' => 99999,
         'debug_mode' => false,
         'contentSelectors' => [],
-        'allowBodyFallback' => true,
+        'allowBodyFallback' => false,
     ];
 }
 
