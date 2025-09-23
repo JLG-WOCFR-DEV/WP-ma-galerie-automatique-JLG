@@ -539,6 +539,7 @@
                 header.appendChild(toolbar);
 
                 const playPauseButton = document.createElement('button');
+                playPauseButton.type = 'button';
                 playPauseButton.id = 'mga-play-pause';
                 playPauseButton.className = 'mga-toolbar-button';
                 playPauseButton.setAttribute('aria-label', mga__( 'Play/Pause', 'lightbox-jlg' ));
@@ -577,6 +578,7 @@
                 playPauseButton.appendChild(pauseIcon);
 
                 const zoomButton = document.createElement('button');
+                zoomButton.type = 'button';
                 zoomButton.id = 'mga-zoom';
                 zoomButton.className = 'mga-toolbar-button';
                 zoomButton.setAttribute('aria-label', mga__( 'Zoom', 'lightbox-jlg' ));
@@ -598,6 +600,7 @@
                 zoomButton.appendChild(zoomIcon);
 
                 const fullscreenButton = document.createElement('button');
+                fullscreenButton.type = 'button';
                 fullscreenButton.id = 'mga-fullscreen';
                 fullscreenButton.className = 'mga-toolbar-button';
                 fullscreenButton.setAttribute('aria-label', mga__( 'Plein écran', 'lightbox-jlg' ));
@@ -615,6 +618,7 @@
                 fullscreenButton.appendChild(fullscreenIcon);
 
                 const closeButton = document.createElement('button');
+                closeButton.type = 'button';
                 closeButton.id = 'mga-close';
                 closeButton.className = 'mga-toolbar-button';
                 closeButton.setAttribute('aria-label', mga__( 'Fermer', 'lightbox-jlg' ));
