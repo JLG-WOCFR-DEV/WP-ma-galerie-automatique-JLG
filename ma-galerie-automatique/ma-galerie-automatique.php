@@ -11,6 +11,30 @@
 // Sécurité
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+/**
+ * Retourne le chemin absolu du dossier de traduction.
+ *
+ * @return string
+ */
+function mga_get_languages_path() {
+    return plugin_dir_path( __FILE__ ) . 'languages';
+}
+
+/**
+ * Indique si le dossier de traduction existe réellement.
+ *
+ * @return bool
+ */
+function mga_languages_directory_exists() {
+    static $languages_exists = null;
+
+    if ( null === $languages_exists ) {
+        $languages_exists = is_dir( mga_get_languages_path() );
+    }
+
+    return $languages_exists;
+}
+
 if ( ! defined( 'MGA_VERSION' ) ) {
     define( 'MGA_VERSION', '1.8' );
 }
@@ -23,6 +47,10 @@ if ( ! defined( 'MGA_ADMIN_TEMPLATE_PATH' ) ) {
  * Initialise la traduction du plugin.
  */
 function mga_load_textdomain() {
+    if ( ! mga_languages_directory_exists() ) {
+        return;
+    }
+
     load_plugin_textdomain( 'lightbox-jlg', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 }
 
@@ -126,6 +154,16 @@ function mga_enqueue_assets() {
     // On s'assure que toutes les clés existent pour éviter les erreurs PHP
     $settings = wp_parse_args( (array) $saved_settings, $defaults );
     $settings = mga_sanitize_settings( $settings, $saved_settings );
+    $settings['contentSelectors'] = apply_filters(
+        'mga_frontend_content_selectors',
+        (array) $settings['contentSelectors'],
+        $post
+    );
+    $settings['allowBodyFallback'] = apply_filters(
+        'mga_frontend_allow_body_fallback',
+        (bool) $settings['allowBodyFallback'],
+        $post
+    );
 
     // Librairies (Mise à jour vers Swiper v11)
     $swiper_version = '11.1.4';
@@ -158,6 +196,8 @@ function mga_enqueue_assets() {
     // Fichiers du plugin
     wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
     $script_dependencies = [ 'mga-swiper-js', 'wp-i18n' ];
+    $languages_path = mga_get_languages_path();
+    $has_languages = mga_languages_directory_exists();
     if ( ! empty( $settings['debug_mode'] ) ) {
         $can_view_debug = apply_filters(
             'mga_user_can_view_debug',
@@ -173,12 +213,17 @@ function mga_enqueue_assets() {
                 true
             );
             wp_enqueue_script( 'mga-debug-script' );
-            wp_set_script_translations( 'mga-debug-script', 'lightbox-jlg', plugin_dir_path( __FILE__ ) . 'languages' );
+
+            if ( $has_languages ) {
+                wp_set_script_translations( 'mga-debug-script', 'lightbox-jlg', $languages_path );
+            }
             $script_dependencies[] = 'mga-debug-script';
         }
     }
     wp_enqueue_script('mga-gallery-script', plugin_dir_url( __FILE__ ) . 'assets/js/gallery-slideshow.js', $script_dependencies, MGA_VERSION, true);
-    wp_set_script_translations( 'mga-gallery-script', 'lightbox-jlg', plugin_dir_path( __FILE__ ) . 'languages' );
+    if ( $has_languages ) {
+        wp_set_script_translations( 'mga-gallery-script', 'lightbox-jlg', $languages_path );
+    }
 
     // Passer les réglages au JavaScript
     wp_localize_script('mga-gallery-script', 'mga_settings', $settings);
@@ -234,6 +279,12 @@ function mga_should_enqueue_assets( $post ) {
         return false;
     }
 
+    $content = (string) $post->post_content;
+
+    if ( '' === trim( $content ) ) {
+        return false;
+    }
+
     $has_linked_images = false;
 
     $block_names = apply_filters(
@@ -241,30 +292,46 @@ function mga_should_enqueue_assets( $post ) {
         [ 'core/gallery', 'core/image' ]
     );
 
-    if ( ! empty( $post->post_content ) && ! empty( $block_names ) ) {
+    $block_names = array_filter( (array) $block_names );
+    $candidate_block_names = [];
+
+    if ( ! empty( $block_names ) ) {
+        if ( function_exists( 'has_block' ) ) {
+            foreach ( $block_names as $block_name ) {
+                if ( is_string( $block_name ) && has_block( $block_name, $post ) ) {
+                    $candidate_block_names[] = $block_name;
+                }
+            }
+        } else {
+            $candidate_block_names = $block_names;
+        }
+    }
+
+    if ( ! empty( $candidate_block_names ) ) {
         $parsed_blocks = [];
 
         if ( function_exists( 'parse_blocks' ) ) {
-            $parsed_blocks = parse_blocks( $post->post_content );
+            $parsed_blocks = parse_blocks( $content );
         } elseif ( class_exists( 'WP_Block_Parser' ) ) {
             $parser = new WP_Block_Parser();
-            $parsed_blocks = $parser->parse( $post->post_content );
+            $parsed_blocks = $parser->parse( $content );
         }
 
         if ( ! empty( $parsed_blocks ) ) {
-            $has_linked_images = mga_blocks_contain_linked_media( $parsed_blocks, (array) $block_names );
+            $has_linked_images = mga_blocks_contain_linked_media( $parsed_blocks, $candidate_block_names );
+        } elseif ( ! function_exists( 'has_block' ) ) {
+            $has_linked_images = true;
         }
     }
 
     if ( ! $has_linked_images ) {
-        $content = $post->post_content;
+        $linked_image_pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
 
-        if ( ! empty( $content ) ) {
-            $linked_image_pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
+        $has_anchor = false !== stripos( $content, '<a' );
+        $has_media_tag = false !== stripos( $content, '<img' ) || false !== stripos( $content, '<picture' );
 
-            if ( preg_match( $linked_image_pattern, $content ) ) {
-                $has_linked_images = true;
-            }
+        if ( $has_anchor && $has_media_tag && preg_match( $linked_image_pattern, $content ) ) {
+            $has_linked_images = true;
         }
     }
 
@@ -631,7 +698,9 @@ function mga_admin_enqueue_assets($hook) {
     if ($hook !== 'toplevel_page_ma-galerie-automatique') return;
     wp_enqueue_style('mga-admin-style', plugin_dir_url(__FILE__) . 'assets/css/admin-style.css', [], MGA_VERSION);
     wp_enqueue_script('mga-admin-script', plugin_dir_url(__FILE__) . 'assets/js/admin-script.js', [ 'wp-i18n' ], MGA_VERSION, true);
-    wp_set_script_translations( 'mga-admin-script', 'lightbox-jlg', plugin_dir_path( __FILE__ ) . 'languages' );
+    if ( mga_languages_directory_exists() ) {
+        wp_set_script_translations( 'mga-admin-script', 'lightbox-jlg', mga_get_languages_path() );
+    }
 }
 add_action('admin_enqueue_scripts', 'mga_admin_enqueue_assets');
 
