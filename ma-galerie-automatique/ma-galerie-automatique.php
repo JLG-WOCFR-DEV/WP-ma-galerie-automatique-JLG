@@ -238,7 +238,7 @@ function mga_enqueue_assets() {
     if ( false !== $settings_json ) {
         wp_add_inline_script(
             'mga-gallery-script',
-            'const mgaSettings = ' . $settings_json . ';',
+            'window.mga_settings = ' . $settings_json . ";\nwindow.mgaSettings = window.mga_settings;",
             'before'
         );
     }
