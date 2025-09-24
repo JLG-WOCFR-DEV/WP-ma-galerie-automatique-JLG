@@ -26,26 +26,54 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Live update for range sliders
-    const thumbSizeSlider = document.getElementById('mga_thumb_size');
-    const thumbSizeValue = document.getElementById('mga_thumb_size_value');
-    const thumbSizeMobileSlider = document.getElementById('mga_thumb_size_mobile');
-    const thumbSizeMobileValue = document.getElementById('mga_thumb_size_mobile_value');
-    if (thumbSizeSlider && thumbSizeValue) {
-        thumbSizeSlider.addEventListener('input', () => {
-            thumbSizeValue.textContent = mgaAdminSprintf(mgaAdmin__('%spx', 'lightbox-jlg'), thumbSizeSlider.value);
-        });
-    }
-    if (thumbSizeMobileSlider && thumbSizeMobileValue) {
-        thumbSizeMobileSlider.addEventListener('input', () => {
-            thumbSizeMobileValue.textContent = mgaAdminSprintf(mgaAdmin__('%spx', 'lightbox-jlg'), thumbSizeMobileSlider.value);
-        });
-    }
+    const bindRangeToOutput = (sliderId, outputId, displayFormatter, ariaFormatter) => {
+        const slider = document.getElementById(sliderId);
+        const output = document.getElementById(outputId);
 
-    const opacitySlider = document.getElementById('mga_bg_opacity');
-    const opacityValue = document.getElementById('mga_bg_opacity_value');
-    if (opacitySlider && opacityValue) {
-        opacitySlider.addEventListener('input', () => {
-            opacityValue.textContent = opacitySlider.value;
-        });
-    }
+        if (!slider || !output) {
+            return;
+        }
+
+        const updateOutput = () => {
+            const value = slider.value;
+            const displayValue = typeof displayFormatter === 'function'
+                ? displayFormatter(value)
+                : value;
+            const ariaValue = typeof ariaFormatter === 'function'
+                ? ariaFormatter(value)
+                : displayValue;
+
+            if (typeof output.value !== 'undefined') {
+                output.value = displayValue;
+            }
+
+            output.textContent = displayValue;
+            slider.setAttribute('aria-valuenow', value);
+            slider.setAttribute('aria-valuetext', ariaValue);
+        };
+
+        slider.addEventListener('input', updateOutput);
+        updateOutput();
+    };
+
+    bindRangeToOutput(
+        'mga_thumb_size',
+        'mga_thumb_size_value',
+        (value) => mgaAdminSprintf(mgaAdmin__('%spx', 'lightbox-jlg'), value),
+        (value) => mgaAdminSprintf(mgaAdmin__('%s pixels', 'lightbox-jlg'), value)
+    );
+
+    bindRangeToOutput(
+        'mga_thumb_size_mobile',
+        'mga_thumb_size_mobile_value',
+        (value) => mgaAdminSprintf(mgaAdmin__('%spx', 'lightbox-jlg'), value),
+        (value) => mgaAdminSprintf(mgaAdmin__('%s pixels', 'lightbox-jlg'), value)
+    );
+
+    bindRangeToOutput(
+        'mga_bg_opacity',
+        'mga_bg_opacity_value',
+        (value) => value,
+        (value) => mgaAdminSprintf(mgaAdmin__('%s opacity', 'lightbox-jlg'), value)
+    );
 });
