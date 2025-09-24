@@ -365,6 +365,16 @@ function mga_get_cached_post_linked_images( WP_Post $post ) {
  * @param bool $has_linked_images Présence d'images liées détectée.
  */
 function mga_update_post_linked_images_cache( $post_id, $has_linked_images ) {
+    if ( ! $has_linked_images ) {
+        $post = get_post( $post_id );
+
+        if ( $post instanceof WP_Post && mga_post_contains_reusable_block( $post ) ) {
+            delete_post_meta( $post_id, '_mga_has_linked_images' );
+
+            return;
+        }
+    }
+
     update_post_meta( $post_id, '_mga_has_linked_images', $has_linked_images ? 1 : 0 );
 }
 
@@ -387,6 +397,62 @@ function mga_parse_blocks_from_content( $content ) {
     }
 
     return [];
+}
+
+/**
+ * Indique si un post contient un bloc réutilisable.
+ *
+ * @param WP_Post $post Objet WP_Post.
+ *
+ * @return bool
+ */
+function mga_post_contains_reusable_block( WP_Post $post ) {
+    $content = (string) $post->post_content;
+
+    if ( '' === trim( $content ) || false === strpos( $content, '<!-- wp:' ) ) {
+        return false;
+    }
+
+    $parsed_blocks = mga_parse_blocks_from_content( $content );
+
+    if ( ! empty( $parsed_blocks ) ) {
+        return mga_blocks_include_reusable_block( $parsed_blocks );
+    }
+
+    if ( function_exists( 'has_block' ) ) {
+        return has_block( 'core/block', $post );
+    }
+
+    return false;
+}
+
+/**
+ * Recherche récursivement un bloc réutilisable dans une liste de blocs parsés.
+ *
+ * @param array $blocks Liste de blocs issus de parse_blocks().
+ *
+ * @return bool
+ */
+function mga_blocks_include_reusable_block( array $blocks ) {
+    foreach ( $blocks as $block ) {
+        if ( ! is_array( $block ) ) {
+            continue;
+        }
+
+        $block_name = isset( $block['blockName'] ) ? $block['blockName'] : null;
+
+        if ( 'core/block' === $block_name ) {
+            return true;
+        }
+
+        if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+            if ( mga_blocks_include_reusable_block( $block['innerBlocks'] ) ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 /**
