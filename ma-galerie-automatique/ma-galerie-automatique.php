@@ -47,11 +47,11 @@ if ( ! defined( 'MGA_ADMIN_TEMPLATE_PATH' ) ) {
  * Initialise la traduction du plugin.
  */
 function mga_load_textdomain() {
-    if ( ! mga_languages_directory_exists() ) {
-        return;
-    }
+    $relative_path = mga_languages_directory_exists()
+        ? dirname( plugin_basename( __FILE__ ) ) . '/languages'
+        : false;
 
-    load_plugin_textdomain( 'lightbox-jlg', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+    load_plugin_textdomain( 'lightbox-jlg', false, $relative_path );
 }
 
 add_action( 'plugins_loaded', 'mga_load_textdomain' );
@@ -169,7 +169,28 @@ function mga_enqueue_assets() {
     $saved_settings = get_option( 'mga_settings', [] );
     // On s'assure que toutes les clés existent pour éviter les erreurs PHP
     $settings = wp_parse_args( (array) $saved_settings, $defaults );
-    $settings = mga_sanitize_settings( $settings, $saved_settings );
+
+    $settings['thumb_size'] = max( 50, min( 150, absint( $settings['thumb_size'] ) ) );
+    $settings['thumb_size_mobile'] = max( 40, min( 100, absint( $settings['thumb_size_mobile'] ) ) );
+    $settings['delay'] = max( 1, min( 30, absint( $settings['delay'] ) ) );
+    $settings['accent_color'] = sanitize_hex_color( $settings['accent_color'] ) ?: $defaults['accent_color'];
+    $settings['bg_opacity'] = max( 0, min( 1, floatval( $settings['bg_opacity'] ) ) );
+    $settings['z_index'] = max( 0, intval( $settings['z_index'] ) );
+    $settings['loop'] = ! empty( $settings['loop'] );
+    $settings['autoplay_start'] = ! empty( $settings['autoplay_start'] );
+    $settings['debug_mode'] = ! empty( $settings['debug_mode'] );
+    $settings['allowBodyFallback'] = ! empty( $settings['allowBodyFallback'] );
+    $settings['background_style'] = in_array( $settings['background_style'], [ 'echo', 'blur', 'texture' ], true )
+        ? $settings['background_style']
+        : $defaults['background_style'];
+    $settings['contentSelectors'] = array_values( array_unique( array_filter( array_map(
+        static function ( $selector ) {
+            return trim( (string) $selector );
+        },
+        (array) $settings['contentSelectors']
+    ), static function ( $selector ) {
+        return '' !== $selector;
+    } ) ) );
     $settings['contentSelectors'] = apply_filters(
         'mga_frontend_content_selectors',
         (array) $settings['contentSelectors'],
@@ -348,6 +369,27 @@ function mga_update_post_linked_images_cache( $post_id, $has_linked_images ) {
 }
 
 /**
+ * Parse un contenu de post en blocs en assurant la compatibilité avec les anciennes versions.
+ *
+ * @param string $content Contenu du post.
+ *
+ * @return array
+ */
+function mga_parse_blocks_from_content( $content ) {
+    if ( function_exists( 'parse_blocks' ) ) {
+        return parse_blocks( $content );
+    }
+
+    if ( class_exists( 'WP_Block_Parser' ) ) {
+        $parser = new WP_Block_Parser();
+
+        return $parser->parse( $content );
+    }
+
+    return [];
+}
+
+/**
  * Exécute la détection coûteuse des images liées.
  *
  * @param WP_Post $post Objet WP_Post.
@@ -368,33 +410,13 @@ function mga_detect_post_linked_images( WP_Post $post ) {
         [ 'core/gallery', 'core/image' ]
     );
 
-    $block_names = array_filter( (array) $block_names );
-    $candidate_block_names = [];
+    $block_names = array_values( array_filter( (array) $block_names ) );
 
-    if ( ! empty( $block_names ) ) {
-        if ( function_exists( 'has_block' ) ) {
-            foreach ( $block_names as $block_name ) {
-                if ( is_string( $block_name ) && has_block( $block_name, $post ) ) {
-                    $candidate_block_names[] = $block_name;
-                }
-            }
-        } else {
-            $candidate_block_names = $block_names;
-        }
-    }
-
-    if ( ! empty( $candidate_block_names ) ) {
-        $parsed_blocks = [];
-
-        if ( function_exists( 'parse_blocks' ) ) {
-            $parsed_blocks = parse_blocks( $content );
-        } elseif ( class_exists( 'WP_Block_Parser' ) ) {
-            $parser = new WP_Block_Parser();
-            $parsed_blocks = $parser->parse( $content );
-        }
+    if ( ! empty( $block_names ) && false !== strpos( $content, '<!-- wp:' ) ) {
+        $parsed_blocks = mga_parse_blocks_from_content( $content );
 
         if ( ! empty( $parsed_blocks ) ) {
-            $has_linked_images = mga_blocks_contain_linked_media( $parsed_blocks, $candidate_block_names );
+            $has_linked_images = mga_blocks_contain_linked_media( $parsed_blocks, $block_names );
         } elseif ( ! function_exists( 'has_block' ) ) {
             $has_linked_images = true;
         }
@@ -421,6 +443,8 @@ function mga_detect_post_linked_images( WP_Post $post ) {
 /**
  * Met à jour le cache lorsqu'un contenu est sauvegardé.
  *
+ * Les types de contenu pris en compte peuvent être filtrés via `mga_tracked_post_types`.
+ *
  * @param int     $post_id Identifiant du post.
  * @param WP_Post $post    Objet WP_Post.
  */
@@ -430,6 +454,15 @@ function mga_refresh_post_linked_images_cache_on_save( $post_id, $post ) {
     }
 
     if ( ! $post instanceof WP_Post ) {
+        return;
+    }
+
+    $tracked_post_types = apply_filters( 'mga_tracked_post_types', [] );
+
+    if (
+        ! empty( $tracked_post_types )
+        && ! in_array( $post->post_type, (array) $tracked_post_types, true )
+    ) {
         return;
     }
 
@@ -479,12 +512,7 @@ function mga_blocks_contain_linked_media( array $blocks, array $allowed_block_na
                         && 'wp_block' === $reusable_block->post_type
                         && ! empty( $reusable_block->post_content )
                     ) {
-                        if ( function_exists( 'parse_blocks' ) ) {
-                            $reusable_block_cache[ $ref ] = parse_blocks( $reusable_block->post_content );
-                        } elseif ( class_exists( 'WP_Block_Parser' ) ) {
-                            $parser = new WP_Block_Parser();
-                            $reusable_block_cache[ $ref ] = $parser->parse( $reusable_block->post_content );
-                        }
+                        $reusable_block_cache[ $ref ] = mga_parse_blocks_from_content( $reusable_block->post_content );
                     }
 
                     $parsed_reusable_blocks = $reusable_block_cache[ $ref ];
@@ -753,14 +781,18 @@ function mga_sanitize_settings( $input, $existing_settings = null ) {
         $sanitized = [];
 
         foreach ( (array) $selectors as $selector ) {
-            $sanitized_selector = trim( sanitize_text_field( (string) $selector ) );
+            $clean_selector = (string) $selector;
+            $clean_selector = wp_strip_all_tags( $clean_selector );
+            $clean_selector = preg_replace( '/[\x00-\x1F\x7F]+/u', '', $clean_selector );
+            $clean_selector = preg_replace( '/\s+/u', ' ', $clean_selector );
+            $clean_selector = trim( $clean_selector );
 
-            if ( '' !== $sanitized_selector ) {
-                $sanitized[] = $sanitized_selector;
+            if ( '' !== $clean_selector ) {
+                $sanitized[] = $clean_selector;
             }
         }
 
-        return $sanitized;
+        return array_values( array_unique( $sanitized ) );
     };
 
     $existing_selectors = $sanitize_selectors( $defaults['contentSelectors'] );

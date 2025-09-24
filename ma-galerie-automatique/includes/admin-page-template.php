@@ -34,12 +34,42 @@ $settings = wp_parse_args( $settings, $defaults );
                     <th scope="row"><?php echo esc_html__( 'Taille des miniatures', 'lightbox-jlg' ); ?></th>
                     <td>
                         <label for="mga_thumb_size"><?php echo esc_html__( 'PC', 'lightbox-jlg' ); ?></label><br>
-                        <input name="mga_settings[thumb_size]" type="range" id="mga_thumb_size" value="<?php echo esc_attr( $settings['thumb_size'] ); ?>" min="50" max="150" step="5" />
-                        <span id="mga_thumb_size_value"><?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size'] ) ); ?></span>
+                        <input
+                            name="mga_settings[thumb_size]"
+                            type="range"
+                            id="mga_thumb_size"
+                            value="<?php echo esc_attr( $settings['thumb_size'] ); ?>"
+                            min="50"
+                            max="150"
+                            step="5"
+                            aria-valuemin="50"
+                            aria-valuemax="150"
+                            aria-valuenow="<?php echo esc_attr( $settings['thumb_size'] ); ?>"
+                            aria-valuetext="<?php echo esc_attr( sprintf( __( '%s pixels', 'lightbox-jlg' ), intval( $settings['thumb_size'] ) ) ); ?>"
+                            aria-describedby="mga_thumb_size_value"
+                        />
+                        <output id="mga_thumb_size_value" for="mga_thumb_size" class="mga-range-output" aria-live="polite">
+                            <?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size'] ) ); ?>
+                        </output>
                         <br><br>
                         <label for="mga_thumb_size_mobile"><?php echo esc_html__( 'Mobile', 'lightbox-jlg' ); ?></label><br>
-                        <input name="mga_settings[thumb_size_mobile]" type="range" id="mga_thumb_size_mobile" value="<?php echo esc_attr( $settings['thumb_size_mobile'] ); ?>" min="40" max="100" step="5" />
-                        <span id="mga_thumb_size_mobile_value"><?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ); ?></span>
+                        <input
+                            name="mga_settings[thumb_size_mobile]"
+                            type="range"
+                            id="mga_thumb_size_mobile"
+                            value="<?php echo esc_attr( $settings['thumb_size_mobile'] ); ?>"
+                            min="40"
+                            max="100"
+                            step="5"
+                            aria-valuemin="40"
+                            aria-valuemax="100"
+                            aria-valuenow="<?php echo esc_attr( $settings['thumb_size_mobile'] ); ?>"
+                            aria-valuetext="<?php echo esc_attr( sprintf( __( '%s pixels', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ) ); ?>"
+                            aria-describedby="mga_thumb_size_mobile_value"
+                        />
+                        <output id="mga_thumb_size_mobile_value" for="mga_thumb_size_mobile" class="mga-range-output" aria-live="polite">
+                            <?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ); ?>
+                        </output>
                         <p class="description"><?php echo esc_html__( "Ajustez la hauteur des miniatures en bas de la galerie pour chaque type d'appareil.", 'lightbox-jlg' ); ?></p>
                     </td>
                 </tr>
@@ -53,8 +83,23 @@ $settings = wp_parse_args( $settings, $defaults );
                 <tr>
                     <th scope="row"><label for="mga_bg_opacity"><?php echo esc_html__( "Opacité de l'arrière-plan", 'lightbox-jlg' ); ?></label></th>
                     <td>
-                         <input name="mga_settings[bg_opacity]" type="range" id="mga_bg_opacity" value="<?php echo esc_attr( $settings['bg_opacity'] ); ?>" min="0.5" max="1" step="0.05" />
-                         <span id="mga_bg_opacity_value"><?php echo esc_html( $settings['bg_opacity'] ); ?></span>
+                        <input
+                            name="mga_settings[bg_opacity]"
+                            type="range"
+                            id="mga_bg_opacity"
+                            value="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
+                            min="0.5"
+                            max="1"
+                            step="0.05"
+                            aria-valuemin="0.5"
+                            aria-valuemax="1"
+                            aria-valuenow="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
+                            aria-valuetext="<?php echo esc_attr( sprintf( __( '%s opacity', 'lightbox-jlg' ), $settings['bg_opacity'] ) ); ?>"
+                            aria-describedby="mga_bg_opacity_value"
+                        />
+                        <output id="mga_bg_opacity_value" for="mga_bg_opacity" class="mga-range-output" aria-live="polite">
+                            <?php echo esc_html( $settings['bg_opacity'] ); ?>
+                        </output>
                         <p class="description"><?php echo esc_html__( "Réglez la transparence du fond de la galerie (0.5 = transparent, 1 = opaque).", 'lightbox-jlg' ); ?></p>
                     </td>
                 </tr>
