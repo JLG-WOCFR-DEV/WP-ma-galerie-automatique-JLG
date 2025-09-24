@@ -14,6 +14,7 @@ if ( is_multisite() ) {
     foreach ( $site_ids as $site_id ) {
         switch_to_blog( $site_id );
         delete_option( 'mga_settings' );
+        delete_option( 'mga_swiper_asset_sources' );
         restore_current_blog();
     }
 
@@ -21,3 +22,4 @@ if ( is_multisite() ) {
 }
 
 delete_option( 'mga_settings' );
+delete_option( 'mga_swiper_asset_sources' );
