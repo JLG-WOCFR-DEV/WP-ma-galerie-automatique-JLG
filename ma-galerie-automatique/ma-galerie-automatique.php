@@ -139,6 +139,13 @@ function mga_enqueue_assets() {
 
     $asset_sources = mga_get_swiper_asset_sources();
 
+    if (
+        ( 'local' === $asset_sources['css'] && ! file_exists( $local_swiper_css_path ) ) ||
+        ( 'local' === $asset_sources['js'] && ! file_exists( $local_swiper_js_path ) )
+    ) {
+        $asset_sources = mga_refresh_swiper_asset_sources();
+    }
+
     $swiper_css = 'local' === $asset_sources['css'] ? $local_swiper_css_url : $cdn_swiper_css;
     $swiper_css = apply_filters( 'mga_swiper_css', $swiper_css, $swiper_version );
 

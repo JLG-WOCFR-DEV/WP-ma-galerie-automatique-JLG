@@ -40,6 +40,30 @@
 
         debug.init();
 
+        function resolveEventTarget(event) {
+            if (!event || !event.target) {
+                return null;
+            }
+
+            const target = event.target;
+
+            if (target instanceof Element) {
+                return target;
+            }
+
+            if (target && typeof target === 'object') {
+                if (target.parentElement instanceof Element) {
+                    return target.parentElement;
+                }
+
+                if (target.parentNode instanceof Element) {
+                    return target.parentNode;
+                }
+            }
+
+            return null;
+        }
+
         /**
          * Swiper peut afficher des avertissements « Swiper Loop Warning » lorsque
          * l'option `loop` est active mais que la configuration n'offre pas assez
@@ -780,7 +804,12 @@
                 return;
             }
 
-            const targetLink = e.target.closest('a');
+            const eventTarget = resolveEventTarget(e);
+            if (!eventTarget) {
+                return;
+            }
+
+            const targetLink = eventTarget.closest('a');
             if (!targetLink) {
                 return;
             }
@@ -1169,10 +1198,14 @@
         document.body.addEventListener('click', function(e) {
             const viewer = document.getElementById('mga-viewer');
             if (!viewer || viewer.style.display === 'none') return;
-            if (e.target.closest('#mga-close')) closeViewer(viewer);
-            if (e.target.closest('#mga-play-pause')) { if (mainSwiper && mainSwiper.autoplay && mainSwiper.autoplay.running) mainSwiper.autoplay.stop(); else if (mainSwiper && mainSwiper.autoplay) mainSwiper.autoplay.start(); }
-            if (e.target.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
-            if (e.target.closest('#mga-fullscreen')) {
+            const eventTarget = resolveEventTarget(e);
+            if (!eventTarget) {
+                return;
+            }
+            if (eventTarget.closest('#mga-close')) closeViewer(viewer);
+            if (eventTarget.closest('#mga-play-pause')) { if (mainSwiper && mainSwiper.autoplay && mainSwiper.autoplay.running) mainSwiper.autoplay.stop(); else if (mainSwiper && mainSwiper.autoplay) mainSwiper.autoplay.start(); }
+            if (eventTarget.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
+            if (eventTarget.closest('#mga-fullscreen')) {
                 const { request: requestFullscreen, exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
 
                 if (!fullscreenElement) {
