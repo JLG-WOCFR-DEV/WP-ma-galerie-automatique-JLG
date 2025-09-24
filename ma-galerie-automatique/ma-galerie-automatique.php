@@ -32,6 +32,8 @@ add_action( 'plugins_loaded', 'mga_load_textdomain' );
  * Initialise les réglages lors de l'activation du plugin.
  */
 function mga_activate() {
+    mga_refresh_swiper_asset_sources();
+
     $defaults = mga_get_default_settings();
     $existing_settings = get_option( 'mga_settings', false );
 
@@ -50,6 +52,61 @@ function mga_activate() {
 }
 
 register_activation_hook( __FILE__, 'mga_activate' );
+
+/**
+ * Détecte la disponibilité des assets Swiper locaux et mémorise le résultat.
+ *
+ * @return array{css:string,js:string}
+ */
+function mga_refresh_swiper_asset_sources() {
+    $local_swiper_css_path = plugin_dir_path( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.css';
+    $local_swiper_js_path  = plugin_dir_path( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.js';
+
+    $sources = [
+        'css' => file_exists( $local_swiper_css_path ) ? 'local' : 'cdn',
+        'js'  => file_exists( $local_swiper_js_path ) ? 'local' : 'cdn',
+    ];
+
+    update_option( 'mga_swiper_asset_sources', $sources );
+
+    return $sources;
+}
+
+/**
+ * Retourne la source mémorisée des assets Swiper.
+ *
+ * @return array{css:string,js:string}
+ */
+function mga_get_swiper_asset_sources() {
+    $sources = get_option( 'mga_swiper_asset_sources' );
+
+    if ( ! is_array( $sources ) || ! isset( $sources['css'], $sources['js'] ) ) {
+        $sources = mga_refresh_swiper_asset_sources();
+    }
+
+    return $sources;
+}
+
+/**
+ * Réévalue la présence des assets locaux après une mise à jour du plugin.
+ */
+function mga_maybe_refresh_swiper_asset_sources( $upgrader, $options ) {
+    if ( empty( $options['type'] ) || 'plugin' !== $options['type'] ) {
+        return;
+    }
+
+    if ( empty( $options['plugins'] ) || ! is_array( $options['plugins'] ) ) {
+        return;
+    }
+
+    $plugin_basename = plugin_basename( __FILE__ );
+
+    if ( in_array( $plugin_basename, $options['plugins'], true ) ) {
+        mga_refresh_swiper_asset_sources();
+    }
+}
+
+add_action( 'upgrader_process_complete', 'mga_maybe_refresh_swiper_asset_sources', 10, 2 );
 
 // ===== FRONT-END =====
 
@@ -80,16 +137,12 @@ function mga_enqueue_assets() {
     $cdn_swiper_css = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.css';
     $cdn_swiper_js  = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.js';
 
-    $swiper_css = $local_swiper_css_url;
-    if ( ! file_exists( $local_swiper_css_path ) ) {
-        $swiper_css = $cdn_swiper_css;
-    }
+    $asset_sources = mga_get_swiper_asset_sources();
+
+    $swiper_css = 'local' === $asset_sources['css'] ? $local_swiper_css_url : $cdn_swiper_css;
     $swiper_css = apply_filters( 'mga_swiper_css', $swiper_css, $swiper_version );
 
-    $swiper_js = $local_swiper_js_url;
-    if ( ! file_exists( $local_swiper_js_path ) ) {
-        $swiper_js = $cdn_swiper_js;
-    }
+    $swiper_js = 'local' === $asset_sources['js'] ? $local_swiper_js_url : $cdn_swiper_js;
     $swiper_js = apply_filters( 'mga_swiper_js', $swiper_js, $swiper_version );
 
     wp_enqueue_style( 'mga-swiper-css', $swiper_css, [], $swiper_version );
@@ -230,6 +283,8 @@ function mga_blocks_contain_linked_media( array $blocks, array $allowed_block_na
         $visited_block_ids = [];
     }
 
+    static $reusable_block_cache = [];
+
     foreach ( $blocks as $block ) {
         if ( ! is_array( $block ) ) {
             continue;
@@ -244,28 +299,33 @@ function mga_blocks_contain_linked_media( array $blocks, array $allowed_block_na
             if ( $ref && ! in_array( $ref, $visited_block_ids, true ) ) {
                 $visited_block_ids[] = $ref;
 
-                $reusable_block = get_post( $ref );
-
-                if (
-                    $reusable_block instanceof WP_Post
-                    && 'wp_block' === $reusable_block->post_type
-                    && ! empty( $reusable_block->post_content )
-                ) {
-                    $parsed_reusable_blocks = [];
-
-                    if ( function_exists( 'parse_blocks' ) ) {
-                        $parsed_reusable_blocks = parse_blocks( $reusable_block->post_content );
-                    } elseif ( class_exists( 'WP_Block_Parser' ) ) {
-                        $parser = new WP_Block_Parser();
-                        $parsed_reusable_blocks = $parser->parse( $reusable_block->post_content );
-                    }
+                if ( array_key_exists( $ref, $reusable_block_cache ) ) {
+                    $parsed_reusable_blocks = $reusable_block_cache[ $ref ];
+                } else {
+                    $reusable_block_cache[ $ref ] = [];
+                    $reusable_block = get_post( $ref );
 
                     if (
-                        ! empty( $parsed_reusable_blocks )
-                        && mga_blocks_contain_linked_media( $parsed_reusable_blocks, $allowed_block_names, $visited_block_ids )
+                        $reusable_block instanceof WP_Post
+                        && 'wp_block' === $reusable_block->post_type
+                        && ! empty( $reusable_block->post_content )
                     ) {
-                        return true;
+                        if ( function_exists( 'parse_blocks' ) ) {
+                            $reusable_block_cache[ $ref ] = parse_blocks( $reusable_block->post_content );
+                        } elseif ( class_exists( 'WP_Block_Parser' ) ) {
+                            $parser = new WP_Block_Parser();
+                            $reusable_block_cache[ $ref ] = $parser->parse( $reusable_block->post_content );
+                        }
                     }
+
+                    $parsed_reusable_blocks = $reusable_block_cache[ $ref ];
+                }
+
+                if (
+                    ! empty( $parsed_reusable_blocks )
+                    && mga_blocks_contain_linked_media( $parsed_reusable_blocks, $allowed_block_names, $visited_block_ids )
+                ) {
+                    return true;
                 }
             }
 
@@ -504,7 +564,7 @@ function mga_sanitize_settings( $input, $existing_settings = null ) {
     } else {
         $output['accent_color'] = $defaults['accent_color'];
     }
-    $output['bg_opacity'] = isset($input['bg_opacity']) ? max(min(floatval($input['bg_opacity']), 1), 0.5) : $defaults['bg_opacity'];
+    $output['bg_opacity'] = isset($input['bg_opacity']) ? max(min(floatval($input['bg_opacity']), 1), 0) : $defaults['bg_opacity'];
     $output['loop'] = ! empty( $input['loop'] );
     $output['autoplay_start'] = ! empty( $input['autoplay_start'] );
     
