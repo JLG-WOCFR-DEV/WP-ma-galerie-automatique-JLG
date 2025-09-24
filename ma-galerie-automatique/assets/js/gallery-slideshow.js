@@ -699,9 +699,21 @@
         debug.log(mga__( 'Script initialisé et prêt.', 'lightbox-jlg' ));
         debug.updateInfo('mga-debug-status', mga__( 'Prêt', 'lightbox-jlg' ), '#4CAF50');
 
-        const defaultContentSelectors = ['.wp-block-post-content', '.entry-content', '.post-content'];
+        const defaultContentSelectors = [
+            '.wp-block-post-content',
+            '.entry-content',
+            '.post-content',
+            '.site-main',
+            '.content-area',
+            'main',
+            '.hentry',
+            '#primary',
+            '#main'
+        ];
         const configuredSelectors = Array.isArray(settings.contentSelectors) ? settings.contentSelectors : [];
-        const contentSelectors = configuredSelectors.concat(defaultContentSelectors).filter(Boolean);
+        const contentSelectors = Array.from(
+            new Set(configuredSelectors.concat(defaultContentSelectors).filter(Boolean))
+        );
         let contentArea = null;
         let foundSelector = mga__( 'Aucune zone détectée', 'lightbox-jlg' );
         for (const selector of contentSelectors) {
