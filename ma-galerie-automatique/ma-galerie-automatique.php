@@ -26,7 +26,7 @@ function mga_load_textdomain() {
     load_plugin_textdomain( 'lightbox-jlg', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 }
 
-add_action( 'init', 'mga_load_textdomain' );
+add_action( 'plugins_loaded', 'mga_load_textdomain' );
 
 /**
  * Initialise les réglages lors de l'activation du plugin.
