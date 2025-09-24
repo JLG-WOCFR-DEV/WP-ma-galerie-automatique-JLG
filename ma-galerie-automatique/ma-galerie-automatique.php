@@ -96,13 +96,22 @@ function mga_refresh_swiper_asset_sources() {
         'checked_at' => time(),
     ];
 
-    update_option( 'mga_swiper_asset_sources', $sources );
+    $existing_sources = get_option( 'mga_swiper_asset_sources', false );
+
+    if ( false === $existing_sources ) {
+        add_option( 'mga_swiper_asset_sources', $sources, '', 'no' );
+    } else {
+        update_option( 'mga_swiper_asset_sources', $sources, false );
+    }
 
     return $sources;
 }
 
 /**
  * Retourne la source mémorisée des assets Swiper.
+ *
+ * Le délai de rafraîchissement peut être ajusté via le filtre
+ * `mga_swiper_sources_ttl`.
  *
  * @return array{css:string,js:string}
  */
@@ -113,11 +122,13 @@ function mga_get_swiper_asset_sources() {
         define( 'MGA_SWIPER_SOURCES_TTL', HOUR_IN_SECONDS * 12 );
     }
 
+    $ttl = apply_filters( 'mga_swiper_sources_ttl', MGA_SWIPER_SOURCES_TTL, $sources );
+
     $needs_refresh = true;
 
     if ( is_array( $sources ) && isset( $sources['css'], $sources['js'] ) ) {
         $checked_at = isset( $sources['checked_at'] ) ? absint( $sources['checked_at'] ) : 0;
-        $is_fresh   = $checked_at && ( time() - $checked_at ) < MGA_SWIPER_SOURCES_TTL;
+        $is_fresh   = $checked_at && ( time() - $checked_at ) < absint( $ttl );
 
         if ( $is_fresh ) {
             $needs_refresh = false;
@@ -509,7 +520,8 @@ function mga_detect_post_linked_images( WP_Post $post ) {
 /**
  * Met à jour le cache lorsqu'un contenu est sauvegardé.
  *
- * Les types de contenu pris en compte peuvent être filtrés via `mga_tracked_post_types`.
+ * Les types de contenu pris en compte peuvent être filtrés via
+ * `mga_tracked_post_types`. Les articles et les pages sont suivis par défaut.
  *
  * @param int     $post_id Identifiant du post.
  * @param WP_Post $post    Objet WP_Post.
@@ -523,7 +535,29 @@ function mga_refresh_post_linked_images_cache_on_save( $post_id, $post ) {
         return;
     }
 
-    $tracked_post_types = apply_filters( 'mga_tracked_post_types', [] );
+    $defaults = mga_get_default_settings();
+    $settings = get_option( 'mga_settings', $defaults );
+
+    $tracked_post_types = [];
+
+    if (
+        isset( $settings['tracked_post_types'] )
+        && is_array( $settings['tracked_post_types'] )
+    ) {
+        $tracked_post_types = array_map( 'sanitize_key', $settings['tracked_post_types'] );
+    }
+
+    if ( empty( $tracked_post_types ) ) {
+        $tracked_post_types = (array) $defaults['tracked_post_types'];
+    }
+
+    $all_registered_post_types = get_post_types( [], 'names' );
+    $tracked_post_types = array_values(
+        array_intersect( $tracked_post_types, $all_registered_post_types )
+    );
+
+    $tracked_post_types = apply_filters( 'mga_tracked_post_types', $tracked_post_types, $post );
+    $tracked_post_types = array_values( array_filter( (array) $tracked_post_types ) );
 
     if (
         ! empty( $tracked_post_types )
@@ -777,6 +811,7 @@ function mga_get_default_settings() {
         'debug_mode' => false,
         'contentSelectors' => [],
         'allowBodyFallback' => false,
+        'tracked_post_types' => [ 'post', 'page' ],
     ];
 }
 
@@ -879,6 +914,45 @@ function mga_sanitize_settings( $input, $existing_settings = null ) {
     $output['allowBodyFallback'] = isset( $input['allowBodyFallback'] )
         ? (bool) $input['allowBodyFallback']
         : (bool) $defaults['allowBodyFallback'];
+
+    $all_post_types = get_post_types( [], 'names' );
+    $default_tracked_post_types = array_values(
+        array_intersect( (array) $defaults['tracked_post_types'], $all_post_types )
+    );
+
+    $existing_tracked_post_types = $default_tracked_post_types;
+
+    if (
+        isset( $existing_settings['tracked_post_types'] )
+        && is_array( $existing_settings['tracked_post_types'] )
+    ) {
+        $existing_tracked_post_types = array_values(
+            array_intersect(
+                array_map( 'sanitize_key', $existing_settings['tracked_post_types'] ),
+                $all_post_types
+            )
+        );
+    }
+
+    if ( array_key_exists( 'tracked_post_types', $input ) ) {
+        $sanitized_tracked_post_types = [];
+
+        foreach ( (array) $input['tracked_post_types'] as $post_type ) {
+            $post_type = sanitize_key( $post_type );
+
+            if ( in_array( $post_type, $all_post_types, true ) ) {
+                $sanitized_tracked_post_types[] = $post_type;
+            }
+        }
+
+        $output['tracked_post_types'] = array_values( array_unique( $sanitized_tracked_post_types ) );
+
+        if ( empty( $output['tracked_post_types'] ) ) {
+            $output['tracked_post_types'] = $default_tracked_post_types;
+        }
+    } else {
+        $output['tracked_post_types'] = $existing_tracked_post_types;
+    }
 
     return $output;
 }

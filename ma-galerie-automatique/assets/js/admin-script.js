@@ -12,16 +12,89 @@ const mgaAdminSprintf = mgaAdminI18n && typeof mgaAdminI18n.sprintf === 'functio
     };
 
 document.addEventListener('DOMContentLoaded', function() {
-    const navTabs = document.querySelectorAll('.mga-admin-wrap .nav-tab');
-    const tabContents = document.querySelectorAll('.mga-admin-wrap .tab-content');
+    const navTabs = Array.from(document.querySelectorAll('.mga-admin-wrap .nav-tab'));
+    const tabContents = Array.from(document.querySelectorAll('.mga-admin-wrap .tab-content'));
 
-    navTabs.forEach(tab => {
-        tab.addEventListener('click', function(e) {
-            e.preventDefault();
-            navTabs.forEach(t => t.classList.remove('nav-tab-active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-            this.classList.add('nav-tab-active');
-            document.querySelector(this.getAttribute('href')).classList.add('active');
+    const activateTab = (tab, focusTab = true) => {
+        if (!tab) {
+            return;
+        }
+
+        navTabs.forEach((t) => {
+            t.classList.remove('nav-tab-active');
+            t.setAttribute('aria-selected', 'false');
+            t.setAttribute('tabindex', '-1');
+        });
+
+        tabContents.forEach((panel) => {
+            panel.classList.remove('active');
+            panel.setAttribute('aria-hidden', 'true');
+            panel.setAttribute('hidden', 'hidden');
+        });
+
+        tab.classList.add('nav-tab-active');
+        tab.setAttribute('aria-selected', 'true');
+        tab.setAttribute('tabindex', '0');
+
+        const targetSelector = tab.getAttribute('href');
+        const targetPanel = targetSelector ? document.querySelector(targetSelector) : null;
+
+        if (targetPanel) {
+            targetPanel.classList.add('active');
+            targetPanel.setAttribute('aria-hidden', 'false');
+            targetPanel.removeAttribute('hidden');
+        }
+
+        if (focusTab) {
+            tab.focus({ preventScroll: true });
+        }
+    };
+
+    const focusAdjacentTab = (currentTab, direction) => {
+        const currentIndex = navTabs.indexOf(currentTab);
+
+        if (currentIndex === -1) {
+            return;
+        }
+
+        const targetIndex = (currentIndex + direction + navTabs.length) % navTabs.length;
+        activateTab(navTabs[targetIndex]);
+    };
+
+    navTabs.forEach((tab) => {
+        tab.addEventListener('click', (event) => {
+            event.preventDefault();
+            activateTab(tab, false);
+        });
+
+        tab.addEventListener('keydown', (event) => {
+            switch (event.key) {
+                case 'ArrowRight':
+                case 'ArrowDown':
+                    event.preventDefault();
+                    focusAdjacentTab(tab, 1);
+                    break;
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                    event.preventDefault();
+                    focusAdjacentTab(tab, -1);
+                    break;
+                case 'Home':
+                    event.preventDefault();
+                    activateTab(navTabs[0]);
+                    break;
+                case 'End':
+                    event.preventDefault();
+                    activateTab(navTabs[navTabs.length - 1]);
+                    break;
+                case ' ':
+                case 'Enter':
+                    event.preventDefault();
+                    activateTab(tab);
+                    break;
+                default:
+                    break;
+            }
         });
     });
 

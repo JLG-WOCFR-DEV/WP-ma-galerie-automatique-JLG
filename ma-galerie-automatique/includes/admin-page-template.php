@@ -13,15 +13,42 @@ $settings = wp_parse_args( $settings, $defaults );
 <div class="wrap mga-admin-wrap">
     <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
-    <div class="nav-tab-wrapper">
-        <a href="#settings" class="nav-tab nav-tab-active"><?php echo esc_html__( 'Réglages', 'lightbox-jlg' ); ?></a>
-        <a href="#tutorial" class="nav-tab"><?php echo esc_html__( 'Tutoriel', 'lightbox-jlg' ); ?></a>
+    <div class="nav-tab-wrapper" role="tablist" aria-label="<?php echo esc_attr__( 'Sections de la page de réglages', 'lightbox-jlg' ); ?>">
+        <a
+            href="#settings"
+            class="nav-tab nav-tab-active"
+            id="mga-tab-link-settings"
+            role="tab"
+            aria-controls="settings"
+            aria-selected="true"
+            tabindex="0"
+        >
+            <?php echo esc_html__( 'Réglages', 'lightbox-jlg' ); ?>
+        </a>
+        <a
+            href="#tutorial"
+            class="nav-tab"
+            id="mga-tab-link-tutorial"
+            role="tab"
+            aria-controls="tutorial"
+            aria-selected="false"
+            tabindex="-1"
+        >
+            <?php echo esc_html__( 'Tutoriel', 'lightbox-jlg' ); ?>
+        </a>
     </div>
 
     <form action="options.php" method="post">
         <?php settings_fields( 'mga_settings_group' ); ?>
 
-        <div id="settings" class="tab-content active">
+        <div
+            id="settings"
+            class="tab-content active"
+            role="tabpanel"
+            aria-labelledby="mga-tab-link-settings"
+            aria-hidden="false"
+            tabindex="0"
+        >
             <table class="form-table">
                 <tr>
                     <th scope="row"><label for="mga_delay"><?php echo esc_html__( 'Vitesse du diaporama', 'lightbox-jlg' ); ?></label></th>
@@ -157,10 +184,64 @@ $settings = wp_parse_args( $settings, $defaults );
                         </fieldset>
                     </td>
                 </tr>
+                <tr>
+                    <th scope="row"><?php echo esc_html__( 'Types de contenu suivis', 'lightbox-jlg' ); ?></th>
+                    <td>
+                        <fieldset>
+                            <legend class="screen-reader-text">
+                                <span><?php echo esc_html__( 'Sélectionnez les types de contenu à analyser', 'lightbox-jlg' ); ?></span>
+                            </legend>
+                            <?php
+                            $post_types = get_post_types( [ 'public' => true ], 'objects' );
+
+                            if ( empty( $post_types ) ) :
+                                ?>
+                                <p class="description"><?php echo esc_html__( 'Aucun type de contenu public n’a été détecté.', 'lightbox-jlg' ); ?></p>
+                                <?php
+                            else :
+                                foreach ( $post_types as $post_type ) :
+                                    if ( 'attachment' === $post_type->name ) {
+                                        continue;
+                                    }
+
+                                    $is_checked = in_array( $post_type->name, (array) $settings['tracked_post_types'], true );
+                                    ?>
+                                    <label for="mga-tracked-post-type-<?php echo esc_attr( $post_type->name ); ?>" class="mga-tracked-post-type">
+                                        <input
+                                            type="checkbox"
+                                            id="mga-tracked-post-type-<?php echo esc_attr( $post_type->name ); ?>"
+                                            name="mga_settings[tracked_post_types][]"
+                                            value="<?php echo esc_attr( $post_type->name ); ?>"
+                                            <?php checked( $is_checked ); ?>
+                                        />
+                                        <span><?php echo esc_html( $post_type->labels->singular_name ); ?></span>
+                                    </label>
+                                    <br />
+                                    <?php
+                                endforeach;
+
+                                ?>
+                                <p class="description">
+                                    <?php echo esc_html__( 'Limitez l’analyse aux contenus réellement utilisés pour vos galeries. Par défaut, seuls les articles et les pages sont inspectés.', 'lightbox-jlg' ); ?>
+                                </p>
+                                <?php
+                            endif;
+                            ?>
+                        </fieldset>
+                    </td>
+                </tr>
             </table>
         </div>
 
-        <div id="tutorial" class="tab-content">
+        <div
+            id="tutorial"
+            class="tab-content"
+            role="tabpanel"
+            aria-labelledby="mga-tab-link-tutorial"
+            aria-hidden="true"
+            tabindex="0"
+            hidden
+        >
             <h2><span class="dashicons dashicons-editor-help"></span> <?php echo esc_html__( 'Comment faire fonctionner la galerie ?', 'lightbox-jlg' ); ?></h2>
             <p><?php echo esc_html__( "Cette extension est conçue pour s'intégrer naturellement à WordPress. Le principe est simple : seules les images que vous décidez de lier deviendront des déclencheurs pour la galerie.", 'lightbox-jlg' ); ?></p>
             <ol style="list-style-type: decimal; margin-left: 20px;">
