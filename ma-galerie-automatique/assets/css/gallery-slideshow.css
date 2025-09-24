@@ -146,6 +146,7 @@
     .mga-caption {
         white-space: normal;
     }
+    /* Correction : on cible bien .mga-main-swiper pour l'affichage mobile en mode portrait */
     .mga-main-swiper {
         margin-top: 110px;
         max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 130px));
