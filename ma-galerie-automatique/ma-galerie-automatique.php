@@ -93,6 +93,7 @@ function mga_refresh_swiper_asset_sources() {
     $sources = [
         'css' => file_exists( $local_swiper_css_path ) ? 'local' : 'cdn',
         'js'  => file_exists( $local_swiper_js_path ) ? 'local' : 'cdn',
+        'checked_at' => time(),
     ];
 
     update_option( 'mga_swiper_asset_sources', $sources );
@@ -108,7 +109,22 @@ function mga_refresh_swiper_asset_sources() {
 function mga_get_swiper_asset_sources() {
     $sources = get_option( 'mga_swiper_asset_sources' );
 
-    if ( ! is_array( $sources ) || ! isset( $sources['css'], $sources['js'] ) ) {
+    if ( ! defined( 'MGA_SWIPER_SOURCES_TTL' ) ) {
+        define( 'MGA_SWIPER_SOURCES_TTL', HOUR_IN_SECONDS * 12 );
+    }
+
+    $needs_refresh = true;
+
+    if ( is_array( $sources ) && isset( $sources['css'], $sources['js'] ) ) {
+        $checked_at = isset( $sources['checked_at'] ) ? absint( $sources['checked_at'] ) : 0;
+        $is_fresh   = $checked_at && ( time() - $checked_at ) < MGA_SWIPER_SOURCES_TTL;
+
+        if ( $is_fresh ) {
+            $needs_refresh = false;
+        }
+    }
+
+    if ( $needs_refresh ) {
         $sources = mga_refresh_swiper_asset_sources();
     }
 
@@ -168,21 +184,12 @@ function mga_enqueue_assets() {
     // Librairies (Mise à jour vers Swiper v11)
     $swiper_version = '11.1.4';
     $local_swiper_css_url = plugin_dir_url( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.css';
-    $local_swiper_css_path = plugin_dir_path( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.css';
     $local_swiper_js_url  = plugin_dir_url( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.js';
-    $local_swiper_js_path = plugin_dir_path( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.js';
 
     $cdn_swiper_css = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.css';
     $cdn_swiper_js  = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.js';
 
     $asset_sources = mga_get_swiper_asset_sources();
-
-    if (
-        ( 'local' === $asset_sources['css'] && ! file_exists( $local_swiper_css_path ) ) ||
-        ( 'local' === $asset_sources['js'] && ! file_exists( $local_swiper_js_path ) )
-    ) {
-        $asset_sources = mga_refresh_swiper_asset_sources();
-    }
 
     $swiper_css = 'local' === $asset_sources['css'] ? $local_swiper_css_url : $cdn_swiper_css;
     $swiper_css = apply_filters( 'mga_swiper_css', $swiper_css, $swiper_version );
@@ -226,7 +233,15 @@ function mga_enqueue_assets() {
     }
 
     // Passer les réglages au JavaScript
-    wp_localize_script('mga-gallery-script', 'mga_settings', $settings);
+    $settings_json = wp_json_encode( $settings );
+
+    if ( false !== $settings_json ) {
+        wp_add_inline_script(
+            'mga-gallery-script',
+            'const mgaSettings = ' . $settings_json . ';',
+            'before'
+        );
+    }
 
     // Générer les styles dynamiques
     $accent_color = sanitize_hex_color($settings['accent_color']);
@@ -234,15 +249,14 @@ function mga_enqueue_assets() {
         $accent_color = $defaults['accent_color'];
     }
 
-    $dynamic_styles = "
-        :root {
-            --mga-thumb-size-desktop: " . intval($settings['thumb_size']) . "px;
-            --mga-thumb-size-mobile: " . intval($settings['thumb_size_mobile']) . "px;
-            --mga-accent-color: " . $accent_color . ";
-            --mga-bg-opacity: " . floatval($settings['bg_opacity']) . ";
-            --mga-z-index: " . intval($settings['z_index']) . ";
-        }
-    ";
+    $dynamic_styles = sprintf(
+        ':root {--mga-thumb-size-desktop:%1$spx;--mga-thumb-size-mobile:%2$spx;--mga-accent-color:%3$s;--mga-bg-opacity:%4$s;--mga-z-index:%5$s;}',
+        absint( $settings['thumb_size'] ),
+        absint( $settings['thumb_size_mobile'] ),
+        esc_html( $accent_color ),
+        esc_html( (string) floatval( $settings['bg_opacity'] ) ),
+        esc_html( (string) intval( $settings['z_index'] ) )
+    );
     wp_add_inline_style('mga-gallery-style', $dynamic_styles);
 }
 
@@ -279,6 +293,68 @@ function mga_should_enqueue_assets( $post ) {
         return false;
     }
 
+    $content = (string) $post->post_content;
+
+    if ( '' === trim( $content ) ) {
+        return false;
+    }
+
+    static $request_detection_cache = [];
+
+    if ( isset( $request_detection_cache[ $post->ID ] ) ) {
+        return $request_detection_cache[ $post->ID ];
+    }
+
+    $has_linked_images = mga_get_cached_post_linked_images( $post );
+
+    if ( null === $has_linked_images ) {
+        $has_linked_images = mga_detect_post_linked_images( $post );
+        mga_update_post_linked_images_cache( $post->ID, $has_linked_images );
+    }
+
+    $has_linked_images = apply_filters( 'mga_post_has_linked_images', $has_linked_images, $post );
+    $has_linked_images = (bool) $has_linked_images;
+
+    $request_detection_cache[ $post->ID ] = $has_linked_images;
+
+    return $has_linked_images;
+}
+
+/**
+ * Récupère le cache de détection d'images liées pour un post.
+ *
+ * @param WP_Post $post Objet WP_Post.
+ *
+ * @return bool|null
+ */
+function mga_get_cached_post_linked_images( WP_Post $post ) {
+    $cached_value = get_post_meta( $post->ID, '_mga_has_linked_images', true );
+
+    if ( '' === $cached_value ) {
+        return null;
+    }
+
+    return (bool) $cached_value;
+}
+
+/**
+ * Met à jour la valeur de cache pour un post donné.
+ *
+ * @param int  $post_id           Identifiant du post.
+ * @param bool $has_linked_images Présence d'images liées détectée.
+ */
+function mga_update_post_linked_images_cache( $post_id, $has_linked_images ) {
+    update_post_meta( $post_id, '_mga_has_linked_images', $has_linked_images ? 1 : 0 );
+}
+
+/**
+ * Exécute la détection coûteuse des images liées.
+ *
+ * @param WP_Post $post Objet WP_Post.
+ *
+ * @return bool
+ */
+function mga_detect_post_linked_images( WP_Post $post ) {
     $content = (string) $post->post_content;
 
     if ( '' === trim( $content ) ) {
@@ -325,7 +401,7 @@ function mga_should_enqueue_assets( $post ) {
     }
 
     if ( ! $has_linked_images ) {
-        $linked_image_pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
+        $linked_image_pattern = '#<a\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\s*(?:<picture\b[^>]*>.*?<img\b[^>]*>|<img\b[^>]*>)#is';
 
         $has_anchor = false !== stripos( $content, '<a' );
         $has_media_tag = false !== stripos( $content, '<img' ) || false !== stripos( $content, '<picture' );
@@ -339,10 +415,29 @@ function mga_should_enqueue_assets( $post ) {
         $has_linked_images = true;
     }
 
-    $has_linked_images = apply_filters( 'mga_post_has_linked_images', $has_linked_images, $post );
-
     return (bool) $has_linked_images;
 }
+
+/**
+ * Met à jour le cache lorsqu'un contenu est sauvegardé.
+ *
+ * @param int     $post_id Identifiant du post.
+ * @param WP_Post $post    Objet WP_Post.
+ */
+function mga_refresh_post_linked_images_cache_on_save( $post_id, $post ) {
+    if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
+        return;
+    }
+
+    if ( ! $post instanceof WP_Post ) {
+        return;
+    }
+
+    $has_linked_images = mga_detect_post_linked_images( $post );
+    mga_update_post_linked_images_cache( $post_id, $has_linked_images );
+}
+
+add_action( 'save_post', 'mga_refresh_post_linked_images_cache_on_save', 10, 2 );
 
 /**
  * Parcourt les blocs parsés pour trouver une image liée à un média.
@@ -697,7 +792,8 @@ function mga_admin_enqueue_assets($hook) {
     if ( ! current_user_can( 'manage_options' ) ) return;
     if ($hook !== 'toplevel_page_ma-galerie-automatique') return;
     wp_enqueue_style('mga-admin-style', plugin_dir_url(__FILE__) . 'assets/css/admin-style.css', [], MGA_VERSION);
-    wp_enqueue_script('mga-admin-script', plugin_dir_url(__FILE__) . 'assets/js/admin-script.js', [ 'wp-i18n' ], MGA_VERSION, true);
+    wp_register_script('mga-admin-script', plugin_dir_url(__FILE__) . 'assets/js/admin-script.js', [ 'wp-i18n' ], MGA_VERSION, true);
+    wp_enqueue_script('mga-admin-script');
     if ( mga_languages_directory_exists() ) {
         wp_set_script_translations( 'mga-admin-script', 'lightbox-jlg', mga_get_languages_path() );
     }
