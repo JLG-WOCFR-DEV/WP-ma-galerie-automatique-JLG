@@ -215,13 +215,31 @@ function mga_enqueue_assets() {
 
     // Librairies (Mise à jour vers Swiper v11)
     $swiper_version = '11.1.4';
-    $local_swiper_css_url = plugin_dir_url( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.css';
-    $local_swiper_js_url  = plugin_dir_url( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.js';
+    $local_swiper_css_url  = plugin_dir_url( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.css';
+    $local_swiper_js_url   = plugin_dir_url( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.js';
+    $local_swiper_css_path = plugin_dir_path( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.css';
+    $local_swiper_js_path  = plugin_dir_path( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.js';
 
     $cdn_swiper_css = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.css';
     $cdn_swiper_js  = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.js';
 
     $asset_sources = mga_get_swiper_asset_sources();
+
+    $should_refresh_sources = false;
+
+    if ( 'local' === $asset_sources['css'] && ! file_exists( $local_swiper_css_path ) ) {
+        $asset_sources['css'] = 'cdn';
+        $should_refresh_sources = true;
+    }
+
+    if ( 'local' === $asset_sources['js'] && ! file_exists( $local_swiper_js_path ) ) {
+        $asset_sources['js'] = 'cdn';
+        $should_refresh_sources = true;
+    }
+
+    if ( $should_refresh_sources ) {
+        $asset_sources = mga_refresh_swiper_asset_sources();
+    }
 
     $swiper_css = 'local' === $asset_sources['css'] ? $local_swiper_css_url : $cdn_swiper_css;
     $swiper_css = apply_filters( 'mga_swiper_css', $swiper_css, $swiper_version );
