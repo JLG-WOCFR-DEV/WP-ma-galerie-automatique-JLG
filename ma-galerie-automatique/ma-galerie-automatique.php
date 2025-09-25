@@ -311,6 +311,30 @@ add_action( 'wp_enqueue_scripts', 'mga_enqueue_assets' );
  */
 function mga_should_enqueue_assets( $post ) {
     $post = get_post( $post );
+    $defaults = mga_get_default_settings();
+    $settings = get_option( 'mga_settings', $defaults );
+
+    $tracked_post_types = [];
+
+    if (
+        isset( $settings['tracked_post_types'] )
+        && is_array( $settings['tracked_post_types'] )
+    ) {
+        $tracked_post_types = array_map( 'sanitize_key', $settings['tracked_post_types'] );
+    }
+
+    if ( empty( $tracked_post_types ) ) {
+        $tracked_post_types = (array) $defaults['tracked_post_types'];
+    }
+
+    $all_registered_post_types = get_post_types( [], 'names' );
+    $tracked_post_types = array_values(
+        array_intersect( $tracked_post_types, $all_registered_post_types )
+    );
+
+    $tracked_post_types = apply_filters( 'mga_tracked_post_types', $tracked_post_types, $post );
+    $tracked_post_types = array_values( array_filter( (array) $tracked_post_types ) );
+
     $force_enqueue = apply_filters( 'mga_force_enqueue', false, $post );
 
     if ( ! is_singular() && ! $force_enqueue ) {
@@ -322,6 +346,13 @@ function mga_should_enqueue_assets( $post ) {
     }
 
     if ( ! $post instanceof WP_Post ) {
+        return false;
+    }
+
+    if (
+        ! empty( $tracked_post_types )
+        && ! in_array( $post->post_type, $tracked_post_types, true )
+    ) {
         return false;
     }
 
