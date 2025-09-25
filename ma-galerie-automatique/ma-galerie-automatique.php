@@ -366,7 +366,7 @@ function mga_get_cached_post_linked_images( WP_Post $post ) {
         return null;
     }
 
-    return (bool) $cached_value;
+    return in_array( $cached_value, [ 1, '1' ], true );
 }
 
 /**
