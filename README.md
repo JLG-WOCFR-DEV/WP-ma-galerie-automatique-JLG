@@ -59,6 +59,7 @@ Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
 
 ### `mga_swiper_css`
 - **Rôle** : modifier l'URL de la feuille de style utilisée par Swiper (locale par défaut).
+- **Ressource locale** : le plugin embarque la version minifiée officielle (`ma-galerie-automatique/assets/vendor/swiper/swiper-bundle.min.css`).
 - **Moment** : filtré dans `mga_enqueue_assets()` au moment où les assets publics sont enfilés via `wp_enqueue_scripts`.
 - **Astuce** : pointez vers un CDN si vous souhaitez déléguer le chargement à un fournisseur externe.
   ```php
@@ -67,6 +68,7 @@ Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
 
 ### `mga_swiper_js`
 - **Rôle** : remplacer le script JavaScript de Swiper avant son enfilement (la version locale est chargée par défaut).
+- **Ressource locale** : la bibliothèque fournie est `ma-galerie-automatique/assets/vendor/swiper/swiper-bundle.min.js`.
 - **Moment** : appelé dans `mga_enqueue_assets()` juste avant l'enfilement du script Swiper côté visiteur.
 - **Astuce** : utilisez un CDN si vous préférez mutualiser la bibliothèque.
   ```php
