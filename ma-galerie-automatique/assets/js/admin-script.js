@@ -13,72 +13,43 @@
             });
         };
 
-    let focusSupportsOptionsCache = null;
-
-    function detectFocusOptionsSupport() {
-        if (focusSupportsOptionsCache !== null) {
-            return focusSupportsOptionsCache;
+    const resolveFocusUtils = () => {
+        if (global.mgaFocusUtils && typeof global.mgaFocusUtils === 'object') {
+            return global.mgaFocusUtils;
         }
 
-        focusSupportsOptionsCache = false;
-
-        const doc = global.document;
-
-        if (
-            !doc ||
-            typeof doc.createElement !== 'function' ||
-            typeof global.HTMLElement === 'undefined' ||
-            !global.HTMLElement.prototype ||
-            typeof global.HTMLElement.prototype.focus !== 'function'
-        ) {
-            return focusSupportsOptionsCache;
-        }
-
-        const testElement = doc.createElement('button');
-        const root = doc.body || doc.documentElement;
-
-        try {
-            testElement.type = 'button';
-
-            if (root && typeof root.appendChild === 'function') {
-                root.appendChild(testElement);
-            }
-
-            global.HTMLElement.prototype.focus.call(testElement, {
-                get preventScroll() {
-                    focusSupportsOptionsCache = true;
-                    return true;
-                },
-            });
-        } catch (error) {
-            focusSupportsOptionsCache = false;
-        } finally {
-            if (testElement.parentNode && typeof testElement.parentNode.removeChild === 'function') {
-                testElement.parentNode.removeChild(testElement);
+        if (typeof require === 'function') {
+            try {
+                return require('./utils/focus-utils');
+            } catch (error) {
+                // Ignore resolution errors in non-CommonJS environments.
             }
         }
 
-        return focusSupportsOptionsCache;
-    }
+        return null;
+    };
 
-    function safeFocus(element, options = { preventScroll: true }) {
+    const focusUtils = resolveFocusUtils();
+
+    const fallbackSafeFocus = (element) => {
         if (!element || typeof element.focus !== 'function') {
             return;
         }
 
-        const canUseOptions = options && detectFocusOptionsSupport();
-
-        if (canUseOptions) {
-            try {
-                element.focus(options);
-                return;
-            } catch (error) {
-                // Ignore and fall back to focusing without options.
-            }
+        try {
+            element.focus();
+        } catch (error) {
+            // Ignore focus errors in environments without focus support.
         }
+    };
 
-        element.focus();
-    }
+    const safeFocus = focusUtils && typeof focusUtils.safeFocus === 'function'
+        ? focusUtils.safeFocus
+        : fallbackSafeFocus;
+
+    const detectFocusOptionsSupport = focusUtils && typeof focusUtils.detectFocusOptionsSupport === 'function'
+        ? focusUtils.detectFocusOptionsSupport
+        : () => false;
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = {
