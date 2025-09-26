@@ -1,0 +1,105 @@
+<?php
+/**
+ * @group enqueue
+ */
+class EnqueueAssetsTest extends WP_UnitTestCase {
+    public function setUp(): void {
+        parent::setUp();
+
+        update_option( 'mga_settings', [] );
+
+        // Prime the dependency containers so get_data() calls operate on known instances.
+        wp_styles();
+        wp_scripts();
+    }
+
+    public function tearDown(): void {
+        wp_styles()->reset();
+        wp_scripts()->reset();
+
+        parent::tearDown();
+    }
+
+    /**
+     * Ensures inline assets consume the sanitized settings to guard regressions in the enqueue pipeline.
+     */
+    public function test_enqueue_clamps_and_reflects_settings() {
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        update_option(
+            'mga_settings',
+            [
+                'thumb_size'         => 999,
+                'thumb_size_mobile'  => 2,
+                'delay'              => 0,
+                'accent_color'       => 'not-a-color',
+                'bg_opacity'         => -0.5,
+                'z_index'            => -42,
+                'background_style'   => 'invalid',
+                'loop'               => '',
+                'autoplay_start'     => '',
+                'allowBodyFallback'  => '',
+                'contentSelectors'   => [ ' .entry-content ', "\n", '.entry-content' ],
+                'debug_mode'         => true,
+            ]
+        );
+
+        mga_enqueue_assets();
+
+        $dynamic_styles = wp_styles()->get_data( 'mga-gallery-style', 'after' );
+        $this->assertIsArray( $dynamic_styles, 'Inline style data should be stored under the "after" key.' );
+        $this->assertNotEmpty( $dynamic_styles, 'The enqueue pipeline should generate a dynamic style block.' );
+
+        $styles_blob = implode( '\n', $dynamic_styles );
+        $this->assertStringContainsString( '--mga-thumb-size-desktop:150px', $styles_blob, 'Desktop thumb size should clamp to 150px.' );
+        $this->assertStringContainsString( '--mga-thumb-size-mobile:40px', $styles_blob, 'Mobile thumb size should clamp to 40px.' );
+        $this->assertStringContainsString( '--mga-accent-color:#ffffff', $styles_blob, 'Invalid accent colors should fall back to the default.' );
+        $this->assertStringContainsString( '--mga-bg-opacity:0', $styles_blob, 'Opacity values should be clamped to zero when negative.' );
+        $this->assertStringContainsString( '--mga-z-index:0', $styles_blob, 'Negative z-index values should be coerced to zero.' );
+
+        $script_data = wp_scripts()->get_data( 'mga-gallery-script', 'before' );
+        $this->assertIsArray( $script_data, 'Inline script data should be stored under the "before" key.' );
+        $this->assertNotEmpty( $script_data, 'The enqueue pipeline should inject a settings payload before the script handle.' );
+
+        $settings = $this->extract_settings_from_inline_script( $script_data );
+        $this->assertSame( 150, $settings['thumb_size'], 'Desktop thumb size should be clamped to 150 in the script payload.' );
+        $this->assertSame( 40, $settings['thumb_size_mobile'], 'Mobile thumb size should clamp to 40 in the script payload.' );
+        $this->assertSame( '#ffffff', $settings['accent_color'], 'Accent color should fall back to the default hex value.' );
+        $this->assertSame( 0.0, $settings['bg_opacity'], 'Negative opacity values should clamp to zero in the script payload.' );
+        $this->assertSame( 0, $settings['z_index'], 'Negative z-index values should be coerced to zero in the script payload.' );
+    }
+
+    /**
+     * Extracts and decodes the JSON payload from the inline script registered for mga-gallery-script.
+     *
+     * The assertion chain enforces that inline data remains JSON encoded (rather than arbitrary JS),
+     * which helps detect unexpected changes in how settings are handed off to the frontend.
+     *
+     * @param string[] $script_data Inline script snippets registered for mga-gallery-script.
+     *
+     * @return array<string, mixed>
+     */
+    private function extract_settings_from_inline_script( array $script_data ) {
+        $inline_blob = implode( '\n', $script_data );
+
+        $this->assertMatchesRegularExpression(
+            '/window\\.mga_settings = (?P<json>\{.*?\});/s',
+            $inline_blob,
+            'Inline script should assign a JSON payload to window.mga_settings.'
+        );
+
+        preg_match( '/window\\.mga_settings = (?P<json>\{.*?\});/s', $inline_blob, $matches );
+        $this->assertArrayHasKey( 'json', $matches, 'The inline script should contain a JSON object assignment.' );
+
+        $decoded = json_decode( $matches['json'], true );
+        $this->assertIsArray( $decoded, 'The JSON payload assigned to window.mga_settings should decode to an array.' );
+
+        return $decoded;
+    }
+}
