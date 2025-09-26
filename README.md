@@ -50,6 +50,9 @@ Après l’activation :
 ## Développement
 Le modèle de la page d'administration se trouve dans `includes/admin-page-template.php`. Il est automatiquement chargé lors de l'affichage des réglages du plugin.
 
+### Tests E2E
+Les scénarios Playwright du dépôt (par exemple `tests/e2e/gallery-viewer.spec.ts`) génèrent désormais leurs propres images PNG de test afin d'éviter de versionner des médias binaires. Si vous souhaitez vérifier visuellement la lightbox avec des visuels plus représentatifs, déposez simplement vos fichiers dans `tests/e2e/assets/` (non suivi par Git). Les fichiers `png`, `jpg`, `jpeg`, `gif`, `webp` ou `avif` y sont automatiquement détectés — conservez au moins deux images pour couvrir la galerie complète.
+
 ## Hooks et personnalisation
 
 Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
