@@ -101,7 +101,7 @@ function mga_refresh_swiper_asset_sources() {
     if ( false === $existing_sources ) {
         add_option( 'mga_swiper_asset_sources', $sources, '', 'no' );
     } else {
-        update_option( 'mga_swiper_asset_sources', $sources, false );
+        update_option( 'mga_swiper_asset_sources', $sources, 'no' );
     }
 
     return $sources;
