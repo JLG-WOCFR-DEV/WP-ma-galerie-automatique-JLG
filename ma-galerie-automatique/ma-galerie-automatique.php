@@ -586,7 +586,7 @@ function mga_refresh_post_linked_images_cache_on_save( $post_id, $post ) {
     }
 
     $defaults = mga_get_default_settings();
-    $settings = get_option( 'mga_settings', $defaults );
+    $settings = (array) get_option( 'mga_settings', $defaults );
 
     $tracked_post_types = [];
 
