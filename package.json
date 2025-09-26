@@ -1,0 +1,10 @@
+{
+  "name": "ma-galerie-automatique-jlg",
+  "private": true,
+  "scripts": {
+    "test:js": "wp-scripts test-unit-js"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^26.16.0"
+  }
+}
