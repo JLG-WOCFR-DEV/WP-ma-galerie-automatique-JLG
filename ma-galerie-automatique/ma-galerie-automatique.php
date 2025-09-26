@@ -550,7 +550,7 @@ function mga_detect_post_linked_images( WP_Post $post ) {
     }
 
     if ( ! $has_linked_images ) {
-        $linked_image_pattern = '#<a\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\s*(?:<picture\b[^>]*>.*?<img\b[^>]*>|<img\b[^>]*>)#is';
+        $linked_image_pattern = '#<a\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?(?:\#[^"\']*)?["\'][^>]*>\s*(?:<picture\b[^>]*>.*?<img\b[^>]*>|<img\b[^>]*>)#is';
 
         $has_anchor = false !== stripos( $content, '<a' );
         $has_media_tag = false !== stripos( $content, '<img' ) || false !== stripos( $content, '<picture' );
@@ -808,7 +808,7 @@ function mga_post_has_eligible_images( $post = null ) {
         return false;
     }
 
-    $pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
+    $pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?(?:\\#[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
 
     if ( preg_match( $pattern, $content ) ) {
         return true;
