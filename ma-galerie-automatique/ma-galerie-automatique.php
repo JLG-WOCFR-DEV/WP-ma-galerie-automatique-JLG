@@ -329,6 +329,9 @@ add_action( 'wp_enqueue_scripts', 'mga_enqueue_assets' );
  */
 function mga_should_enqueue_assets( $post ) {
     $post = get_post( $post );
+    if ( $post instanceof WP_Post && post_password_required( $post ) ) {
+        return false;
+    }
     $defaults = mga_get_default_settings();
     $saved_settings = get_option( 'mga_settings', [] );
     $settings = wp_parse_args( (array) $saved_settings, $defaults );

@@ -160,6 +160,26 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
         remove_filter( 'mga_force_enqueue', '__return_true' );
     }
 
+    public function test_password_protected_posts_are_ignored_until_unlocked() {
+        $linked_image_markup = '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>';
+        $post_id             = self::factory()->post->create(
+            [
+                'post_content'   => $linked_image_markup,
+                'post_password'  => 'secret',
+                'comment_status' => 'closed',
+            ]
+        );
+
+        unset( $_COOKIE[ 'wp-postpass_' . COOKIEHASH ] );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $this->assertFalse(
+            mga_should_enqueue_assets( $post_id ),
+            'Password protected posts should not enqueue assets before the password is provided.'
+        );
+    }
+
     /**
      * Registers a public post type for test scenarios and tracks it for tearDown cleanup.
      *
