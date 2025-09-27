@@ -35,6 +35,7 @@
         let isResizeListenerAttached = false;
         let initialBodyOverflow = null;
         let bodyOverflowWasModified = false;
+        let initialBodyPaddingRight = null;
         let lastFocusedElementBeforeViewer = null;
         let viewerFocusTrapHandler = null;
 
@@ -991,6 +992,23 @@
                 setupViewerFocusManagement(viewer);
                 const previousOverflow = document.body.style.overflow;
                 initialBodyOverflow = previousOverflow;
+                initialBodyPaddingRight = document.body.style.paddingRight;
+                const docEl = document.documentElement;
+                if (typeof window !== 'undefined' && docEl) {
+                    const computedScrollbarWidth = Math.max(window.innerWidth - docEl.clientWidth, 0);
+                    if (computedScrollbarWidth > 0) {
+                        let basePadding = 0;
+                        try {
+                            const computedStyle = window.getComputedStyle(document.body);
+                            const parsedPadding = parseFloat(computedStyle.paddingRight || '0');
+                            basePadding = Number.isNaN(parsedPadding) ? 0 : parsedPadding;
+                        } catch (styleError) {
+                            const parsedInline = parseFloat(initialBodyPaddingRight || '0');
+                            basePadding = Number.isNaN(parsedInline) ? 0 : parsedInline;
+                        }
+                        document.body.style.paddingRight = `${basePadding + computedScrollbarWidth}px`;
+                    }
+                }
                 if (previousOverflow !== 'hidden') {
                     document.body.style.overflow = 'hidden';
                     bodyOverflowWasModified = true;
@@ -1287,8 +1305,14 @@
             if (bodyOverflowWasModified) {
                 document.body.style.overflow = initialBodyOverflow;
             }
+            if (typeof initialBodyPaddingRight === 'string') {
+                document.body.style.paddingRight = initialBodyPaddingRight;
+            } else {
+                document.body.style.paddingRight = '';
+            }
             initialBodyOverflow = null;
             bodyOverflowWasModified = false;
+            initialBodyPaddingRight = null;
             debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
             debug.stopTimer();
             if (lastFocusedElementBeforeViewer && typeof lastFocusedElementBeforeViewer.focus === 'function') {

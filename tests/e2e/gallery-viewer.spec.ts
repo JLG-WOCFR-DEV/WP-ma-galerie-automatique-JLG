@@ -13,6 +13,17 @@ type PreparedImages = {
     cleanup: () => Promise<void>;
 };
 
+type BodyScrollSnapshot = {
+    overflow: string;
+    paddingRight: string;
+    computedPaddingRight: number;
+    rectLeft: number;
+};
+
+type BodyScrollSnapshotWithScrollbar = BodyScrollSnapshot & {
+    scrollbarWidth: number;
+};
+
 async function createTemporaryImages(fileNames: string[]): Promise<{
     directory: string;
     files: string[];
@@ -125,13 +136,68 @@ test.describe('Gallery viewer', () => {
             });
 
             await page.goto(post.link);
-            await expect(page.locator(`a[href="${uploads[0].source_url}"] img`)).toBeVisible();
 
-            await page.locator(`a[href="${uploads[0].source_url}"]`).click();
+            const firstImageLink = page.locator(`a[href="${uploads[0].source_url}"]`);
+            const firstImage = firstImageLink.locator('img');
+            await expect(firstImage).toBeVisible();
+
+            const initialBodyState = await page.evaluate<BodyScrollSnapshotWithScrollbar>(() => {
+                const body = document.body;
+                const style = window.getComputedStyle(body);
+                const rect = body.getBoundingClientRect();
+
+                return {
+                    overflow: body.style.overflow || '',
+                    paddingRight: body.style.paddingRight || '',
+                    computedPaddingRight: parseFloat(style.paddingRight) || 0,
+                    rectLeft: rect.left,
+                    scrollbarWidth: Math.max(window.innerWidth - document.documentElement.clientWidth, 0),
+                };
+            });
+
+            await firstImageLink.click();
 
             const viewer = page.locator('#mga-viewer');
             await expect(viewer).toBeVisible();
             await expect(page.locator('#mga-counter')).toHaveText(`1 / ${uploads.length}`);
+
+            const bodyStateWithViewer = await page.evaluate<BodyScrollSnapshot>(() => {
+                const body = document.body;
+                const style = window.getComputedStyle(body);
+                const rect = body.getBoundingClientRect();
+
+                return {
+                    overflow: body.style.overflow || '',
+                    paddingRight: body.style.paddingRight || '',
+                    computedPaddingRight: parseFloat(style.paddingRight) || 0,
+                    rectLeft: rect.left,
+                };
+            });
+
+            const expectedPaddingRight = initialBodyState.computedPaddingRight + initialBodyState.scrollbarWidth;
+            expect(Math.abs(bodyStateWithViewer.rectLeft - initialBodyState.rectLeft)).toBeLessThan(0.5);
+            expect(Math.abs(bodyStateWithViewer.computedPaddingRight - expectedPaddingRight)).toBeLessThan(1);
+
+            await page.locator('#mga-close').click();
+            await expect(viewer).toBeHidden();
+
+            const bodyStateAfterClose = await page.evaluate<BodyScrollSnapshot>(() => {
+                const body = document.body;
+                const style = window.getComputedStyle(body);
+                const rect = body.getBoundingClientRect();
+
+                return {
+                    overflow: body.style.overflow || '',
+                    paddingRight: body.style.paddingRight || '',
+                    computedPaddingRight: parseFloat(style.paddingRight) || 0,
+                    rectLeft: rect.left,
+                };
+            });
+
+            expect(bodyStateAfterClose.overflow).toBe(initialBodyState.overflow);
+            expect(bodyStateAfterClose.paddingRight).toBe(initialBodyState.paddingRight);
+            expect(Math.abs(bodyStateAfterClose.computedPaddingRight - initialBodyState.computedPaddingRight)).toBeLessThan(0.5);
+            expect(Math.abs(bodyStateAfterClose.rectLeft - initialBodyState.rectLeft)).toBeLessThan(0.5);
         } finally {
             await preparedImages.cleanup();
         }
