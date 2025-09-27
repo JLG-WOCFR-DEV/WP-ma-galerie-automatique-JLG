@@ -166,6 +166,49 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
         );
     }
 
+    /**
+     * Invalid settings should fall back to defaults without emitting warnings.
+     */
+    public function test_invalid_settings_option_falls_back_to_defaults_without_warnings() {
+        update_option( 'mga_settings', 'invalid' );
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+            ]
+        );
+
+        $warnings = [];
+
+        set_error_handler(
+            static function ( $errno, $errstr ) use ( &$warnings ) {
+                if ( E_WARNING === $errno ) {
+                    $warnings[] = $errstr;
+
+                    return true;
+                }
+
+                return false;
+            }
+        );
+
+        mga_refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
+
+        restore_error_handler();
+
+        $this->assertSame(
+            [],
+            $warnings,
+            'Invalid settings should not trigger PHP warnings.'
+        );
+
+        $this->assertSame(
+            '1',
+            get_post_meta( $post_id, '_mga_has_linked_images', true ),
+            'Invalid settings should fall back to defaults and detect linked images on tracked post types.'
+        );
+    }
+
     private function reset_plugin_state() {
         delete_option( 'mga_settings' );
 

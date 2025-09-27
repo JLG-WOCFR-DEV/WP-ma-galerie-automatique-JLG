@@ -588,6 +588,12 @@ function mga_refresh_post_linked_images_cache_on_save( $post_id, $post ) {
     $defaults = mga_get_default_settings();
     $settings = get_option( 'mga_settings', $defaults );
 
+    if ( ! is_array( $settings ) ) {
+        $settings = [];
+    }
+
+    $settings = wp_parse_args( $settings, $defaults );
+
     $tracked_post_types = [];
 
     if (
