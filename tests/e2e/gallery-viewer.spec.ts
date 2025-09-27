@@ -90,6 +90,44 @@ async function prepareGalleryImages(): Promise<PreparedImages> {
     };
 }
 
+async function createPublishedGalleryPost(
+    requestUtils: any,
+    title = 'Gallery viewer E2E',
+): Promise<{
+    post: { link: string };
+    uploads: Array<{ id: number; source_url: string }>;
+    cleanup: () => Promise<void>;
+}> {
+    const preparedImages = await prepareGalleryImages();
+    const uploads: Array<{ id: number; source_url: string }> = [];
+
+    try {
+        for (const filePath of preparedImages.files) {
+            const media = await requestUtils.uploadMedia(filePath);
+            uploads.push({ id: media.id, source_url: media.source_url });
+        }
+
+        const content = buildGalleryContent(uploads);
+        const now = new Date().toISOString();
+        const post = await requestUtils.createPost({
+            title,
+            content,
+            status: 'publish',
+            date: now,
+            date_gmt: now,
+        });
+
+        return {
+            post,
+            uploads,
+            cleanup: preparedImages.cleanup,
+        };
+    } catch (error) {
+        await preparedImages.cleanup();
+        throw error;
+    }
+}
+
 test.describe('Gallery viewer', () => {
     test.beforeAll(async ({ requestUtils }) => {
         await requestUtils.login();
@@ -104,26 +142,9 @@ test.describe('Gallery viewer', () => {
     });
 
     test('opens the viewer for a seeded gallery post', async ({ page, requestUtils }) => {
-        const preparedImages = await prepareGalleryImages();
-
-        const uploads: Array<{ id: number; source_url: string }> = [];
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(requestUtils, 'Gallery viewer E2E');
 
         try {
-            for (const filePath of preparedImages.files) {
-                const media = await requestUtils.uploadMedia(filePath);
-                uploads.push({ id: media.id, source_url: media.source_url });
-            }
-
-            const content = buildGalleryContent(uploads);
-            const now = new Date().toISOString();
-            const post = await requestUtils.createPost({
-                title: 'Gallery viewer E2E',
-                content,
-                status: 'publish',
-                date: now,
-                date_gmt: now,
-            });
-
             await page.goto(post.link);
             await expect(page.locator(`a[href="${uploads[0].source_url}"] img`)).toBeVisible();
 
@@ -133,7 +154,82 @@ test.describe('Gallery viewer', () => {
             await expect(viewer).toBeVisible();
             await expect(page.locator('#mga-counter')).toHaveText(`1 / ${uploads.length}`);
         } finally {
-            await preparedImages.cleanup();
+            await cleanup();
+        }
+    });
+
+    test('prevents layout shift when locking scroll', async ({ page, requestUtils }) => {
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(requestUtils, 'Gallery viewer layout shift');
+
+        try {
+            await page.goto(post.link);
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`);
+            const image = trigger.locator('img');
+            await expect(image).toBeVisible();
+
+            const initialBox = await image.boundingBox();
+            expect(initialBox).not.toBeNull();
+
+            const initialMetrics = await page.evaluate(() => {
+                const computedPadding = window.getComputedStyle(document.body).paddingRight;
+                return {
+                    scrollBarWidth: Math.max(window.innerWidth - document.documentElement.clientWidth, 0),
+                    inlinePaddingRight: document.body.style.paddingRight || '',
+                    computedPaddingRight: computedPadding,
+                    overflow: document.body.style.overflow || '',
+                    hasScrollLockClass: document.body.classList.contains('mga-scroll-locked'),
+                };
+            });
+
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+
+            const afterOpenBox = await image.boundingBox();
+            expect(afterOpenBox).not.toBeNull();
+
+            if (initialBox && afterOpenBox) {
+                expect(Math.abs(afterOpenBox.x - initialBox.x)).toBeLessThanOrEqual(1);
+            }
+
+            const afterOpenMetrics = await page.evaluate(() => {
+                const computedPadding = window.getComputedStyle(document.body).paddingRight;
+                return {
+                    inlinePaddingRight: document.body.style.paddingRight || '',
+                    computedPaddingRight: computedPadding,
+                    overflow: document.body.style.overflow || '',
+                    hasScrollLockClass: document.body.classList.contains('mga-scroll-locked'),
+                };
+            });
+
+            const initialComputedPadding = parseFloat(initialMetrics.computedPaddingRight) || 0;
+            const afterComputedPadding = parseFloat(afterOpenMetrics.computedPaddingRight) || 0;
+            const paddingDelta = afterComputedPadding - initialComputedPadding;
+            expect(Math.abs(paddingDelta - initialMetrics.scrollBarWidth)).toBeLessThanOrEqual(1);
+            expect(afterOpenMetrics.overflow).toBe('hidden');
+            expect(afterOpenMetrics.hasScrollLockClass).toBe(true);
+
+            await page.locator('#mga-close').click();
+            await expect(viewer).toBeHidden();
+
+            const afterCloseMetrics = await page.evaluate(() => {
+                const computedPadding = window.getComputedStyle(document.body).paddingRight;
+                return {
+                    inlinePaddingRight: document.body.style.paddingRight || '',
+                    computedPaddingRight: computedPadding,
+                    overflow: document.body.style.overflow || '',
+                    hasScrollLockClass: document.body.classList.contains('mga-scroll-locked'),
+                };
+            });
+
+            expect(afterCloseMetrics.inlinePaddingRight).toBe(initialMetrics.inlinePaddingRight);
+            expect(afterCloseMetrics.computedPaddingRight).toBe(initialMetrics.computedPaddingRight);
+            expect(afterCloseMetrics.overflow).toBe(initialMetrics.overflow);
+            expect(afterCloseMetrics.hasScrollLockClass).toBe(initialMetrics.hasScrollLockClass);
+        } finally {
+            await cleanup();
         }
     });
 });

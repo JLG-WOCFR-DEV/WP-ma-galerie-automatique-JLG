@@ -28,13 +28,17 @@
             restartTimer: noop,
             table: noop,
         };
+        const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
         let mainSwiper = null;
         let thumbsSwiper = null;
         const preloadedUrls = new Set();
         let resizeTimeout;
         let isResizeListenerAttached = false;
         let initialBodyOverflow = null;
+        let initialBodyPaddingRight = null;
         let bodyOverflowWasModified = false;
+        let bodyPaddingRightWasModified = false;
+        let bodyScrollLockClassAdded = false;
         let lastFocusedElementBeforeViewer = null;
         let viewerFocusTrapHandler = null;
 
@@ -990,7 +994,37 @@
                 }
                 setupViewerFocusManagement(viewer);
                 const previousOverflow = document.body.style.overflow;
+                const previousPaddingRight = document.body.style.paddingRight;
                 initialBodyOverflow = previousOverflow;
+                initialBodyPaddingRight = previousPaddingRight;
+
+                let computedPaddingRight = 0;
+                if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+                    const bodyComputedStyle = window.getComputedStyle(document.body);
+                    computedPaddingRight = parseFloat(bodyComputedStyle.paddingRight) || 0;
+                } else if (previousPaddingRight) {
+                    const parsedPadding = parseFloat(previousPaddingRight);
+                    computedPaddingRight = Number.isNaN(parsedPadding) ? 0 : parsedPadding;
+                }
+
+                const scrollbarWidth = (typeof window !== 'undefined' && typeof window.innerWidth === 'number' && typeof document !== 'undefined' && document.documentElement)
+                    ? Math.max(window.innerWidth - document.documentElement.clientWidth, 0)
+                    : 0;
+
+                if (scrollbarWidth > 0) {
+                    document.body.style.paddingRight = `${computedPaddingRight + scrollbarWidth}px`;
+                    bodyPaddingRightWasModified = true;
+                } else {
+                    bodyPaddingRightWasModified = false;
+                }
+
+                if (document.body.classList.contains(SCROLL_LOCK_CLASS)) {
+                    bodyScrollLockClassAdded = false;
+                } else {
+                    document.body.classList.add(SCROLL_LOCK_CLASS);
+                    bodyScrollLockClassAdded = true;
+                }
+
                 if (previousOverflow !== 'hidden') {
                     document.body.style.overflow = 'hidden';
                     bodyOverflowWasModified = true;
@@ -1284,11 +1318,20 @@
                 viewerFocusTrapHandler = null;
             }
             viewer.style.display = 'none';
+            if (bodyPaddingRightWasModified) {
+                document.body.style.paddingRight = initialBodyPaddingRight;
+            }
             if (bodyOverflowWasModified) {
                 document.body.style.overflow = initialBodyOverflow;
             }
+            if (bodyScrollLockClassAdded) {
+                document.body.classList.remove(SCROLL_LOCK_CLASS);
+            }
             initialBodyOverflow = null;
+            initialBodyPaddingRight = null;
             bodyOverflowWasModified = false;
+            bodyPaddingRightWasModified = false;
+            bodyScrollLockClassAdded = false;
             debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
             debug.stopTimer();
             if (lastFocusedElementBeforeViewer && typeof lastFocusedElementBeforeViewer.focus === 'function') {
