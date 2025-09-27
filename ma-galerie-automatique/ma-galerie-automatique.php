@@ -330,6 +330,12 @@ add_action( 'wp_enqueue_scripts', 'mga_enqueue_assets' );
 function mga_should_enqueue_assets( $post ) {
     $post = get_post( $post );
 
+    $force_enqueue = apply_filters( 'mga_force_enqueue', false, $post );
+
+    if ( ! $post instanceof WP_Post ) {
+        return (bool) $force_enqueue;
+    }
+
     if ( post_password_required( $post ) ) {
         return false;
     }
@@ -359,18 +365,12 @@ function mga_should_enqueue_assets( $post ) {
     $tracked_post_types = apply_filters( 'mga_tracked_post_types', $tracked_post_types, $post );
     $tracked_post_types = array_values( array_filter( (array) $tracked_post_types ) );
 
-    $force_enqueue = apply_filters( 'mga_force_enqueue', false, $post );
-
     if ( ! is_singular() && ! $force_enqueue ) {
         return false;
     }
 
     if ( $force_enqueue ) {
         return true;
-    }
-
-    if ( ! $post instanceof WP_Post ) {
-        return false;
     }
 
     if (

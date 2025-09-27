@@ -161,6 +161,25 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
     }
 
     /**
+     * Forcing an enqueue on non singular views without a global WP_Post should not trigger notices.
+     */
+    public function test_force_enqueue_without_global_post_object() {
+        $this->go_to( home_url( '/' ) );
+
+        $previous_global_post = $GLOBALS['post'] ?? null;
+        $GLOBALS['post']      = null;
+
+        add_filter( 'mga_force_enqueue', '__return_true' );
+
+        try {
+            $this->assertTrue( mga_should_enqueue_assets( null ), 'Forced enqueues should succeed even when no global post is available.' );
+        } finally {
+            remove_filter( 'mga_force_enqueue', '__return_true' );
+            $GLOBALS['post'] = $previous_global_post;
+        }
+    }
+
+    /**
      * Password protected posts should not enqueue assets until unlocked by the visitor.
      */
     public function test_password_protected_posts_require_unlocked_access() {
