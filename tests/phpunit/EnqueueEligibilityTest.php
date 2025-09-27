@@ -161,6 +161,26 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
     }
 
     /**
+     * Password protected posts should not enqueue assets until unlocked by the visitor.
+     */
+    public function test_password_protected_posts_require_unlocked_access() {
+        $post_id = self::factory()->post->create(
+            [
+                'post_content'  => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+                'post_password' => 'secret',
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $cookie_key = 'wp-postpass_' . COOKIEHASH;
+        unset( $_COOKIE[ $cookie_key ] );
+
+        $this->assertTrue( post_password_required( $post_id ), 'Visiting a protected post without the access cookie should still require the password.' );
+        $this->assertFalse( mga_should_enqueue_assets( $post_id ), 'Assets should not enqueue for locked password protected posts.' );
+    }
+
+    /**
      * Registers a public post type for test scenarios and tracks it for tearDown cleanup.
      *
      * @param string $post_type Custom post type slug.
