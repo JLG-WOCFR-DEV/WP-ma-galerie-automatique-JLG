@@ -225,7 +225,7 @@ function mga_enqueue_assets() {
         (array) $settings['contentSelectors'],
         $post
     );
-    $settings['allowBodyFallback'] = apply_filters(
+    $settings['allowBodyFallback'] = (bool) apply_filters(
         'mga_frontend_allow_body_fallback',
         (bool) $settings['allowBodyFallback'],
         $post
