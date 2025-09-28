@@ -38,39 +38,106 @@
         const panel = document.createElement('div');
         panel.id = 'mga-debug-panel';
         panel.style.cssText = 'position: fixed; bottom: 10px; right: 10px; background: #23282d; color: #fff; border: 2px solid #0073aa; padding: 15px; font-family: monospace; font-size: 12px; z-index: 999999; max-width: 450px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);';
-        panel.innerHTML = `
-            <h4 style="margin: 0 0 10px; padding: 0 0 10px; border-bottom: 1px solid #444; font-size: 14px;">${mga__( 'Debug MGA Performance', 'lightbox-jlg' )}</h4>
-            <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px;">
-                <div style="background: #1c1f23; padding: 6px 8px; border-radius: 4px; grid-column: 1 / -1;">
-                    <strong style="display: block; margin-bottom: 4px; color: #ccc;">${mga__( 'Statut :', 'lightbox-jlg' )}</strong>
-                    <div id="mga-debug-status" style="font-size: 14px; color: #4CAF50;">${mga__( 'Inconnu', 'lightbox-jlg' )}</div>
-                </div>
-                <div style="background: #1c1f23; padding: 6px 8px; border-radius: 4px;">
-                    <strong style="display: block; margin-bottom: 4px; color: #ccc;">${mga__( 'Chronomètre réel :', 'lightbox-jlg' )}</strong>
-                    <div id="mga-debug-realtime" style="font-size: 16px; color: #4CAF50;">${mgaSprintf( mga__( '%ss', 'lightbox-jlg' ), '0.00' )}</div>
-                </div>
-                <div style="background: #1c1f23; padding: 6px 8px; border-radius: 4px;">
-                    <strong style="display: block; margin-bottom: 4px; color: #ccc;">${mga__( 'Timer Autoplay :', 'lightbox-jlg' )}</strong>
-                    <div id="mga-debug-autoplay-time" style="font-size: 16px; color: #FFC107;">${mga__( 'N/A', 'lightbox-jlg' )}</div>
-                </div>
-                <div style="background: #1c1f23; padding: 6px 8px; border-radius: 4px;">
-                    <strong style="display: block; margin-bottom: 4px; color: #ccc;">${mga__( 'Zone de contenu :', 'lightbox-jlg' )}</strong>
-                    <div id="mga-debug-content-area" style="font-size: 13px; color: #03A9F4; word-break: break-all;">${mga__( 'N/A', 'lightbox-jlg' )}</div>
-                </div>
-                <div style="background: #1c1f23; padding: 6px 8px; border-radius: 4px;">
-                    <strong style="display: block; margin-bottom: 4px; color: #ccc;">${mga__( 'Images déclencheuses :', 'lightbox-jlg' )}</strong>
-                    <div id="mga-debug-trigger-img" style="font-size: 14px; color: #FFC107;">${mga__( '0', 'lightbox-jlg' )}</div>
-                </div>
-            </div>
-            <button id="mga-force-open" style="background: #0073aa; color: white; border: none; padding: 8px 12px; cursor: pointer; margin-top: 10px; width: 100%;">${mga__( "Forcer l'ouverture (Test)", 'lightbox-jlg' )}</button>
-            <div id="mga-log-container" style="margin-top: 15px; max-height: 200px; overflow-y: auto; background: #111; padding: 5px;">
-                 <h5 style="margin:0 0 5px; padding:0; color: #ccc;">${mga__( "Journal d'événements :", 'lightbox-jlg' )}</h5>
-                 <div id="mga-debug-log"></div>
-            </div>
-        `;
+
+        const title = document.createElement('h4');
+        title.style.cssText = 'margin: 0 0 10px; padding: 0 0 10px; border-bottom: 1px solid #444; font-size: 14px;';
+        title.textContent = mga__( 'Debug MGA Performance', 'lightbox-jlg' );
+        panel.appendChild(title);
+
+        const statsGrid = document.createElement('div');
+        statsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px;';
+
+        const statusCard = document.createElement('div');
+        statusCard.style.cssText = 'background: #1c1f23; padding: 6px 8px; border-radius: 4px; grid-column: 1 / -1;';
+        const statusLabel = document.createElement('strong');
+        statusLabel.style.cssText = 'display: block; margin-bottom: 4px; color: #ccc;';
+        statusLabel.textContent = mga__( 'Statut :', 'lightbox-jlg' );
+        const statusValue = document.createElement('div');
+        statusValue.id = 'mga-debug-status';
+        statusValue.style.cssText = 'font-size: 14px; color: #4CAF50;';
+        statusValue.textContent = mga__( 'Inconnu', 'lightbox-jlg' );
+        statusCard.appendChild(statusLabel);
+        statusCard.appendChild(statusValue);
+        statsGrid.appendChild(statusCard);
+
+        const realtimeCard = document.createElement('div');
+        realtimeCard.style.cssText = 'background: #1c1f23; padding: 6px 8px; border-radius: 4px;';
+        const realtimeLabel = document.createElement('strong');
+        realtimeLabel.style.cssText = 'display: block; margin-bottom: 4px; color: #ccc;';
+        realtimeLabel.textContent = mga__( 'Chronomètre réel :', 'lightbox-jlg' );
+        const realtimeValue = document.createElement('div');
+        realtimeValue.id = 'mga-debug-realtime';
+        realtimeValue.style.cssText = 'font-size: 16px; color: #4CAF50;';
+        realtimeValue.textContent = mgaSprintf( mga__( '%ss', 'lightbox-jlg' ), '0.00' );
+        realtimeCard.appendChild(realtimeLabel);
+        realtimeCard.appendChild(realtimeValue);
+        statsGrid.appendChild(realtimeCard);
+
+        const autoplayCard = document.createElement('div');
+        autoplayCard.style.cssText = 'background: #1c1f23; padding: 6px 8px; border-radius: 4px;';
+        const autoplayLabel = document.createElement('strong');
+        autoplayLabel.style.cssText = 'display: block; margin-bottom: 4px; color: #ccc;';
+        autoplayLabel.textContent = mga__( 'Timer Autoplay :', 'lightbox-jlg' );
+        const autoplayValue = document.createElement('div');
+        autoplayValue.id = 'mga-debug-autoplay-time';
+        autoplayValue.style.cssText = 'font-size: 16px; color: #FFC107;';
+        autoplayValue.textContent = mga__( 'N/A', 'lightbox-jlg' );
+        autoplayCard.appendChild(autoplayLabel);
+        autoplayCard.appendChild(autoplayValue);
+        statsGrid.appendChild(autoplayCard);
+
+        const contentCard = document.createElement('div');
+        contentCard.style.cssText = 'background: #1c1f23; padding: 6px 8px; border-radius: 4px;';
+        const contentLabel = document.createElement('strong');
+        contentLabel.style.cssText = 'display: block; margin-bottom: 4px; color: #ccc;';
+        contentLabel.textContent = mga__( 'Zone de contenu :', 'lightbox-jlg' );
+        const contentValue = document.createElement('div');
+        contentValue.id = 'mga-debug-content-area';
+        contentValue.style.cssText = 'font-size: 13px; color: #03A9F4; word-break: break-all;';
+        contentValue.textContent = mga__( 'N/A', 'lightbox-jlg' );
+        contentCard.appendChild(contentLabel);
+        contentCard.appendChild(contentValue);
+        statsGrid.appendChild(contentCard);
+
+        const triggerCard = document.createElement('div');
+        triggerCard.style.cssText = 'background: #1c1f23; padding: 6px 8px; border-radius: 4px;';
+        const triggerLabel = document.createElement('strong');
+        triggerLabel.style.cssText = 'display: block; margin-bottom: 4px; color: #ccc;';
+        triggerLabel.textContent = mga__( 'Images déclencheuses :', 'lightbox-jlg' );
+        const triggerValue = document.createElement('div');
+        triggerValue.id = 'mga-debug-trigger-img';
+        triggerValue.style.cssText = 'font-size: 14px; color: #FFC107;';
+        triggerValue.textContent = mga__( '0', 'lightbox-jlg' );
+        triggerCard.appendChild(triggerLabel);
+        triggerCard.appendChild(triggerValue);
+        statsGrid.appendChild(triggerCard);
+
+        panel.appendChild(statsGrid);
+
+        const forceButton = document.createElement('button');
+        forceButton.id = 'mga-force-open';
+        forceButton.style.cssText = 'background: #0073aa; color: white; border: none; padding: 8px 12px; cursor: pointer; margin-top: 10px; width: 100%;';
+        forceButton.textContent = mga__( "Forcer l'ouverture (Test)", 'lightbox-jlg' );
+        panel.appendChild(forceButton);
+
+        const logContainer = document.createElement('div');
+        logContainer.id = 'mga-log-container';
+        logContainer.style.cssText = 'margin-top: 15px; max-height: 200px; overflow-y: auto; background: #111; padding: 5px;';
+
+        const logTitle = document.createElement('h5');
+        logTitle.style.cssText = 'margin:0 0 5px; padding:0; color: #ccc;';
+        logTitle.textContent = mga__( "Journal d'événements :", 'lightbox-jlg' );
+        logContainer.appendChild(logTitle);
+
+        const logContent = document.createElement('div');
+        logContent.id = 'mga-debug-log';
+        logContainer.appendChild(logContent);
+
+        panel.appendChild(logContainer);
+
         document.body.appendChild(panel);
         state.panel = panel;
-        state.logContainer = panel.querySelector('#mga-debug-log');
+        state.logContainer = logContent;
         state.forceOpenAttached = false;
         return panel;
     }
