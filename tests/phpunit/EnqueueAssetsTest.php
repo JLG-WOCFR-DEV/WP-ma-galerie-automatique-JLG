@@ -66,6 +66,58 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
     }
 
     /**
+     * Ensures SRI metadata is omitted when a custom URL is injected via filters.
+     */
+    public function test_custom_swiper_urls_skip_integrity_metadata() {
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<!-- wp:paragraph --><p>Content</p><!-- /wp:paragraph -->',
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        update_option(
+            'mga_swiper_asset_sources',
+            [
+                'css'        => 'cdn',
+                'js'         => 'cdn',
+                'checked_at' => time(),
+            ]
+        );
+
+        $css_callback = static fn() => 'https://cdn.example.com/swiper/swiper-bundle.min.css';
+        $js_callback  = static fn() => 'https://cdn.example.com/swiper/swiper-bundle.min.js';
+
+        add_filter( 'mga_swiper_css', $css_callback );
+        add_filter( 'mga_swiper_js', $js_callback );
+
+        try {
+            mga_enqueue_assets();
+        } finally {
+            remove_filter( 'mga_swiper_css', $css_callback );
+            remove_filter( 'mga_swiper_js', $js_callback );
+        }
+
+        $this->assertFalse(
+            wp_styles()->get_data( 'mga-swiper-css', 'integrity' ),
+            'The Swiper CSS handle should not declare an SRI hash when a custom URL is injected.'
+        );
+        $this->assertFalse(
+            wp_styles()->get_data( 'mga-swiper-css', 'crossorigin' ),
+            'The Swiper CSS handle should not declare crossorigin metadata when a custom URL is injected.'
+        );
+        $this->assertFalse(
+            wp_scripts()->get_data( 'mga-swiper-js', 'integrity' ),
+            'The Swiper JS handle should not declare an SRI hash when a custom URL is injected.'
+        );
+        $this->assertFalse(
+            wp_scripts()->get_data( 'mga-swiper-js', 'crossorigin' ),
+            'The Swiper JS handle should not declare crossorigin metadata when a custom URL is injected.'
+        );
+    }
+
+    /**
      * Ensures inline assets consume the sanitized settings to guard regressions in the enqueue pipeline.
      */
     public function test_enqueue_clamps_and_reflects_settings() {
