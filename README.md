@@ -65,6 +65,7 @@ Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
   ```php
   add_filter( 'mga_swiper_css', fn() => 'https://cdn.example.com/swiper@11/swiper-bundle.min.css' );
   ```
+- **Note** : lorsque l'URL finale ne correspond plus à celle fournie par défaut, les attributs SRI sont retirés automatiquement pour éviter les erreurs de validation.
 
 ### `mga_swiper_js`
 - **Rôle** : remplacer le script JavaScript de Swiper avant son enfilement (la version locale est chargée par défaut).
@@ -73,6 +74,28 @@ Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
 - **Astuce** : utilisez un CDN si vous préférez mutualiser la bibliothèque.
   ```php
   add_filter( 'mga_swiper_js', fn() => 'https://cdn.example.com/swiper@11/swiper-bundle.min.js' );
+  ```
+- **Note** : de la même manière, un script Swiper personnalisé n'embarque plus les attributs SRI par défaut.
+
+### `mga_swiper_css_sri_attributes`
+- **Rôle** : ajuster ou supprimer les attributs ajoutés à la balise `<link>` du Swiper CDN (intégrité, `crossorigin`, etc.).
+- **Moment** : appliqué dans `mga_enqueue_assets()` après la résolution de l'URL finale.
+- **Exemple** : définir un nouvel hash SRI pour un CDN personnalisé.
+  ```php
+  add_filter( 'mga_swiper_css_sri_attributes', function ( array $attributes ) {
+      return [
+          'integrity'  => 'sha384-...votre hash...',
+          'crossorigin' => 'anonymous',
+      ];
+  } );
+  ```
+
+### `mga_swiper_js_sri_attributes`
+- **Rôle** : adapter les attributs ajoutés au `<script>` de Swiper.
+- **Moment** : appelé lors de l'enfilement des scripts publics.
+- **Exemple** : désactiver complètement la vérification SRI.
+  ```php
+  add_filter( 'mga_swiper_js_sri_attributes', '__return_empty_array' );
   ```
 
 ### `mga_user_can_view_debug`

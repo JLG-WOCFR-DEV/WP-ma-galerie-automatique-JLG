@@ -267,16 +267,76 @@ function mga_enqueue_assets() {
 
     wp_enqueue_style( 'mga-swiper-css', $swiper_css, [], $swiper_version );
 
-    if ( 'cdn' === $asset_sources['css'] ) {
-        wp_style_add_data( 'mga-swiper-css', 'integrity', MGA_SWIPER_CSS_SRI_HASH );
-        wp_style_add_data( 'mga-swiper-css', 'crossorigin', 'anonymous' );
+    $css_sri_attributes = [];
+
+    if ( 'cdn' === $asset_sources['css'] && $swiper_css === $cdn_swiper_css ) {
+        $css_sri_attributes = [
+            'integrity'  => MGA_SWIPER_CSS_SRI_HASH,
+            'crossorigin' => 'anonymous',
+        ];
+    }
+
+    /**
+     * Filters the SRI related attributes applied to the Swiper stylesheet handle.
+     *
+     * @param array<string, string> $css_sri_attributes Associative array of attribute => value pairs.
+     * @param string                $swiper_css         Final URL used to enqueue the Swiper stylesheet.
+     * @param array<string, mixed>  $asset_sources      Cached asset source metadata.
+     */
+    $css_sri_attributes = apply_filters(
+        'mga_swiper_css_sri_attributes',
+        $css_sri_attributes,
+        $swiper_css,
+        $asset_sources
+    );
+
+    foreach ( $css_sri_attributes as $attribute => $value ) {
+        if ( '' === $attribute || null === $attribute ) {
+            continue;
+        }
+
+        if ( null === $value || '' === $value ) {
+            continue;
+        }
+
+        wp_style_add_data( 'mga-swiper-css', $attribute, $value );
     }
 
     wp_enqueue_script( 'mga-swiper-js', $swiper_js, [], $swiper_version, true );
 
-    if ( 'cdn' === $asset_sources['js'] ) {
-        wp_script_add_data( 'mga-swiper-js', 'integrity', MGA_SWIPER_JS_SRI_HASH );
-        wp_script_add_data( 'mga-swiper-js', 'crossorigin', 'anonymous' );
+    $js_sri_attributes = [];
+
+    if ( 'cdn' === $asset_sources['js'] && $swiper_js === $cdn_swiper_js ) {
+        $js_sri_attributes = [
+            'integrity'  => MGA_SWIPER_JS_SRI_HASH,
+            'crossorigin' => 'anonymous',
+        ];
+    }
+
+    /**
+     * Filters the SRI related attributes applied to the Swiper script handle.
+     *
+     * @param array<string, string> $js_sri_attributes Associative array of attribute => value pairs.
+     * @param string                $swiper_js         Final URL used to enqueue the Swiper script.
+     * @param array<string, mixed>  $asset_sources     Cached asset source metadata.
+     */
+    $js_sri_attributes = apply_filters(
+        'mga_swiper_js_sri_attributes',
+        $js_sri_attributes,
+        $swiper_js,
+        $asset_sources
+    );
+
+    foreach ( $js_sri_attributes as $attribute => $value ) {
+        if ( '' === $attribute || null === $attribute ) {
+            continue;
+        }
+
+        if ( null === $value || '' === $value ) {
+            continue;
+        }
+
+        wp_script_add_data( 'mga-swiper-js', $attribute, $value );
     }
 
     // Fichiers du plugin
