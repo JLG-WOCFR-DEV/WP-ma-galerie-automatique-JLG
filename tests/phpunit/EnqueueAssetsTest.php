@@ -21,6 +21,51 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
     }
 
     /**
+     * Ensures Swiper assets loaded from the CDN receive SRI and crossorigin metadata.
+     */
+    public function test_enqueue_sets_integrity_attributes_for_cdn_swiper_assets() {
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<!-- wp:paragraph --><p>Content</p><!-- /wp:paragraph -->',
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        update_option(
+            'mga_swiper_asset_sources',
+            [
+                'css'        => 'cdn',
+                'js'         => 'cdn',
+                'checked_at' => time(),
+            ]
+        );
+
+        mga_enqueue_assets();
+
+        $this->assertSame(
+            MGA_SWIPER_CSS_SRI_HASH,
+            wp_styles()->get_data( 'mga-swiper-css', 'integrity' ),
+            'The Swiper CSS handle should declare the expected SRI hash when loading from the CDN.'
+        );
+        $this->assertSame(
+            'anonymous',
+            wp_styles()->get_data( 'mga-swiper-css', 'crossorigin' ),
+            'The Swiper CSS handle should set crossorigin metadata when loading from the CDN.'
+        );
+        $this->assertSame(
+            MGA_SWIPER_JS_SRI_HASH,
+            wp_scripts()->get_data( 'mga-swiper-js', 'integrity' ),
+            'The Swiper JS handle should declare the expected SRI hash when loading from the CDN.'
+        );
+        $this->assertSame(
+            'anonymous',
+            wp_scripts()->get_data( 'mga-swiper-js', 'crossorigin' ),
+            'The Swiper JS handle should set crossorigin metadata when loading from the CDN.'
+        );
+    }
+
+    /**
      * Ensures inline assets consume the sanitized settings to guard regressions in the enqueue pipeline.
      */
     public function test_enqueue_clamps_and_reflects_settings() {

@@ -44,6 +44,24 @@ if ( ! defined( 'MGA_ADMIN_TEMPLATE_PATH' ) ) {
 }
 
 /**
+ * SHA-384 integrity hash for the Swiper v11.1.4 CSS bundle.
+ *
+ * Update alongside Swiper version bumps.
+ */
+if ( ! defined( 'MGA_SWIPER_CSS_SRI_HASH' ) ) {
+    define( 'MGA_SWIPER_CSS_SRI_HASH', 'sha384-PVSiG5fugGA8MJ63B59UwXZo2CdlhrZb9vyPsW2ewxr0s5WHXWgEnS+8vtFkDr7O' );
+}
+
+/**
+ * SHA-384 integrity hash for the Swiper v11.1.4 JavaScript bundle.
+ *
+ * Update alongside Swiper version bumps.
+ */
+if ( ! defined( 'MGA_SWIPER_JS_SRI_HASH' ) ) {
+    define( 'MGA_SWIPER_JS_SRI_HASH', 'sha384-ChaDfAcubhQlVCLEzy7y8vgjNLbZ4RlIjH2jjcUXjYpn0MwZieWBjpXFMjMx8Dax' );
+}
+
+/**
  * Initialise la traduction du plugin.
  */
 function mga_load_textdomain() {
@@ -248,7 +266,18 @@ function mga_enqueue_assets() {
     $swiper_js = apply_filters( 'mga_swiper_js', $swiper_js, $swiper_version );
 
     wp_enqueue_style( 'mga-swiper-css', $swiper_css, [], $swiper_version );
+
+    if ( 'cdn' === $asset_sources['css'] ) {
+        wp_style_add_data( 'mga-swiper-css', 'integrity', MGA_SWIPER_CSS_SRI_HASH );
+        wp_style_add_data( 'mga-swiper-css', 'crossorigin', 'anonymous' );
+    }
+
     wp_enqueue_script( 'mga-swiper-js', $swiper_js, [], $swiper_version, true );
+
+    if ( 'cdn' === $asset_sources['js'] ) {
+        wp_script_add_data( 'mga-swiper-js', 'integrity', MGA_SWIPER_JS_SRI_HASH );
+        wp_script_add_data( 'mga-swiper-js', 'crossorigin', 'anonymous' );
+    }
 
     // Fichiers du plugin
     wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
