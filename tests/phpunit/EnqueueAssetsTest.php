@@ -121,6 +121,64 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
     }
 
     /**
+     * Ensures the allowBodyFallback flag remains a boolean even when filters return truthy non-boolean values.
+     *
+     * @dataProvider allow_body_fallback_truthy_filter_values
+     *
+     * @param mixed $filter_value The value returned by the mga_frontend_allow_body_fallback filter.
+     */
+    public function test_enqueue_casts_allow_body_fallback_filter_to_boolean( $filter_value ) {
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        update_option(
+            'mga_settings',
+            [
+                'allowBodyFallback' => true,
+            ]
+        );
+
+        $filter = static function () use ( $filter_value ) {
+            return $filter_value;
+        };
+
+        add_filter( 'mga_frontend_allow_body_fallback', $filter, 10, 2 );
+
+        try {
+            mga_enqueue_assets();
+        } finally {
+            remove_filter( 'mga_frontend_allow_body_fallback', $filter, 10 );
+        }
+
+        $script_data = wp_scripts()->get_data( 'mga-gallery-script', 'before' );
+        $this->assertIsArray( $script_data, 'Inline script data should be stored under the "before" key.' );
+
+        $settings = $this->extract_settings_from_inline_script( $script_data );
+
+        $this->assertTrue(
+            $settings['allowBodyFallback'],
+            'The allowBodyFallback setting should be JSON-encoded as a boolean true value.'
+        );
+    }
+
+    /**
+     * Provides truthy filter return values that should still produce a boolean true in the JSON payload.
+     *
+     * @return array<string, array{0:mixed}>
+     */
+    public function allow_body_fallback_truthy_filter_values() {
+        return [
+            'integer_one' => [ 1 ],
+            'string_yes'  => [ 'yes' ],
+        ];
+    }
+
+    /**
      * Extracts and decodes the JSON payload from the inline script registered for mga-gallery-script.
      *
      * The assertion chain enforces that inline data remains JSON encoded (rather than arbitrary JS),
