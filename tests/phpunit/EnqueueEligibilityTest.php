@@ -161,6 +161,58 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
     }
 
     /**
+     * Galleries that disable linking should not trigger the enqueue logic via the shortcode fallback.
+     */
+    public function test_gallery_without_links_is_ignored_by_shortcode_fallback() {
+        $gallery_markup = <<<'HTML'
+<!-- wp:gallery {"linkDestination":"none"} -->
+<figure class="wp-block-gallery has-nested-images columns-default is-cropped">
+    <figure class="wp-block-image size-large"><img src="https://example.com/gallery-one.jpg" alt="" /></figure>
+</figure>
+<!-- /wp:gallery -->
+HTML;
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => $gallery_markup,
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $this->assertFalse(
+            mga_should_enqueue_assets( $post_id ),
+            'Galleries that do not link to files should be ignored by the fallback detection.'
+        );
+    }
+
+    /**
+     * Galleries linking to media files should continue to enqueue assets after the fallback adjustments.
+     */
+    public function test_gallery_linked_to_media_triggers_enqueue() {
+        $gallery_markup = <<<'HTML'
+<!-- wp:gallery {"linkDestination":"media"} -->
+<figure class="wp-block-gallery has-nested-images columns-default is-cropped">
+    <figure class="wp-block-image size-large"><a href="https://example.com/gallery-two.jpg"><img src="https://example.com/gallery-two.jpg" alt="" /></a></figure>
+</figure>
+<!-- /wp:gallery -->
+HTML;
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => $gallery_markup,
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $this->assertTrue(
+            mga_should_enqueue_assets( $post_id ),
+            'Galleries linking to media files should still enqueue assets.'
+        );
+    }
+
+    /**
      * Forcing an enqueue on non singular views without a global WP_Post should not trigger notices.
      */
     public function test_force_enqueue_without_global_post_object() {
