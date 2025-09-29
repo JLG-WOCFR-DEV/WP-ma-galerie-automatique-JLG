@@ -516,18 +516,20 @@ function mga_get_cached_post_linked_images( WP_Post $post ) {
 /**
  * Met à jour la valeur de cache pour un post donné.
  *
+ * Lorsque le contenu dépend d'un bloc réutilisable, la méta `_mga_has_linked_images`
+ * est supprimée afin que la détection soit recalculée à chaque requête et prenne
+ * en compte les éventuelles modifications du bloc.
+ *
  * @param int  $post_id           Identifiant du post.
  * @param bool $has_linked_images Présence d'images liées détectée.
  */
 function mga_update_post_linked_images_cache( $post_id, $has_linked_images ) {
-    if ( ! $has_linked_images ) {
-        $post = get_post( $post_id );
+    $post = get_post( $post_id );
 
-        if ( $post instanceof WP_Post && mga_post_contains_reusable_block( $post ) ) {
-            delete_post_meta( $post_id, '_mga_has_linked_images' );
+    if ( $post instanceof WP_Post && mga_post_contains_reusable_block( $post ) ) {
+        delete_post_meta( $post_id, '_mga_has_linked_images' );
 
-            return;
-        }
+        return;
     }
 
     update_post_meta( $post_id, '_mga_has_linked_images', $has_linked_images ? 1 : 0 );
