@@ -209,6 +209,86 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
         );
     }
 
+    /**
+     * Posts that depend on reusable blocks should clear cached detections so block edits take effect immediately.
+     */
+    public function test_reusable_block_cache_is_purged_when_block_is_updated() {
+        update_option(
+            'mga_settings',
+            [
+                'tracked_post_types' => [ 'post' ],
+            ]
+        );
+
+        $reusable_block_id = self::factory()->post->create(
+            [
+                'post_type'    => 'wp_block',
+                'post_content' => '<!-- wp:image {"linkDestination":"media"} -->'
+                    . '<figure class="wp-block-image"><a href="https://example.com/image.jpg">'
+                    . '<img src="https://example.com/image.jpg" /></a></figure><!-- /wp:image -->',
+            ]
+        );
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => sprintf( '<!-- wp:block {"ref":%d} /-->', $reusable_block_id ),
+            ]
+        );
+
+        $post = get_post( $post_id );
+        $this->assertInstanceOf( WP_Post::class, $post );
+        $this->assertTrue(
+            mga_detect_post_linked_images( $post ),
+            'The initial reusable block should expose linked media to the detector.'
+        );
+
+        mga_refresh_post_linked_images_cache_on_save( $post_id, $post );
+
+        $this->assertSame(
+            '',
+            get_post_meta( $post_id, '_mga_has_linked_images', true ),
+            'Posts referencing reusable blocks should not persist cached flags after detection.'
+        );
+
+        wp_update_post(
+            [
+                'ID'           => $reusable_block_id,
+                'post_content' => '<!-- wp:paragraph --><p>Reusable content without links.</p><!-- /wp:paragraph -->',
+            ]
+        );
+        clean_post_cache( $reusable_block_id );
+
+        $detection_runs = 0;
+        $marker_filter  = static function ( $block_names ) use ( &$detection_runs ) {
+            $detection_runs++;
+
+            return $block_names;
+        };
+
+        add_filter( 'mga_linked_image_blocks', $marker_filter );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $this->assertFalse(
+            mga_should_enqueue_assets( $post_id ),
+            'Removing linked media from the reusable block should disable the enqueue logic.'
+        );
+
+        $this->assertSame(
+            1,
+            $detection_runs,
+            'Detection should re-run for posts containing reusable blocks on each request.'
+        );
+
+        remove_filter( 'mga_linked_image_blocks', $marker_filter );
+
+        $this->assertSame(
+            '',
+            get_post_meta( $post_id, '_mga_has_linked_images', true ),
+            'Posts referencing reusable blocks should continue to avoid caching after block updates.'
+        );
+    }
+
     private function reset_plugin_state() {
         delete_option( 'mga_settings' );
 
