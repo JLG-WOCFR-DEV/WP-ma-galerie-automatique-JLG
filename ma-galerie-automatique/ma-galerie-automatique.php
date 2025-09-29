@@ -879,6 +879,66 @@ function mga_is_image_url( $url ) {
 }
 
 /**
+ * Vérifie si les attributs d'une galerie indiquent que les images sont liées à un média.
+ *
+ * @param array $attributes Attributs de la galerie.
+ *
+ * @return bool
+ */
+function mga_gallery_attributes_link_to_media( array $attributes ) {
+    if ( empty( $attributes ) ) {
+        return false;
+    }
+
+    $attributes = array_change_key_case( $attributes, CASE_LOWER );
+
+    if ( isset( $attributes['link'] ) && is_string( $attributes['link'] ) ) {
+        if ( in_array( $attributes['link'], [ 'file', 'attachment', 'media' ], true ) ) {
+            return true;
+        }
+    }
+
+    if ( isset( $attributes['linkdestination'] ) && is_string( $attributes['linkdestination'] ) ) {
+        if ( in_array( $attributes['linkdestination'], [ 'media', 'attachment' ], true ) ) {
+            return true;
+        }
+    }
+
+    if ( isset( $attributes['linkto'] ) && is_string( $attributes['linkto'] ) ) {
+        if ( in_array( $attributes['linkto'], [ 'file', 'attachment', 'media' ], true ) ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Analyse le HTML d'une galerie pour déterminer si des images sont liées à un média.
+ *
+ * @param string $html HTML généré par une galerie.
+ *
+ * @return bool
+ */
+function mga_gallery_html_has_linked_media( $html ) {
+    if ( ! is_string( $html ) || '' === trim( $html ) ) {
+        return false;
+    }
+
+    $pattern = '#<a\\b[^>]*href=["\']([^"\']+)["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
+
+    if ( preg_match_all( $pattern, $html, $matches ) ) {
+        foreach ( $matches[1] as $href ) {
+            if ( mga_is_image_url( $href ) ) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
  * Détermine si le contenu du post courant contient des images utilisables.
  *
  * @param WP_Post|int|null $post Objet post, identifiant, ou null pour utiliser le post courant.
@@ -896,8 +956,30 @@ function mga_post_has_eligible_images( $post = null ) {
         $galleries = get_post_galleries_images( $post );
 
         if ( ! empty( $galleries ) ) {
-            foreach ( $galleries as $images ) {
-                if ( ! empty( $images ) ) {
+            $gallery_attributes = [];
+            $gallery_html       = [];
+
+            if ( function_exists( 'get_post_galleries' ) ) {
+                $gallery_attributes = get_post_galleries( $post, false );
+                $gallery_html       = get_post_galleries( $post, true );
+            }
+
+            foreach ( $galleries as $index => $images ) {
+                if ( empty( $images ) ) {
+                    continue;
+                }
+
+                $has_linked_media = false;
+
+                if ( isset( $gallery_attributes[ $index ] ) && is_array( $gallery_attributes[ $index ] ) ) {
+                    $has_linked_media = mga_gallery_attributes_link_to_media( $gallery_attributes[ $index ] );
+                }
+
+                if ( ! $has_linked_media && isset( $gallery_html[ $index ] ) ) {
+                    $has_linked_media = mga_gallery_html_has_linked_media( $gallery_html[ $index ] );
+                }
+
+                if ( $has_linked_media ) {
                     return true;
                 }
             }
