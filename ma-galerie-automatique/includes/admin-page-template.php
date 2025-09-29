@@ -12,6 +12,7 @@ $settings = wp_parse_args( $settings, $defaults );
 ?>
 <div class="wrap mga-admin-wrap">
     <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+    <?php settings_errors( 'mga_settings_group' ); ?>
 
     <div class="nav-tab-wrapper" role="tablist" aria-label="<?php echo esc_attr__( 'Sections de la page de réglages', 'lightbox-jlg' ); ?>">
         <a
