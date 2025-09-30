@@ -278,10 +278,38 @@
                 if (linkElement.dataset.mgaHighres) {
                     return true;
                 }
+                const linkType = linkElement.dataset.type || linkElement.dataset.wpType;
+                if (typeof linkType === 'string' && linkType.toLowerCase() === 'attachment') {
+                    return true;
+                }
             }
             const rel = linkElement.getAttribute('rel');
             if (rel && rel.split(/\s+/).includes('mga-allow-fallback')) {
                 return true;
+            }
+            const dataType = linkElement.getAttribute('data-type');
+            if (typeof dataType === 'string' && dataType.toLowerCase() === 'attachment') {
+                return true;
+            }
+            const href = linkElement.getAttribute('href');
+            if (typeof href === 'string') {
+                if (/[?&]attachment_id=\d+/i.test(href)) {
+                    return true;
+                }
+                if (/\/attachment\//i.test(href)) {
+                    return true;
+                }
+                try {
+                    const baseHref = (typeof window !== 'undefined' && window.location)
+                        ? window.location.href
+                        : undefined;
+                    const url = new URL(href, baseHref);
+                    if (url.searchParams && url.searchParams.has('attachment_id')) {
+                        return true;
+                    }
+                } catch (error) {
+                    // Ignored : l'URL relative sera déjà couverte par les expressions régulières ci-dessus.
+                }
             }
             return false;
         }
