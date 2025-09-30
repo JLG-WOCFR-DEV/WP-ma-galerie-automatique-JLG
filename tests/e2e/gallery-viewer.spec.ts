@@ -13,6 +13,12 @@ type PreparedImages = {
     cleanup: () => Promise<void>;
 };
 
+type UploadedMedia = {
+    id: number;
+    source_url: string;
+    link?: string;
+};
+
 async function createTemporaryImages(fileNames: string[]): Promise<{
     directory: string;
     files: string[];
@@ -48,7 +54,7 @@ async function createTemporaryImages(fileNames: string[]): Promise<{
     return { directory, files, cleanup };
 }
 
-function buildGalleryContent(mediaItems: Array<{ id: number; source_url: string }>): string {
+function buildGalleryContent(mediaItems: UploadedMedia[]): string {
     return mediaItems
         .map((media, index) => {
             const altText = `Placeholder ${index + 1}`;
@@ -59,6 +65,50 @@ function buildGalleryContent(mediaItems: Array<{ id: number; source_url: string 
                 `<!-- /wp:image -->`;
         })
         .join('\n');
+}
+
+function buildCoreGalleryBlock(
+    mediaItems: UploadedMedia[],
+    options: { linkTo?: 'media' | 'attachment' } = {},
+): string {
+    const { linkTo = 'media' } = options;
+
+    const galleryItems = mediaItems
+        .map((media, index) => {
+            const altText = `Placeholder ${index + 1}`;
+            const attachmentHref = linkTo === 'attachment'
+                ? media.link ?? media.source_url
+                : media.source_url;
+
+            const anchorAttributes = [`href="${attachmentHref}"`, `data-id="${media.id}"`];
+            if (linkTo === 'attachment') {
+                anchorAttributes.push('data-type="attachment"');
+            }
+
+            const imageAttributes = [
+                `src="${media.source_url}"`,
+                `alt="${altText}"`,
+                `data-id="${media.id}"`,
+                `data-full-url="${media.source_url}"`,
+                `data-orig-file="${media.source_url}"`,
+                `data-link="${attachmentHref}"`,
+                `class="wp-image-${media.id}"`,
+            ];
+
+            return (
+                `<figure class="wp-block-image size-full"><a ${anchorAttributes.join(' ')}>` +
+                `<img ${imageAttributes.join(' ')} /></a></figure>`
+            );
+        })
+        .join('\n');
+
+    return (
+        `<!-- wp:gallery {"linkTo":"${linkTo}"} -->\n` +
+        `<figure class="wp-block-gallery has-nested-images columns-default is-cropped">\n` +
+        `${galleryItems}\n` +
+        `</figure>\n` +
+        `<!-- /wp:gallery -->`
+    );
 }
 
 async function prepareGalleryImages(): Promise<PreparedImages> {
@@ -93,21 +143,23 @@ async function prepareGalleryImages(): Promise<PreparedImages> {
 async function createPublishedGalleryPost(
     requestUtils: any,
     title = 'Gallery viewer E2E',
+    options: { contentBuilder?: (mediaItems: UploadedMedia[]) => string } = {},
 ): Promise<{
     post: { link: string };
-    uploads: Array<{ id: number; source_url: string }>;
+    uploads: UploadedMedia[];
     cleanup: () => Promise<void>;
 }> {
+    const { contentBuilder = buildGalleryContent } = options;
     const preparedImages = await prepareGalleryImages();
-    const uploads: Array<{ id: number; source_url: string }> = [];
+    const uploads: UploadedMedia[] = [];
 
     try {
         for (const filePath of preparedImages.files) {
             const media = await requestUtils.uploadMedia(filePath);
-            uploads.push({ id: media.id, source_url: media.source_url });
+            uploads.push({ id: media.id, source_url: media.source_url, link: media.link });
         }
 
-        const content = buildGalleryContent(uploads);
+        const content = contentBuilder(uploads);
         const now = new Date().toISOString();
         const post = await requestUtils.createPost({
             title,
@@ -153,6 +205,36 @@ test.describe('Gallery viewer', () => {
             const viewer = page.locator('#mga-viewer');
             await expect(viewer).toBeVisible();
             await expect(page.locator('#mga-counter')).toHaveText(`1 / ${uploads.length}`);
+        } finally {
+            await cleanup();
+        }
+    });
+
+    test('opens the viewer for a core/gallery linking to attachments', async ({ page, requestUtils }) => {
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            'Gallery attachments E2E',
+            {
+                contentBuilder: (mediaItems) => buildCoreGalleryBlock(mediaItems, { linkTo: 'attachment' }),
+            },
+        );
+
+        try {
+            await page.goto(post.link);
+
+            const attachmentHref = uploads[0].link ?? uploads[0].source_url;
+            const triggerLink = page.locator(`a[href="${attachmentHref}"]`);
+            await expect(triggerLink.locator('img')).toBeVisible();
+
+            await triggerLink.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+            await expect(page.locator('#mga-counter')).toHaveText(`1 / ${uploads.length}`);
+            await expect(page.locator('#mga-main-wrapper .swiper-slide-active img')).toHaveAttribute(
+                'src',
+                uploads[0].source_url,
+            );
         } finally {
             await cleanup();
         }
