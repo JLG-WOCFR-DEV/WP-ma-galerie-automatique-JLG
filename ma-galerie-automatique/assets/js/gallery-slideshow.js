@@ -790,12 +790,69 @@
 
         debug.updateInfo('mga-debug-content-area', foundSelector, '#4CAF50');
         
+        const FALLBACK_GROUP_ID = '__mga-default-group__';
+        const configuredGroupAttribute = typeof settings.groupAttribute === 'string'
+            ? settings.groupAttribute.trim()
+            : '';
+
+        const resolveLinkGroupId = (link) => {
+            if (!(link instanceof Element)) {
+                return FALLBACK_GROUP_ID;
+            }
+
+            const attributeCandidates = [];
+
+            if (configuredGroupAttribute) {
+                attributeCandidates.push(configuredGroupAttribute);
+            }
+
+            attributeCandidates.push('data-mga-gallery', 'rel');
+
+            for (const attrName of attributeCandidates) {
+                if (!attrName) {
+                    continue;
+                }
+
+                const rawValue = link.getAttribute(attrName);
+                if (typeof rawValue === 'string') {
+                    const trimmed = rawValue.trim();
+                    if (trimmed) {
+                        return `${attrName}:${trimmed}`;
+                    }
+                }
+            }
+
+            if (configuredGroupAttribute) {
+                const hrefValue = link.getAttribute('href');
+                if (typeof hrefValue === 'string') {
+                    const trimmedHref = hrefValue.trim();
+                    if (trimmedHref) {
+                        return `href:${trimmedHref}`;
+                    }
+                }
+            }
+
+            return FALLBACK_GROUP_ID;
+        };
+
         const getTriggerLinks = (shouldUpdateDebug = true) => {
             const links = Array.from(contentArea.querySelectorAll('a')).filter(a => a.querySelector('img'));
+            const grouped = links.reduce((accumulator, link) => {
+                const groupId = resolveLinkGroupId(link);
+                if (!accumulator[groupId]) {
+                    accumulator[groupId] = [];
+                }
+                accumulator[groupId].push(link);
+                return accumulator;
+            }, {});
+
             if (shouldUpdateDebug) {
-                debug.updateInfo('mga-debug-trigger-img', links.length);
+                const groupCount = Object.keys(grouped).length;
+                const summary = `${links.length} (${groupCount} groupe${groupCount > 1 ? 's' : ''})`;
+                debug.updateInfo('mga-debug-trigger-img', summary);
             }
-            return links;
+
+            return grouped;
         };
 
         const { cleanup: triggerObserverCleanup, active: hasActiveObserver } = (() => {
@@ -884,7 +941,14 @@
                     return;
                 }
 
-                const triggerLinks = getTriggerLinks();
+                const groupedTriggerLinks = getTriggerLinks();
+                const clickedGroupId = resolveLinkGroupId(targetLink);
+                const triggerLinks = groupedTriggerLinks[clickedGroupId] || [];
+
+                debug.log(mgaSprintf(
+                    mga__( 'Préparation de la galerie pour le groupe %s.', 'lightbox-jlg' ),
+                    clickedGroupId,
+                ));
 
                 const clickedTriggerIndex = triggerLinks.indexOf(targetLink);
                 if (clickedTriggerIndex === -1) {

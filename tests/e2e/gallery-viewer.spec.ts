@@ -111,7 +111,7 @@ function buildCoreGalleryBlock(
     );
 }
 
-async function prepareGalleryImages(): Promise<PreparedImages> {
+async function prepareGalleryImages(minimumCount = 2): Promise<PreparedImages> {
     const assetsDir = path.resolve(process.cwd(), 'tests/e2e/assets');
 
     try {
@@ -120,7 +120,7 @@ async function prepareGalleryImages(): Promise<PreparedImages> {
             .filter((fileName) => /\.(png|jpe?g|gif|webp|avif)$/i.test(fileName))
             .sort();
 
-        if (imageFiles.length >= 2) {
+        if (imageFiles.length >= minimumCount) {
             return {
                 files: imageFiles.map((fileName) => path.join(assetsDir, fileName)),
                 cleanup: async () => {},
@@ -132,7 +132,8 @@ async function prepareGalleryImages(): Promise<PreparedImages> {
         }
     }
 
-    const placeholders = await createTemporaryImages(['placeholder-1.png', 'placeholder-2.png']);
+    const placeholderNames = Array.from({ length: minimumCount }, (_, index) => `placeholder-${index + 1}.png`);
+    const placeholders = await createTemporaryImages(placeholderNames);
 
     return {
         files: placeholders.files,
@@ -143,14 +144,14 @@ async function prepareGalleryImages(): Promise<PreparedImages> {
 async function createPublishedGalleryPost(
     requestUtils: any,
     title = 'Gallery viewer E2E',
-    options: { contentBuilder?: (mediaItems: UploadedMedia[]) => string } = {},
+    options: { contentBuilder?: (mediaItems: UploadedMedia[]) => string; minimumImages?: number } = {},
 ): Promise<{
     post: { link: string };
     uploads: UploadedMedia[];
     cleanup: () => Promise<void>;
 }> {
-    const { contentBuilder = buildGalleryContent } = options;
-    const preparedImages = await prepareGalleryImages();
+    const { contentBuilder = buildGalleryContent, minimumImages = 2 } = options;
+    const preparedImages = await prepareGalleryImages(minimumImages);
     const uploads: UploadedMedia[] = [];
 
     try {
@@ -178,6 +179,34 @@ async function createPublishedGalleryPost(
         await preparedImages.cleanup();
         throw error;
     }
+}
+
+function buildGroupedGalleryContent(mediaItems: UploadedMedia[]): string {
+    if (mediaItems.length < 4) {
+        throw new Error('buildGroupedGalleryContent requires at least four media items.');
+    }
+
+    const buildImageBlock = (media: UploadedMedia, altText: string, groupId: string) =>
+        `<!-- wp:image {"id":${media.id},"sizeSlug":"full","linkDestination":"media"} -->\n` +
+        `<figure class="wp-block-image size-full"><a href="${media.source_url}" data-mga-gallery="${groupId}">` +
+        `<img src="${media.source_url}" alt="${altText}" class="wp-image-${media.id}" /></a></figure>\n` +
+        `<!-- /wp:image -->`;
+
+    const groupA = mediaItems
+        .slice(0, 2)
+        .map((media, index) => buildImageBlock(media, `Groupe A ${index + 1}`, 'group-alpha'))
+        .join('\n');
+
+    const groupB = mediaItems
+        .slice(2, 4)
+        .map((media, index) => buildImageBlock(media, `Groupe B ${index + 1}`, 'group-beta'))
+        .join('\n');
+
+    return (
+        `${groupA}\n` +
+        `<!-- wp:separator -->\n<hr class="wp-block-separator"/>\n<!-- /wp:separator -->\n` +
+        `${groupB}`
+    );
 }
 
 test.describe('Gallery viewer', () => {
@@ -235,6 +264,56 @@ test.describe('Gallery viewer', () => {
                 'src',
                 uploads[0].source_url,
             );
+        } finally {
+            await cleanup();
+        }
+    });
+
+    test('keeps navigation scoped to the clicked gallery group', async ({ page, requestUtils }) => {
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            'Grouped galleries E2E',
+            {
+                contentBuilder: buildGroupedGalleryContent,
+                minimumImages: 4,
+            },
+        );
+
+        try {
+            await page.goto(post.link);
+
+            const firstGroupTrigger = page.locator('a[data-mga-gallery="group-alpha"]').first();
+            await expect(firstGroupTrigger.locator('img')).toBeVisible();
+
+            await firstGroupTrigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+            await expect(page.locator('#mga-counter')).toHaveText('1 / 2');
+            await expect(page.locator(`#mga-main-wrapper img[src="${uploads[2].source_url}"]`)).toHaveCount(0);
+
+            await page.locator('#mga-next').click();
+            await expect(page.locator('#mga-counter')).toHaveText('2 / 2');
+            await expect(page.locator('#mga-main-wrapper .swiper-slide-active img')).toHaveAttribute('src', uploads[1].source_url);
+
+            await page.locator('#mga-next').click();
+            await expect(page.locator('#mga-counter')).toHaveText('1 / 2');
+
+            await page.locator('#mga-close').click();
+            await expect(viewer).toBeHidden();
+
+            const secondGroupTrigger = page.locator('a[data-mga-gallery="group-beta"]').first();
+            await expect(secondGroupTrigger.locator('img')).toBeVisible();
+
+            await secondGroupTrigger.click();
+
+            await expect(viewer).toBeVisible();
+            await expect(page.locator('#mga-counter')).toHaveText('1 / 2');
+            await expect(page.locator(`#mga-main-wrapper img[src="${uploads[0].source_url}"]`)).toHaveCount(0);
+
+            await page.locator('#mga-next').click();
+            await expect(page.locator('#mga-counter')).toHaveText('2 / 2');
+            await expect(page.locator('#mga-main-wrapper .swiper-slide-active img')).toHaveAttribute('src', uploads[3].source_url);
         } finally {
             await cleanup();
         }
