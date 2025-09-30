@@ -810,6 +810,10 @@
 
             attributeCandidates.push('data-mga-gallery', 'rel');
 
+            const normalizedConfiguredGroupAttribute = configuredGroupAttribute
+                ? configuredGroupAttribute.toLowerCase()
+                : '';
+
             for (const attrName of attributeCandidates) {
                 if (!attrName) {
                     continue;
@@ -824,7 +828,7 @@
                 }
             }
 
-            if (configuredGroupAttribute) {
+            if (normalizedConfiguredGroupAttribute === 'href') {
                 const hrefValue = link.getAttribute('href');
                 if (typeof hrefValue === 'string') {
                     const trimmedHref = hrefValue.trim();
