@@ -31,6 +31,8 @@
         const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
         let mainSwiper = null;
         let thumbsSwiper = null;
+        let cleanupAutoplayPreferenceListener = null;
+        let autoplayWasRunningBeforePreferenceChange = false;
         const preloadedUrls = new Set();
         let resizeTimeout;
         let isResizeListenerAttached = false;
@@ -1206,6 +1208,12 @@
         }
 
         function initSwiper(viewer, images) {
+            if (typeof cleanupAutoplayPreferenceListener === 'function') {
+                cleanupAutoplayPreferenceListener();
+                cleanupAutoplayPreferenceListener = null;
+            }
+            autoplayWasRunningBeforePreferenceChange = false;
+
             const mainSwiperContainer = viewer.querySelector('.mga-main-swiper');
             const thumbsSwiperContainer = viewer.querySelector('.mga-thumbs-swiper');
 
@@ -1228,16 +1236,23 @@
 
             // L'instance principale peut activer `loop` en fonction des réglages.
             // On passe par le wrapper pour atténuer l'avertissement Swiper localement.
+            const autoplayConfig = {
+                delay: parseInt(settings.delay, 10) * 1000 || 4000,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: false,
+            };
+
+            const prefersReducedMotionQuery = (typeof window !== 'undefined' && typeof window.matchMedia === 'function')
+                ? window.matchMedia('(prefers-reduced-motion: reduce)')
+                : null;
+
+            const prefersReducedMotion = !!(prefersReducedMotionQuery && prefersReducedMotionQuery.matches);
+
             const mainSwiperConfig = {
                 zoom: true,
                 spaceBetween: 10,
                 loop: !!settings.loop,
                 navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
-                autoplay: {
-                    delay: parseInt(settings.delay, 10) * 1000 || 4000,
-                    disableOnInteraction: false,
-                    pauseOnMouseEnter: false,
-                },
                 on: {
                     init: function(swiper) {
                         preloadNeighboringImages(images, swiper.realIndex);
@@ -1276,6 +1291,10 @@
                 },
             };
 
+            if (!prefersReducedMotion) {
+                mainSwiperConfig.autoplay = Object.assign({}, autoplayConfig);
+            }
+
             if (thumbsSwiper) {
                 mainSwiperConfig.thumbs = { swiper: thumbsSwiper };
             }
@@ -1292,12 +1311,85 @@
                 return;
             }
 
-            if (!mainSwiper.autoplay) {
-                debug.log(mga__( 'L’extension autoplay de Swiper est indisponible.', 'lightbox-jlg' ), true);
-            } else if (settings.autoplay_start) {
-                mainSwiper.autoplay.start();
+            const autoplayInstance = mainSwiper.autoplay;
+            const hasAutoplayModule = !!(autoplayInstance && typeof autoplayInstance.start === 'function' && typeof autoplayInstance.stop === 'function');
+
+            const applyAutoplayParams = () => {
+                if (!mainSwiper || mainSwiper.destroyed) {
+                    return;
+                }
+
+                if (mainSwiper.params && typeof mainSwiper.params === 'object') {
+                    const paramsAutoplay = mainSwiper.params.autoplay && typeof mainSwiper.params.autoplay === 'object'
+                        ? mainSwiper.params.autoplay
+                        : (mainSwiper.params.autoplay = {});
+                    Object.assign(paramsAutoplay, autoplayConfig);
+                }
+
+                if (mainSwiper.originalParams && typeof mainSwiper.originalParams === 'object') {
+                    const originalAutoplay = mainSwiper.originalParams.autoplay && typeof mainSwiper.originalParams.autoplay === 'object'
+                        ? mainSwiper.originalParams.autoplay
+                        : (mainSwiper.originalParams.autoplay = {});
+                    Object.assign(originalAutoplay, autoplayConfig);
+                }
+            };
+
+            if (!hasAutoplayModule) {
+                if (!prefersReducedMotion) {
+                    debug.log(mga__( 'L’extension autoplay de Swiper est indisponible.', 'lightbox-jlg' ), true);
+                }
             } else {
-                 mainSwiper.autoplay.stop();
+                if (!prefersReducedMotion) {
+                    applyAutoplayParams();
+                    if (settings.autoplay_start) {
+                        autoplayInstance.start();
+                    } else {
+                        autoplayInstance.stop();
+                    }
+                } else {
+                    autoplayInstance.stop();
+                }
+
+                if (prefersReducedMotionQuery) {
+                    const handleReducedMotionChange = (event) => {
+                        if (!mainSwiper || mainSwiper.destroyed) {
+                            return;
+                        }
+
+                        const instance = mainSwiper.autoplay;
+                        if (!instance || typeof instance.start !== 'function' || typeof instance.stop !== 'function') {
+                            return;
+                        }
+
+                        const matchesReducedMotion = !!event.matches;
+
+                        if (matchesReducedMotion) {
+                            autoplayWasRunningBeforePreferenceChange = Boolean(instance.running);
+                            instance.stop();
+                        } else {
+                            const shouldResume = autoplayWasRunningBeforePreferenceChange || !!settings.autoplay_start;
+                            autoplayWasRunningBeforePreferenceChange = false;
+                            applyAutoplayParams();
+                            if (shouldResume) {
+                                instance.start();
+                            } else if (instance.running) {
+                                instance.stop();
+                            }
+                        }
+                    };
+
+                    if (typeof prefersReducedMotionQuery.addEventListener === 'function') {
+                        prefersReducedMotionQuery.addEventListener('change', handleReducedMotionChange);
+                        cleanupAutoplayPreferenceListener = () => {
+                            prefersReducedMotionQuery.removeEventListener('change', handleReducedMotionChange);
+                        };
+                    } else if (typeof prefersReducedMotionQuery.addListener === 'function') {
+                        prefersReducedMotionQuery.addListener(handleReducedMotionChange);
+                        cleanupAutoplayPreferenceListener = () => {
+                            prefersReducedMotionQuery.removeListener(handleReducedMotionChange);
+                        };
+                    }
+                }
             }
         }
         
@@ -1411,6 +1503,11 @@
             if(mainSwiper && mainSwiper.autoplay) {
                 mainSwiper.autoplay.stop();
             }
+            if (typeof cleanupAutoplayPreferenceListener === 'function') {
+                cleanupAutoplayPreferenceListener();
+                cleanupAutoplayPreferenceListener = null;
+            }
+            autoplayWasRunningBeforePreferenceChange = false;
             window.removeEventListener('resize', handleResize);
             isResizeListenerAttached = false;
             if (viewerFocusTrapHandler) {

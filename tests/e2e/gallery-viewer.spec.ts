@@ -393,4 +393,138 @@ test.describe('Gallery viewer', () => {
             await cleanup();
         }
     });
+
+    test('respects reduced motion preference for autoplay', async ({ page, requestUtils }) => {
+        await page.addInitScript(() => {
+            const mediaQuery = '(prefers-reduced-motion: reduce)';
+            const listeners = new Set<((event: { matches: boolean; media: string; type: string }) => void)>();
+            const mql = {
+                matches: true,
+                media: mediaQuery,
+                onchange: null as ((event: { matches: boolean; media: string; type: string }) => void) | null,
+                addEventListener: (event: string, handler: (payload: { matches: boolean; media: string; type: string }) => void) => {
+                    if (event === 'change') {
+                        listeners.add(handler);
+                    }
+                },
+                removeEventListener: (event: string, handler: (payload: { matches: boolean; media: string; type: string }) => void) => {
+                    if (event === 'change') {
+                        listeners.delete(handler);
+                    }
+                },
+                addListener: (handler: (payload: { matches: boolean; media: string; type: string }) => void) => {
+                    listeners.add(handler);
+                },
+                removeListener: (handler: (payload: { matches: boolean; media: string; type: string }) => void) => {
+                    listeners.delete(handler);
+                },
+                dispatchEvent: (event: { matches: boolean; media: string; type: string }) => {
+                    if (!event || event.type !== 'change') {
+                        return false;
+                    }
+                    listeners.forEach((handler) => handler(event));
+                    return true;
+                },
+            };
+
+            const notifyListeners = (matches: boolean) => {
+                if (mql.matches === matches) {
+                    return;
+                }
+                mql.matches = matches;
+                const event = { matches, media: mediaQuery, type: 'change' };
+                if (typeof mql.onchange === 'function') {
+                    mql.onchange(event);
+                }
+                listeners.forEach((handler) => {
+                    handler(event);
+                });
+            };
+
+            Object.defineProperty(window, '__setReducedMotionPreference', {
+                value: notifyListeners,
+                configurable: true,
+            });
+
+            const originalMatchMedia = window.matchMedia ? window.matchMedia.bind(window) : undefined;
+            window.matchMedia = (query: string) => {
+                if (query === mediaQuery) {
+                    return mql;
+                }
+                if (originalMatchMedia) {
+                    return originalMatchMedia(query);
+                }
+                return {
+                    matches: false,
+                    media: query,
+                    onchange: null,
+                    addListener() {},
+                    removeListener() {},
+                    addEventListener() {},
+                    removeEventListener() {},
+                    dispatchEvent() {
+                        return false;
+                    },
+                };
+            };
+        });
+
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(requestUtils, 'Gallery viewer reduced motion');
+
+        try {
+            await page.goto(post.link);
+
+            await page.evaluate(() => {
+                const settings = (window as typeof window & { mga_settings?: Record<string, unknown> }).mga_settings || {};
+                settings.autoplay_start = true;
+                (window as typeof window & { mga_settings?: Record<string, unknown> }).mga_settings = settings;
+            });
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`);
+            await expect(trigger.locator('img')).toBeVisible();
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+
+            await page.waitForFunction(() => {
+                const swiperEl = document.querySelector('.mga-main-swiper');
+                return Boolean(swiperEl && (swiperEl as any).swiper && (swiperEl as any).swiper.autoplay);
+            });
+
+            const initialRunning = await page.evaluate(() => {
+                const swiperEl = document.querySelector('.mga-main-swiper') as any;
+                return Boolean(swiperEl?.swiper?.autoplay?.running);
+            });
+            expect(initialRunning).toBe(false);
+
+            await page.evaluate(() => {
+                const setter = (window as typeof window & { __setReducedMotionPreference?: (value: boolean) => void }).__setReducedMotionPreference;
+                setter?.(false);
+            });
+
+            await page.waitForFunction(() => {
+                const swiperEl = document.querySelector('.mga-main-swiper') as any;
+                return Boolean(swiperEl?.swiper?.autoplay?.running);
+            });
+
+            await page.evaluate(() => {
+                const setter = (window as typeof window & { __setReducedMotionPreference?: (value: boolean) => void }).__setReducedMotionPreference;
+                setter?.(true);
+            });
+
+            await page.waitForFunction(() => {
+                const swiperEl = document.querySelector('.mga-main-swiper') as any;
+                return Boolean(swiperEl?.swiper?.autoplay && !swiperEl.swiper.autoplay.running);
+            });
+
+            const finalRunning = await page.evaluate(() => {
+                const swiperEl = document.querySelector('.mga-main-swiper') as any;
+                return Boolean(swiperEl?.swiper?.autoplay?.running);
+            });
+            expect(finalRunning).toBe(false);
+        } finally {
+            await cleanup();
+        }
+    });
 });
