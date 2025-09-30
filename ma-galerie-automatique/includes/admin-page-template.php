@@ -143,6 +143,21 @@ $settings = wp_parse_args( $settings, $defaults );
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><label for="mga_group_attribute"><?php echo esc_html__( 'Attribut de regroupement', 'lightbox-jlg' ); ?></label></th>
+                    <td>
+                        <input
+                            name="mga_settings[groupAttribute]"
+                            type="text"
+                            id="mga_group_attribute"
+                            value="<?php echo esc_attr( $settings['groupAttribute'] ); ?>"
+                            class="regular-text"
+                        />
+                        <p class="description">
+                            <?php echo esc_html__( 'Indiquez l’attribut HTML qui identifie les groupes (ex. data-mga-gallery, rel, href). Laissez vide pour conserver un groupe unique comme dans les versions précédentes.', 'lightbox-jlg' ); ?>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><label for="mga_z_index"><?php echo esc_html__( 'Z-index de la galerie', 'lightbox-jlg' ); ?></label></th>
                     <td>
                         <input name="mga_settings[z_index]" type="number" id="mga_z_index" value="<?php echo esc_attr( $settings['z_index'] ); ?>" min="1" class="small-text" />

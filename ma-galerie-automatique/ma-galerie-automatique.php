@@ -1043,6 +1043,7 @@ function mga_get_default_settings() {
         'background_style' => 'echo',
         'z_index' => 99999,
         'debug_mode' => false,
+        'groupAttribute' => 'data-mga-gallery',
         'contentSelectors' => [],
         'allowBodyFallback' => false,
         'tracked_post_types' => [ 'post', 'page' ],
@@ -1100,6 +1101,29 @@ function mga_sanitize_settings( $input, $existing_settings = null ) {
     $output['loop'] = ! empty( $input['loop'] );
     $output['autoplay_start'] = ! empty( $input['autoplay_start'] );
     
+    $sanitize_group_attribute = static function( $value ) use ( $defaults ) {
+        if ( ! is_string( $value ) ) {
+            return $defaults['groupAttribute'];
+        }
+
+        $trimmed = trim( $value );
+        if ( '' === $trimmed ) {
+            return '';
+        }
+
+        $sanitized = strtolower( preg_replace( '/[^a-z0-9_:\-]/i', '', $trimmed ) );
+
+        return '' === $sanitized ? $defaults['groupAttribute'] : $sanitized;
+    };
+
+    if ( array_key_exists( 'groupAttribute', $input ) ) {
+        $output['groupAttribute'] = $sanitize_group_attribute( $input['groupAttribute'] );
+    } elseif ( isset( $existing_settings['groupAttribute'] ) ) {
+        $output['groupAttribute'] = $sanitize_group_attribute( $existing_settings['groupAttribute'] );
+    } else {
+        $output['groupAttribute'] = $defaults['groupAttribute'];
+    }
+
     $allowed_bg_styles = ['echo', 'blur', 'texture'];
     $output['background_style'] = isset($input['background_style']) && in_array($input['background_style'], $allowed_bg_styles, true) ? $input['background_style'] : $defaults['background_style'];
     
