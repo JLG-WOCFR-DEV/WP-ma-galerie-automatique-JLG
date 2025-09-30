@@ -102,4 +102,27 @@ class MGA_Swiper_Asset_Sources_Test extends WP_UnitTestCase {
 
         $this->assertSame( $sentinel, $sources );
     }
+
+    public function test_swiper_sources_refreshed_when_cache_is_stale() {
+        $stale_timestamp = time() - DAY_IN_SECONDS;
+
+        $sentinel = [
+            'css'        => 'cdn',
+            'js'         => 'cdn',
+            'checked_at' => $stale_timestamp,
+        ];
+
+        delete_option( 'mga_swiper_asset_sources' );
+        add_option( 'mga_swiper_asset_sources', $sentinel, '', 'no' );
+
+        $sources = mga_get_swiper_asset_sources();
+
+        $this->assertIsArray( $sources );
+        $this->assertArrayHasKey( 'checked_at', $sources );
+        $this->assertGreaterThan( $sentinel['checked_at'], $sources['checked_at'], 'Expected stale sources to be refreshed.' );
+
+        $persisted_sources = get_option( 'mga_swiper_asset_sources' );
+
+        $this->assertSame( $sources, $persisted_sources, 'Refreshed sources should be persisted in the option.' );
+    }
 }
