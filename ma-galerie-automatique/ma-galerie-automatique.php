@@ -102,7 +102,7 @@ register_activation_hook( __FILE__, 'mga_activate' );
 /**
  * Détecte la disponibilité des assets Swiper locaux et mémorise le résultat.
  *
- * @return array{css:string,js:string}
+ * @return array{css:string,js:string,checked_at:int}
  */
 function mga_refresh_swiper_asset_sources() {
     $local_swiper_css_path = plugin_dir_path( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.css';
@@ -131,7 +131,7 @@ function mga_refresh_swiper_asset_sources() {
  * Le délai de rafraîchissement peut être ajusté via le filtre
  * `mga_swiper_sources_ttl`.
  *
- * @return array{css:string,js:string}
+ * @return array{css:string,js:string,checked_at:int}
  */
 function mga_get_swiper_asset_sources() {
     $sources = get_option( 'mga_swiper_asset_sources' );
@@ -279,9 +279,9 @@ function mga_enqueue_assets() {
     /**
      * Filters the SRI related attributes applied to the Swiper stylesheet handle.
      *
-     * @param array<string, string> $css_sri_attributes Associative array of attribute => value pairs.
-     * @param string                $swiper_css         Final URL used to enqueue the Swiper stylesheet.
-     * @param array<string, mixed>  $asset_sources      Cached asset source metadata.
+     * @param array<string, string>                     $css_sri_attributes Associative array of attribute => value pairs.
+     * @param string                                     $swiper_css         Final URL used to enqueue the Swiper stylesheet.
+     * @param array{css:string,js:string,checked_at:int} $asset_sources      Cached asset source metadata.
      */
     $css_sri_attributes = apply_filters(
         'mga_swiper_css_sri_attributes',
@@ -316,9 +316,9 @@ function mga_enqueue_assets() {
     /**
      * Filters the SRI related attributes applied to the Swiper script handle.
      *
-     * @param array<string, string> $js_sri_attributes Associative array of attribute => value pairs.
-     * @param string                $swiper_js         Final URL used to enqueue the Swiper script.
-     * @param array<string, mixed>  $asset_sources     Cached asset source metadata.
+     * @param array<string, string>                     $js_sri_attributes Associative array of attribute => value pairs.
+     * @param string                                     $swiper_js         Final URL used to enqueue the Swiper script.
+     * @param array{css:string,js:string,checked_at:int} $asset_sources     Cached asset source metadata.
      */
     $js_sri_attributes = apply_filters(
         'mga_swiper_js_sri_attributes',
