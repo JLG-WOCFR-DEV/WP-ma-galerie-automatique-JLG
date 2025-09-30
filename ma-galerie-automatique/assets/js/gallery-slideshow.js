@@ -1398,7 +1398,8 @@
             const prevIndex = (currentIndex - 1 + images.length) % images.length;
             
             [nextIndex, prevIndex].forEach(index => {
-                const imageUrl = images[index]?.highResUrl;
+                const neighbor = images[index];
+                const imageUrl = neighbor && neighbor.highResUrl;
                 if (imageUrl && !preloadedUrls.has(imageUrl)) {
                     debug.log(mgaSprintf(mga__( "Préchargement de l'image %s", 'lightbox-jlg' ), index));
                     const img = new Image();
