@@ -14,6 +14,40 @@
             });
         };
 
+    function updateEchoBackground(viewer, imageUrl) {
+        if (!viewer) {
+            return;
+        }
+
+        const bgContainer = viewer.querySelector('.mga-echo-bg');
+        if (!bgContainer) return;
+
+        const newImg = document.createElement('img');
+        newImg.className = 'mga-echo-bg__image';
+        let hasLoaded = false;
+
+        const handleLoad = () => {
+            if (hasLoaded) {
+                return;
+            }
+            hasLoaded = true;
+            const oldImg = bgContainer.querySelector('.mga-visible');
+            if (oldImg) {
+                oldImg.classList.remove('mga-visible');
+                setTimeout(() => { if(oldImg.parentElement) oldImg.parentElement.removeChild(oldImg); }, 400);
+            }
+            bgContainer.appendChild(newImg);
+            setTimeout(() => newImg.classList.add('mga-visible'), 10);
+        };
+
+        newImg.onload = handleLoad;
+        newImg.src = imageUrl;
+
+        if (newImg.complete) {
+            setTimeout(() => handleLoad());
+        }
+    }
+
     function initGalleryViewer() {
         const settings = window.mga_settings || {};
         const IMAGE_FILE_PATTERN = /\.(jpe?g|png|gif|bmp|webp|avif|svg)(?:\?.*)?(?:#.*)?$/i;
@@ -1412,23 +1446,6 @@
             });
         }
 
-        function updateEchoBackground(viewer, imageUrl) {
-            const bgContainer = viewer.querySelector('.mga-echo-bg');
-            if (!bgContainer) return;
-            const newImg = document.createElement('img');
-            newImg.className = 'mga-echo-bg__image';
-            newImg.src = imageUrl;
-            newImg.onload = () => {
-                const oldImg = bgContainer.querySelector('.mga-visible');
-                if (oldImg) {
-                    oldImg.classList.remove('mga-visible');
-                    setTimeout(() => { if(oldImg.parentElement) oldImg.parentElement.removeChild(oldImg); }, 400);
-                }
-                bgContainer.appendChild(newImg);
-                setTimeout(() => newImg.classList.add('mga-visible'), 10);
-            };
-        }
-
         function updateInfo(viewer, images, index) {
             if (images[index]) {
                 viewer.querySelector('#mga-caption').textContent = images[index].caption;
@@ -1563,5 +1580,9 @@
         document.addEventListener('DOMContentLoaded', initGalleryViewer);
     } else {
         initGalleryViewer();
+    }
+
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports.updateEchoBackground = updateEchoBackground;
     }
 })();
