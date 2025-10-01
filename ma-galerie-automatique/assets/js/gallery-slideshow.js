@@ -96,6 +96,7 @@
         let bodyScrollLockClassAdded = false;
         let lastFocusedElementBeforeViewer = null;
         let viewerFocusTrapHandler = null;
+        let currentGalleryImages = [];
 
         debug.init();
 
@@ -121,6 +122,61 @@
             }
 
             return null;
+        }
+
+        function getActiveHighResUrl() {
+            if (!Array.isArray(currentGalleryImages) || !currentGalleryImages.length) {
+                return null;
+            }
+
+            const fallbackIndex = mainSwiper && typeof mainSwiper.activeIndex === 'number'
+                ? mainSwiper.activeIndex
+                : 0;
+            const activeIndex = mainSwiper && typeof mainSwiper.realIndex === 'number'
+                ? mainSwiper.realIndex
+                : fallbackIndex;
+
+            const activeImage = currentGalleryImages[activeIndex];
+
+            if (activeImage && typeof activeImage.highResUrl === 'string' && activeImage.highResUrl) {
+                return activeImage.highResUrl;
+            }
+
+            return null;
+        }
+
+        function triggerImageDownload(imageUrl) {
+            if (typeof imageUrl !== 'string' || !imageUrl) {
+                return false;
+            }
+
+            if (!document.body || typeof document.body.appendChild !== 'function') {
+                debug.log(mga__( 'Téléchargement impossible : document.body indisponible.', 'lightbox-jlg' ), true);
+                return false;
+            }
+
+            let link = null;
+
+            try {
+                link = document.createElement('a');
+                link.href = imageUrl;
+                link.rel = 'noopener';
+
+                const urlParts = imageUrl.split('/').filter(Boolean);
+                const fallbackName = urlParts.length ? urlParts[urlParts.length - 1] : 'image';
+                link.download = fallbackName;
+
+                document.body.appendChild(link);
+                link.click();
+                return true;
+            } catch (error) {
+                debug.log(mgaSprintf(mga__( "Échec du téléchargement : %s", 'lightbox-jlg' ), error.message), true);
+                return false;
+            } finally {
+                if (link && link.parentNode === document.body) {
+                    document.body.removeChild(link);
+                }
+            }
         }
 
         /**
@@ -713,6 +769,24 @@
                 zoomIcon.appendChild(zoomSecondaryPath);
                 zoomButton.appendChild(zoomIcon);
 
+                const downloadButton = document.createElement('button');
+                downloadButton.type = 'button';
+                downloadButton.id = 'mga-download';
+                downloadButton.className = 'mga-toolbar-button';
+                downloadButton.setAttribute('aria-label', mga__( 'Télécharger l’image', 'lightbox-jlg' ));
+                toolbar.appendChild(downloadButton);
+
+                const downloadIcon = createSvgElement('svg', {
+                    class: 'mga-icon mga-download-icon',
+                    viewBox: '0 0 24 24',
+                    fill: 'currentColor',
+                });
+                const downloadArrow = createSvgElement('path', {
+                    d: 'M5 20h14v-2H5v2zm7-16l-5 5h3v4h4v-4h3l-5-5z',
+                });
+                downloadIcon.appendChild(downloadArrow);
+                downloadButton.appendChild(downloadIcon);
+
                 const fullscreenButton = document.createElement('button');
                 fullscreenButton.type = 'button';
                 fullscreenButton.id = 'mga-fullscreen';
@@ -1214,6 +1288,8 @@
                     return false;
                 }
 
+                currentGalleryImages = Array.isArray(images) ? images : [];
+
                 if (typeof mainSwiper.slideToLoop === 'function') {
                     mainSwiper.slideToLoop(startIndex, 0);
                 } else if (typeof mainSwiper.slideTo === 'function') {
@@ -1597,6 +1673,18 @@
                 }
             }
             if (eventTarget.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
+            if (eventTarget.closest('#mga-download')) {
+                e.preventDefault();
+                const highResUrl = getActiveHighResUrl();
+                if (highResUrl) {
+                    const didDownload = triggerImageDownload(highResUrl);
+                    if (!didDownload) {
+                        debug.log(mga__( "Impossible de lancer le téléchargement de l’image active.", 'lightbox-jlg' ), true);
+                    }
+                } else {
+                    debug.log(mga__( "URL haute résolution introuvable pour l’image active.", 'lightbox-jlg' ), true);
+                }
+            }
             if (eventTarget.closest('#mga-fullscreen')) {
                 const { request: requestFullscreen, exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
 
@@ -1642,6 +1730,8 @@
             module.exports.__testExports = module.exports.__testExports || {};
             module.exports.__testExports.openViewer = openViewer;
             module.exports.__testExports.getViewer = getViewer;
+            module.exports.__testExports.getActiveHighResUrl = getActiveHighResUrl;
+            module.exports.__testExports.triggerImageDownload = triggerImageDownload;
         }
 
         function closeViewer(viewer) {
@@ -1691,6 +1781,7 @@
             bodyScrollLockClassAdded = false;
             debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
             debug.stopTimer();
+            currentGalleryImages = [];
             if (lastFocusedElementBeforeViewer && typeof lastFocusedElementBeforeViewer.focus === 'function') {
                 safeFocus(lastFocusedElementBeforeViewer);
             }
