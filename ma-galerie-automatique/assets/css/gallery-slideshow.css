@@ -106,8 +106,9 @@
 .mga-main-swiper .swiper-button-prev:hover { background-color: rgba(0, 0, 0, 0.6); }
 
 .mga-thumbs-swiper {
-    height: var(--mga-thumb-size-desktop, 90px);
+    height: calc(var(--mga-thumb-size-desktop, 90px) + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     padding: 10px 0;
     width: 98%;
     max-width: 1200px;
@@ -184,7 +185,7 @@
 
     .mga-caption-container {
         width: 100%;
-        padding: 0 15px 8px 15px;
+        padding: 0 15px calc(8px + env(safe-area-inset-bottom, 0px)) 15px;
         position: absolute;
         top: 60px;
         left: 0;
@@ -194,11 +195,11 @@
     }
     /* Correction : on cible bien .mga-main-swiper pour l'affichage mobile en mode portrait */
     .mga-main-swiper {
-        margin-top: calc(110px + env(safe-area-inset-top, 0px));
-        max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 130px));
+        margin-top: calc(110px + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+        max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 130px + env(safe-area-inset-bottom, 0px)));
     }
     .mga-thumbs-swiper {
-        height: var(--mga-thumb-size-mobile, 70px);
+        height: calc(var(--mga-thumb-size-mobile, 70px) + env(safe-area-inset-bottom, 0px));
     }
     .mga-main-swiper .swiper-button-next, .mga-main-swiper .swiper-button-prev { display: none; }
 }
@@ -222,7 +223,7 @@
         white-space: normal;
     }
     .mga-main-swiper {
-        max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 80px));
+        max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 80px + env(safe-area-inset-bottom, 0px)));
     }
 }
 
