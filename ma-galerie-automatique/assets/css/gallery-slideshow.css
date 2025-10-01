@@ -43,7 +43,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
+    padding: calc(15px + env(safe-area-inset-top, 0px)) 15px 15px 15px;
     box-sizing: border-box;
     color: #fff;
     background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
@@ -128,7 +128,7 @@
 @media (max-width: 768px) and (orientation: portrait) {
     .mga-header {
         height: auto;
-        padding: 10px;
+        padding: calc(10px + env(safe-area-inset-top, 0px)) 10px 10px 10px;
         flex-wrap: wrap;
         justify-content: space-between;
         row-gap: 8px;
@@ -148,7 +148,7 @@
     }
     /* Correction : on cible bien .mga-main-swiper pour l'affichage mobile en mode portrait */
     .mga-main-swiper {
-        margin-top: 110px;
+        margin-top: calc(110px + env(safe-area-inset-top, 0px));
         max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 130px));
     }
     .mga-thumbs-swiper {
