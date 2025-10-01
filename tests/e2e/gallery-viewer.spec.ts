@@ -67,6 +67,30 @@ function buildGalleryContent(mediaItems: UploadedMedia[]): string {
         .join('\n');
 }
 
+function buildGalleryContentWithCaptions(mediaItems: UploadedMedia[], captions: string[]): string {
+    return mediaItems
+        .map((media, index) => {
+            const altText = `Placeholder ${index + 1}`;
+            const caption = captions[index] ?? '';
+
+            const figureContent = [
+                `<a href="${media.source_url}">` +
+                    `<img src="${media.source_url}" alt="${altText}" class="wp-image-${media.id}" /></a>`,
+            ];
+
+            if (caption) {
+                figureContent.push(`<figcaption>${caption}</figcaption>`);
+            }
+
+            return (
+                `<!-- wp:image {"id":${media.id},"sizeSlug":"full","linkDestination":"media"} -->\n` +
+                `<figure class="wp-block-image size-full">${figureContent.join('')}</figure>\n` +
+                `<!-- /wp:image -->`
+            );
+        })
+        .join('\n');
+}
+
 function buildCoreGalleryBlock(
     mediaItems: UploadedMedia[],
     options: { linkTo?: 'media' | 'attachment' } = {},
@@ -234,6 +258,44 @@ test.describe('Gallery viewer', () => {
             const viewer = page.locator('#mga-viewer');
             await expect(viewer).toBeVisible();
             await expect(page.locator('#mga-counter')).toHaveText(`1 / ${uploads.length}`);
+        } finally {
+            await cleanup();
+        }
+    });
+
+    test('displays the entire caption text for long captions', async ({ page, requestUtils }) => {
+        const longCaption =
+            'Voici une légende extrêmement longue destinée à vérifier que le texte complet est lisible ' +
+            'dans la visionneuse, sans être tronqué ni masqué, même lorsqu’il dépasse la largeur habituelle.';
+
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            'Gallery viewer long caption',
+            {
+                contentBuilder: (mediaItems) =>
+                    buildGalleryContentWithCaptions(
+                        mediaItems,
+                        mediaItems.map((_, index) => (index === 0 ? longCaption : '')),
+                    ),
+            },
+        );
+
+        try {
+            await page.goto(post.link);
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`);
+            await expect(trigger.locator('img')).toBeVisible();
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+
+            const caption = page.locator('#mga-caption');
+            await expect(caption).toBeVisible();
+            await expect(caption).toHaveText(longCaption);
+
+            const captionInnerText = await caption.innerText();
+            expect(captionInnerText).toBe(longCaption);
         } finally {
             await cleanup();
         }
