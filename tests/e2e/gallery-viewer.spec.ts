@@ -263,6 +263,30 @@ test.describe('Gallery viewer', () => {
         }
     });
 
+    test('closes the viewer when clicking the background overlay', async ({ page, requestUtils }) => {
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            'Gallery viewer background close',
+        );
+
+        try {
+            await page.goto(post.link);
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`);
+            await expect(trigger.locator('img')).toBeVisible();
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+
+            await page.locator('#mga-viewer').dispatchEvent('click');
+
+            await expect(viewer).toBeHidden();
+        } finally {
+            await cleanup();
+        }
+    });
+
     test('displays the entire caption text for long captions', async ({ page, requestUtils }) => {
         const longCaption =
             'Voici une légende extrêmement longue destinée à vérifier que le texte complet est lisible ' +
