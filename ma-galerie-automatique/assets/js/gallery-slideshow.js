@@ -1235,10 +1235,9 @@
                     const thumbSlide = document.createElement('div');
                     thumbSlide.className = 'swiper-slide';
 
-                    const thumbButton = document.createElement('div');
+                    const thumbButton = document.createElement('button');
+                    thumbButton.type = 'button';
                     thumbButton.className = 'mga-thumb-button';
-                    thumbButton.setAttribute('tabindex', '0');
-                    thumbButton.setAttribute('role', 'button');
                     thumbButton.setAttribute('data-slide-index', String(index));
                     thumbButton.setAttribute('aria-label', createThumbAriaLabel(img, index + 1));
 
@@ -1256,19 +1255,6 @@
                     };
 
                     thumbButton.addEventListener('click', activateThumb);
-                    thumbButton.addEventListener('keydown', (event) => {
-                        if (!event) {
-                            return;
-                        }
-
-                        const { key } = event;
-                        if (key === 'Enter' || key === ' ' || key === 'Space') {
-                            activateThumb(event);
-                        } else if (key === 'Spacebar') {
-                            // Support for older browsers using deprecated key values.
-                            activateThumb(event);
-                        }
-                    });
 
                     thumbSlide.appendChild(thumbButton);
 

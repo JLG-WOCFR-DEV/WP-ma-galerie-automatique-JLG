@@ -126,6 +126,9 @@
     cursor: inherit;
     border: 0;
     background: none;
+    color: inherit;
+    font: inherit;
+    appearance: none;
     border-radius: inherit;
 }
 .mga-thumbs-swiper .swiper-slide .mga-thumb-button:focus {
