@@ -1107,6 +1107,35 @@
                 mainWrapper.textContent = '';
                 thumbsWrapper.textContent = '';
 
+                const createThumbAriaLabel = (image, position) => {
+                    if (image && image.caption) {
+                        return mgaSprintf(
+                            mga__( 'Afficher la diapositive %s : %s', 'lightbox-jlg' ),
+                            String(position),
+                            image.caption
+                        );
+                    }
+
+                    return mgaSprintf(
+                        mga__( 'Afficher la diapositive %s', 'lightbox-jlg' ),
+                        String(position)
+                    );
+                };
+
+                const handleThumbNavigation = (targetIndex) => {
+                    if (mainSwiper && !mainSwiper.destroyed) {
+                        if (typeof mainSwiper.slideToLoop === 'function') {
+                            mainSwiper.slideToLoop(targetIndex);
+                        } else if (typeof mainSwiper.slideTo === 'function') {
+                            mainSwiper.slideTo(targetIndex);
+                        }
+                    }
+
+                    if (thumbsSwiper && !thumbsSwiper.destroyed && typeof thumbsSwiper.slideTo === 'function') {
+                        thumbsSwiper.slideTo(targetIndex);
+                    }
+                };
+
                 images.forEach((img, index) => {
                     const slide = document.createElement('div');
                     slide.className = 'swiper-slide';
@@ -1132,11 +1161,42 @@
                     const thumbSlide = document.createElement('div');
                     thumbSlide.className = 'swiper-slide';
 
+                    const thumbButton = document.createElement('div');
+                    thumbButton.className = 'mga-thumb-button';
+                    thumbButton.setAttribute('tabindex', '0');
+                    thumbButton.setAttribute('role', 'button');
+                    thumbButton.setAttribute('data-slide-index', String(index));
+                    thumbButton.setAttribute('aria-label', createThumbAriaLabel(img, index + 1));
+
                     const thumbImg = document.createElement('img');
                     thumbImg.setAttribute('loading', 'lazy');
                     thumbImg.setAttribute('src', img.thumbUrl);
                     thumbImg.setAttribute('alt', img.caption);
-                    thumbSlide.appendChild(thumbImg);
+                    thumbButton.appendChild(thumbImg);
+
+                    const activateThumb = (event) => {
+                        if (event) {
+                            event.preventDefault();
+                        }
+                        handleThumbNavigation(index);
+                    };
+
+                    thumbButton.addEventListener('click', activateThumb);
+                    thumbButton.addEventListener('keydown', (event) => {
+                        if (!event) {
+                            return;
+                        }
+
+                        const { key } = event;
+                        if (key === 'Enter' || key === ' ' || key === 'Space') {
+                            activateThumb(event);
+                        } else if (key === 'Spacebar') {
+                            // Support for older browsers using deprecated key values.
+                            activateThumb(event);
+                        }
+                    });
+
+                    thumbSlide.appendChild(thumbButton);
 
                     thumbsWrapper.appendChild(thumbSlide);
                 });
