@@ -210,6 +210,8 @@ describe('thumbnail accessibility controls', () => {
     let viewer;
     let mainInstance;
     let thumbsInstance;
+    let addEventListenerSpy;
+    let thumbKeydownRegistrations;
 
     beforeEach(() => {
         jest.resetModules();
@@ -218,6 +220,16 @@ describe('thumbnail accessibility controls', () => {
         Object.defineProperty(document, 'readyState', {
             value: 'complete',
             configurable: true,
+        });
+
+        thumbKeydownRegistrations = [];
+
+        const originalAddEventListener = Element.prototype.addEventListener;
+        addEventListenerSpy = jest.spyOn(Element.prototype, 'addEventListener').mockImplementation(function(type, listener, options) {
+            if (type === 'keydown' && this && this.classList && this.classList.contains('mga-thumb-button')) {
+                thumbKeydownRegistrations.push({ target: this, listener });
+            }
+            return originalAddEventListener.call(this, type, listener, options);
         });
 
         window.matchMedia = jest.fn().mockReturnValue({
@@ -274,6 +286,9 @@ describe('thumbnail accessibility controls', () => {
         window.matchMedia = originalMatchMedia;
         mainInstance = null;
         thumbsInstance = null;
+        if (addEventListenerSpy) {
+            addEventListenerSpy.mockRestore();
+        }
     });
 
     it('renders focusable thumbnail controls with accessibility metadata', () => {
@@ -281,16 +296,18 @@ describe('thumbnail accessibility controls', () => {
         expect(controls.length).toBe(2);
 
         const first = controls[0];
-        expect(first.getAttribute('tabindex')).toBe('0');
-        expect(first.getAttribute('role')).toBe('button');
+        expect(first.tagName).toBe('BUTTON');
+        expect(first.getAttribute('type')).toBe('button');
         expect(first.getAttribute('aria-label')).toBe('Afficher la diapositive 1 : Image 1');
     });
 
-    it('triggers swiper navigation when activated from the keyboard', () => {
+    it('relies on native keyboard activation without custom keydown handlers', () => {
         const controls = viewer.querySelectorAll('.mga-thumbs-swiper .swiper-slide .mga-thumb-button');
         const secondControl = controls[1];
 
-        secondControl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        expect(thumbKeydownRegistrations).toHaveLength(0);
+
+        secondControl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
         expect(mainInstance).toBeTruthy();
         expect(thumbsInstance).toBeTruthy();
