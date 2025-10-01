@@ -29,6 +29,7 @@ La visionneuse plein écran pilotée par `assets/js/gallery-slideshow.js` et mis
 - **Zoom réactif** : le bouton loupe active le zoom Swiper pour inspecter les détails, tout en autorisant le glisser tactile pour se déplacer dans l’image.
 - **Affichage plein écran** : un bouton dédié bascule le navigateur en mode plein écran et l’icône « Fermer » ou la touche Échap permet de revenir à la page.
 - **Navigation clavier et commandes rapides** : les flèches du clavier, les boutons latéraux et les interactions tactiles permettent d’avancer ou de reculer, même en mode boucle.
+- **Fermeture par clic hors image** : un clic sur l’arrière-plan de la visionneuse (en dehors du carrousel principal) ferme immédiatement le diaporama.
 - **Miniatures synchronisées** : un carrousel de vignettes met en évidence la diapositive active et permet de changer d’image d’un clic ou d’un tap.
 - **Arrière-plan immersif et préchargement** : un effet d’écho flouté anime le fond tandis que les visuels suivants sont préchargés pour fluidifier la lecture.
 - **Compatibilité avec les pièces jointes WordPress** : les galeries configurées avec `linkDestination: "attachment"` ouvrent la visionneuse sur le média original en s’appuyant sur les attributs `data-full-url` / `data-orig-file` des images.

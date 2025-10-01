@@ -1800,6 +1800,18 @@
             if (!eventTarget) {
                 return;
             }
+            const clickedInsideViewer = viewer.contains(eventTarget);
+            const clickedInsideMainSwiper = Boolean(eventTarget.closest('.mga-main-swiper'));
+            const clickedInsideHeader = Boolean(eventTarget.closest('.mga-header'));
+            const clickedInsideThumbs = Boolean(eventTarget.closest('.mga-thumbs-swiper'));
+
+            if (
+                eventTarget === viewer ||
+                (clickedInsideViewer && !clickedInsideMainSwiper && !clickedInsideHeader && !clickedInsideThumbs)
+            ) {
+                closeViewer(viewer);
+                return;
+            }
             if (eventTarget.closest('#mga-close')) closeViewer(viewer);
             if (eventTarget.closest('#mga-play-pause')) {
                 if (mainSwiper && mainSwiper.autoplay) {
