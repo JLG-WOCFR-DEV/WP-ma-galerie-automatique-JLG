@@ -895,6 +895,19 @@
             return grouped;
         };
 
+        const sharedHelpers = {
+            resolveLinkGroupId,
+            isExplicitFallbackAllowed,
+            sanitizeHighResUrl,
+            sanitizeThumbnailUrl,
+            resolveThumbnailUrl,
+            getImageDataAttributes,
+        };
+
+        if (typeof module !== 'undefined' && module.exports) {
+            module.exports.helpers = sharedHelpers;
+        }
+
         const { cleanup: triggerObserverCleanup, active: hasActiveObserver } = (() => {
             if (typeof MutationObserver !== 'function') {
                 return { cleanup: noop, active: false };
