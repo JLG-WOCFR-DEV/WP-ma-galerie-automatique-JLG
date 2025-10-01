@@ -237,3 +237,43 @@
         padding: 8px;
     }
 }
+
+@media (prefers-reduced-motion: reduce) {
+    /* Supprimer les animations et transitions non essentielles tout en conservant des repères visuels clairs */
+    .mga-spinner {
+        animation: none !important;
+        border-top-color: var(--mga-accent-color, #fff);
+        border-right-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .mga-echo-bg__image {
+        transition: none !important;
+        transform: none;
+        opacity: 0.85;
+    }
+
+    .mga-echo-bg__image.mga-visible {
+        opacity: 1;
+    }
+
+    .mga-toolbar-button,
+    .mga-thumbs-swiper .swiper-slide,
+    .mga-main-swiper .swiper-button-next,
+    .mga-main-swiper .swiper-button-prev,
+    .mga-timer-progress {
+        transition: none !important;
+    }
+
+    .mga-toolbar-button:hover,
+    .mga-main-swiper .swiper-button-next:hover,
+    .mga-main-swiper .swiper-button-prev:hover {
+        background-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .mga-thumbs-swiper .swiper-slide:hover,
+    .mga-thumbs-swiper .swiper-slide-thumb-active {
+        opacity: 1;
+        border-color: var(--mga-accent-color, #fff);
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+    }
+}
