@@ -319,6 +319,42 @@ test.describe('Gallery viewer', () => {
         }
     });
 
+    test('keeps toolbar actions accessible on a mobile viewport', async ({ page, requestUtils }) => {
+        await page.setViewportSize({ width: 320, height: 640 });
+
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            'Gallery viewer mobile toolbar',
+        );
+
+        try {
+            await page.goto(post.link);
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`);
+            await expect(trigger.locator('img')).toBeVisible();
+
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+
+            const toolbarButtons = ['#mga-play-pause', '#mga-zoom', '#mga-fullscreen', '#mga-close'];
+
+            for (const selector of toolbarButtons) {
+                const button = page.locator(selector);
+                await expect(button).toBeVisible();
+                const box = await button.boundingBox();
+                expect(box).not.toBeNull();
+                if (box) {
+                    expect(box.width).toBeGreaterThan(30);
+                    expect(box.height).toBeGreaterThan(30);
+                }
+            }
+        } finally {
+            await cleanup();
+        }
+    });
+
     test('prevents layout shift when locking scroll', async ({ page, requestUtils }) => {
         const { post, uploads, cleanup } = await createPublishedGalleryPost(requestUtils, 'Gallery viewer layout shift');
 
