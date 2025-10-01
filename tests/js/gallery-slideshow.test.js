@@ -181,3 +181,124 @@ describe('autoplay accessibility handlers', () => {
         expect(playPauseButton.getAttribute('aria-label')).toBe('Lancer le diaporama');
     });
 });
+
+describe('viewer live region accessibility', () => {
+    let testExports;
+    let viewer;
+    let counter;
+    let caption;
+    let captionContainer;
+    const originalMatchMedia = window.matchMedia;
+    const originalReadyState = Object.getOwnPropertyDescriptor(document, 'readyState');
+    const originalWindowRaf = window.requestAnimationFrame;
+    const originalGlobalRaf = global.requestAnimationFrame;
+    let rafMock;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = '<main></main>';
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        window.wp = {
+            i18n: {
+                __: (text) => text,
+                sprintf: (format, ...args) => {
+                    let index = 0;
+                    return format.replace(/%\d*\$?s/g, () => {
+                        const replacement = typeof args[index] !== 'undefined' ? args[index] : '';
+                        index += 1;
+                        return replacement;
+                    });
+                },
+            },
+        };
+
+        rafMock = jest.fn((cb) => {
+            if (typeof cb === 'function') {
+                cb();
+            }
+            return 0;
+        });
+        window.requestAnimationFrame = rafMock;
+        global.requestAnimationFrame = rafMock;
+
+        global.Swiper = function() {};
+
+        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        testExports = module.__testExports;
+
+        viewer = testExports.getViewer();
+        counter = viewer.querySelector('#mga-counter');
+        caption = viewer.querySelector('#mga-caption');
+        captionContainer = viewer.querySelector('.mga-caption-container');
+    });
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete window.wp;
+        window.matchMedia = originalMatchMedia;
+        if (originalReadyState) {
+            Object.defineProperty(document, 'readyState', originalReadyState);
+        } else {
+            delete document.readyState;
+        }
+        if (typeof originalWindowRaf === 'function') {
+            window.requestAnimationFrame = originalWindowRaf;
+        } else {
+            delete window.requestAnimationFrame;
+        }
+        if (typeof originalGlobalRaf === 'function') {
+            global.requestAnimationFrame = originalGlobalRaf;
+        } else {
+            delete global.requestAnimationFrame;
+        }
+    });
+
+    it('initialises caption and counter with ARIA live region attributes', () => {
+        expect(counter.getAttribute('role')).toBe('status');
+        expect(counter.getAttribute('aria-live')).toBe('polite');
+        expect(counter.getAttribute('aria-atomic')).toBe('true');
+        expect(counter.getAttribute('aria-hidden')).toBe('false');
+
+        expect(caption.getAttribute('role')).toBe('status');
+        expect(caption.getAttribute('aria-live')).toBe('polite');
+        expect(caption.getAttribute('aria-atomic')).toBe('true');
+        expect(caption.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('updates live regions and toggles aria-hidden when navigating', () => {
+        const images = [
+            { caption: 'Image mise en avant' },
+            { caption: '' },
+        ];
+
+        testExports.updateInfo(viewer, images, 0);
+        expect(caption.getAttribute('aria-hidden')).toBe('false');
+        expect(caption.textContent).toBe('Image mise en avant');
+        expect(captionContainer.style.visibility).toBe('visible');
+        expect(counter.textContent).toBe('1 / 2');
+
+        rafMock.mockClear();
+        testExports.updateInfo(viewer, images, 0);
+        expect(rafMock).toHaveBeenCalled();
+        expect(counter.textContent).toBe('1 / 2');
+
+        testExports.updateInfo(viewer, images, 1);
+        expect(caption.getAttribute('aria-hidden')).toBe('true');
+        expect(caption.textContent).toBe('');
+        expect(captionContainer.style.visibility).toBe('hidden');
+    });
+});

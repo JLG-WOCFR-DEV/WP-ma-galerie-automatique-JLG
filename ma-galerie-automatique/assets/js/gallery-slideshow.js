@@ -634,6 +634,10 @@
                 const counter = document.createElement('div');
                 counter.id = 'mga-counter';
                 counter.className = 'mga-counter';
+                counter.setAttribute('role', 'status');
+                counter.setAttribute('aria-live', 'polite');
+                counter.setAttribute('aria-atomic', 'true');
+                counter.setAttribute('aria-hidden', 'false');
                 header.appendChild(counter);
 
                 const captionContainer = document.createElement('div');
@@ -643,6 +647,10 @@
                 const caption = document.createElement('p');
                 caption.id = 'mga-caption';
                 caption.className = 'mga-caption';
+                caption.setAttribute('role', 'status');
+                caption.setAttribute('aria-live', 'polite');
+                caption.setAttribute('aria-atomic', 'true');
+                caption.setAttribute('aria-hidden', 'true');
                 captionContainer.appendChild(caption);
 
                 const toolbar = document.createElement('div');
@@ -1508,12 +1516,78 @@
             });
         }
 
-        function updateInfo(viewer, images, index) {
-            if (images[index]) {
-                viewer.querySelector('#mga-caption').textContent = images[index].caption;
-                viewer.querySelector('.mga-caption-container').style.visibility = images[index].caption ? 'visible' : 'hidden';
-                viewer.querySelector('#mga-counter').textContent = mgaSprintf(mga__( '%1$s / %2$s', 'lightbox-jlg' ), index + 1, images.length);
+        function setLiveRegionText(element, text, options = {}) {
+            if (!element) {
+                return;
             }
+
+            const { hideWhenEmpty = false } = options;
+            const normalizedText = text == null ? '' : String(text);
+            const hasText = normalizedText !== '';
+
+            if (hideWhenEmpty) {
+                element.setAttribute('aria-hidden', hasText ? 'false' : 'true');
+            } else {
+                element.setAttribute('aria-hidden', 'false');
+            }
+
+            if (!hasText) {
+                element.textContent = '';
+                return;
+            }
+
+            if (element.textContent === normalizedText) {
+                element.textContent = '';
+
+                const scheduler = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
+                    ? window.requestAnimationFrame.bind(window)
+                    : (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : null);
+
+                if (scheduler) {
+                    scheduler(() => {
+                        element.textContent = normalizedText;
+                    });
+                } else {
+                    setTimeout(() => {
+                        element.textContent = normalizedText;
+                    }, 0);
+                }
+
+                return;
+            }
+
+            element.textContent = normalizedText;
+        }
+
+        function updateInfo(viewer, images, index) {
+            if (!viewer) {
+                return;
+            }
+
+            const captionElement = viewer.querySelector('#mga-caption');
+            const captionContainer = viewer.querySelector('.mga-caption-container');
+            const counterElement = viewer.querySelector('#mga-counter');
+            const hasImages = Array.isArray(images) && typeof images[index] !== 'undefined';
+
+            if (!hasImages) {
+                if (captionContainer) {
+                    captionContainer.style.visibility = 'hidden';
+                }
+                setLiveRegionText(captionElement, '', { hideWhenEmpty: true });
+                setLiveRegionText(counterElement, '');
+                return;
+            }
+
+            const currentImage = images[index];
+            const captionText = currentImage && typeof currentImage.caption === 'string' ? currentImage.caption : '';
+            const counterText = mgaSprintf(mga__( '%1$s / %2$s', 'lightbox-jlg' ), index + 1, images.length);
+
+            if (captionContainer) {
+                captionContainer.style.visibility = captionText ? 'visible' : 'hidden';
+            }
+
+            setLiveRegionText(captionElement, captionText, { hideWhenEmpty: true });
+            setLiveRegionText(counterElement, counterText);
         }
 
         document.body.addEventListener('click', function(e) {
@@ -1582,6 +1656,7 @@
             module.exports.__testExports = module.exports.__testExports || {};
             module.exports.__testExports.openViewer = openViewer;
             module.exports.__testExports.getViewer = getViewer;
+            module.exports.__testExports.updateInfo = updateInfo;
         }
 
         function closeViewer(viewer) {
