@@ -643,6 +643,10 @@
                 const caption = document.createElement('p');
                 caption.id = 'mga-caption';
                 caption.className = 'mga-caption';
+                caption.setAttribute('role', 'status');
+                caption.setAttribute('aria-live', 'polite');
+                caption.setAttribute('aria-atomic', 'true');
+                caption.setAttribute('aria-hidden', 'true');
                 captionContainer.appendChild(caption);
 
                 const toolbar = document.createElement('div');
@@ -1569,11 +1573,30 @@
         }
 
         function updateInfo(viewer, images, index) {
-            if (images[index]) {
-                viewer.querySelector('#mga-caption').textContent = images[index].caption;
-                viewer.querySelector('.mga-caption-container').style.visibility = images[index].caption ? 'visible' : 'hidden';
-                viewer.querySelector('#mga-counter').textContent = mgaSprintf(mga__( '%1$s / %2$s', 'lightbox-jlg' ), index + 1, images.length);
+            const image = images[index];
+            const captionElement = viewer.querySelector('#mga-caption');
+            const captionContainer = viewer.querySelector('.mga-caption-container');
+            const counterElement = viewer.querySelector('#mga-counter');
+
+            if (!captionElement || !captionContainer || !counterElement) {
+                return;
             }
+
+            if (!image) {
+                captionElement.textContent = '';
+                captionElement.setAttribute('aria-hidden', 'true');
+                captionContainer.style.visibility = 'hidden';
+                counterElement.textContent = '';
+                return;
+            }
+
+            const captionText = image.caption || '';
+            const hasCaption = Boolean(captionText);
+
+            captionElement.textContent = captionText;
+            captionElement.setAttribute('aria-hidden', hasCaption ? 'false' : 'true');
+            captionContainer.style.visibility = hasCaption ? 'visible' : 'hidden';
+            counterElement.textContent = mgaSprintf(mga__( '%1$s / %2$s', 'lightbox-jlg' ), index + 1, images.length);
         }
 
         document.body.addEventListener('click', function(e) {
@@ -1642,6 +1665,7 @@
             module.exports.__testExports = module.exports.__testExports || {};
             module.exports.__testExports.openViewer = openViewer;
             module.exports.__testExports.getViewer = getViewer;
+            module.exports.__testExports.updateInfo = updateInfo;
         }
 
         function closeViewer(viewer) {

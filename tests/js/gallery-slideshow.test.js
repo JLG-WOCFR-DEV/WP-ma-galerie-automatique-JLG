@@ -120,6 +120,81 @@ function createSwiperMockFactory() {
     return { SwiperMock, instances };
 }
 
+describe('viewer caption accessibility', () => {
+    const originalMatchMedia = window.matchMedia;
+    let testExports;
+    let viewer;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = '<main></main>';
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        window.mga_settings = {
+            allowBodyFallback: true,
+            loop: false,
+            background_style: 'echo',
+            autoplay_start: false,
+            delay: 4,
+        };
+
+        const { SwiperMock } = createSwiperMockFactory();
+        global.Swiper = SwiperMock;
+
+        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        testExports = module.__testExports;
+        viewer = testExports.getViewer();
+    });
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        window.matchMedia = originalMatchMedia;
+    });
+
+    it('creates a live region caption element with aria attributes', () => {
+        const caption = viewer.querySelector('#mga-caption');
+
+        expect(caption.getAttribute('role')).toBe('status');
+        expect(caption.getAttribute('aria-live')).toBe('polite');
+        expect(caption.getAttribute('aria-atomic')).toBe('true');
+        expect(caption.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('toggles aria-hidden on the caption based on content', () => {
+        const caption = viewer.querySelector('#mga-caption');
+        const captionContainer = viewer.querySelector('.mga-caption-container');
+
+        const images = [
+            { caption: 'Image 1' },
+            { caption: '' },
+        ];
+
+        testExports.updateInfo(viewer, images, 0);
+        expect(caption.textContent).toBe('Image 1');
+        expect(caption.getAttribute('aria-hidden')).toBe('false');
+        expect(captionContainer.style.visibility).toBe('visible');
+
+        testExports.updateInfo(viewer, images, 1);
+        expect(caption.textContent).toBe('');
+        expect(caption.getAttribute('aria-hidden')).toBe('true');
+        expect(captionContainer.style.visibility).toBe('hidden');
+    });
+});
+
 describe('autoplay accessibility handlers', () => {
     let testExports;
     let playPauseButton;
