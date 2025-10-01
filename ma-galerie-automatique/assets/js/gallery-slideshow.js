@@ -124,7 +124,7 @@
             return null;
         }
 
-        function getActiveHighResUrl() {
+        function getActiveImageData() {
             if (!Array.isArray(currentGalleryImages) || !currentGalleryImages.length) {
                 return null;
             }
@@ -138,8 +138,23 @@
 
             const activeImage = currentGalleryImages[activeIndex];
 
-            if (activeImage && typeof activeImage.highResUrl === 'string' && activeImage.highResUrl) {
-                return activeImage.highResUrl;
+            if (!activeImage) {
+                return null;
+            }
+
+            return { image: activeImage, index: activeIndex };
+        }
+
+        function getActiveHighResUrl() {
+            const activeData = getActiveImageData();
+            if (!activeData) {
+                return null;
+            }
+
+            const { image } = activeData;
+
+            if (image && typeof image.highResUrl === 'string' && image.highResUrl) {
+                return image.highResUrl;
             }
 
             return null;
@@ -177,6 +192,49 @@
                     document.body.removeChild(link);
                 }
             }
+        }
+
+        function openSharePanel(imageData) {
+            if (!imageData || typeof imageData.highResUrl !== 'string' || !imageData.highResUrl) {
+                return false;
+            }
+
+            const sharePayload = { url: imageData.highResUrl };
+            const caption = typeof imageData.caption === 'string' ? imageData.caption.trim() : '';
+            const documentTitle = typeof document !== 'undefined' && document && typeof document.title === 'string'
+                ? document.title
+                : '';
+
+            if (caption) {
+                sharePayload.text = caption;
+            }
+
+            if (caption || documentTitle) {
+                sharePayload.title = caption || documentTitle;
+            }
+
+            if (typeof navigator !== 'undefined' && navigator && typeof navigator.share === 'function') {
+                try {
+                    const shareResult = navigator.share(sharePayload);
+                    if (shareResult && typeof shareResult.catch === 'function') {
+                        shareResult.catch(error => {
+                            const message = error && error.message ? error.message : mga__( 'Partage annulé.', 'lightbox-jlg' );
+                            debug.log(mgaSprintf(mga__( 'Partage non abouti : %s', 'lightbox-jlg' ), message), true);
+                        });
+                    }
+                    return true;
+                } catch (error) {
+                    debug.log(mgaSprintf(mga__( 'Erreur lors du partage : %s', 'lightbox-jlg' ), error.message), true);
+                    return false;
+                }
+            }
+
+            if (typeof window !== 'undefined' && window && typeof window.open === 'function') {
+                window.open(imageData.highResUrl, '_blank', 'noopener');
+                return true;
+            }
+
+            return false;
         }
 
         /**
@@ -787,6 +845,24 @@
                 downloadIcon.appendChild(downloadArrow);
                 downloadButton.appendChild(downloadIcon);
 
+                const shareButton = document.createElement('button');
+                shareButton.type = 'button';
+                shareButton.id = 'mga-share';
+                shareButton.className = 'mga-toolbar-button';
+                shareButton.setAttribute('aria-label', mga__( 'Partager l’image', 'lightbox-jlg' ));
+                toolbar.appendChild(shareButton);
+
+                const shareIcon = createSvgElement('svg', {
+                    class: 'mga-icon mga-share-icon',
+                    viewBox: '0 0 24 24',
+                    fill: 'currentColor',
+                });
+                const sharePath = createSvgElement('path', {
+                    d: 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.02-4.11A2.99 2.99 0 0 0 18 7.91c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.03.47.09.7L8.07 9.7A2.99 2.99 0 0 0 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.03-.82l7.05 4.12c-.06.23-.08.46-.08.7 0 1.65 1.34 2.99 3 2.99s3-1.34 3-2.99-1.34-3-3-3z',
+                });
+                shareIcon.appendChild(sharePath);
+                shareButton.appendChild(shareIcon);
+
                 const fullscreenButton = document.createElement('button');
                 fullscreenButton.type = 'button';
                 fullscreenButton.id = 'mga-fullscreen';
@@ -928,6 +1004,7 @@
             : '';
 
         const REL_GROUP_PREFIX = 'mga-group:';
+        const GENERIC_REL_TOKENS = new Set(['nofollow', 'noreferrer', 'noopener', 'opener', 'external']);
 
         const extractRelGroupToken = (relValue) => {
             if (typeof relValue !== 'string') {
@@ -946,6 +1023,19 @@
                         return suffix;
                     }
                 }
+            }
+
+            for (const token of tokens) {
+                const normalized = token.toLowerCase();
+                if (!normalized || GENERIC_REL_TOKENS.has(normalized)) {
+                    continue;
+                }
+
+                if (normalized.includes(':')) {
+                    continue;
+                }
+
+                return token;
             }
 
             return null;
@@ -1708,6 +1798,19 @@
                     debug.log(mga__( "URL haute résolution introuvable pour l’image active.", 'lightbox-jlg' ), true);
                 }
             }
+            if (eventTarget.closest('#mga-share')) {
+                e.preventDefault();
+                const activeData = getActiveImageData();
+                if (!activeData || !activeData.image) {
+                    debug.log(mga__( "Impossible de partager l’image active.", 'lightbox-jlg' ), true);
+                    return;
+                }
+
+                const shared = openSharePanel(activeData.image);
+                if (!shared) {
+                    debug.log(mga__( "Aucune option de partage disponible pour l’image active.", 'lightbox-jlg' ), true);
+                }
+            }
             if (eventTarget.closest('#mga-fullscreen')) {
                 const { request: requestFullscreen, exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
 
@@ -1755,6 +1858,8 @@
             module.exports.__testExports.getViewer = getViewer;
             module.exports.__testExports.getActiveHighResUrl = getActiveHighResUrl;
             module.exports.__testExports.triggerImageDownload = triggerImageDownload;
+            module.exports.__testExports.openSharePanel = openSharePanel;
+            module.exports.__testExports.getActiveImageData = getActiveImageData;
         }
 
         function closeViewer(viewer) {

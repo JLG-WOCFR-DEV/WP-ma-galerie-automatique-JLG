@@ -389,10 +389,13 @@ describe('thumbnail accessibility controls', () => {
 
 describe('download button integration', () => {
     const originalMatchMedia = window.matchMedia;
+    const originalNavigatorShare = navigator.share;
     let testExports;
     let viewer;
     let downloadButton;
+    let shareButton;
     let clickSpy;
+    let shareMock;
 
     beforeEach(() => {
         jest.resetModules();
@@ -446,12 +449,30 @@ describe('download button integration', () => {
         ], 0);
 
         downloadButton = viewer.querySelector('#mga-download');
+        shareButton = viewer.querySelector('#mga-share');
         clickSpy = jest.spyOn(HTMLElement.prototype, 'click').mockImplementation(() => {});
+
+        shareMock = jest.fn().mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'share', {
+            configurable: true,
+            writable: true,
+            value: shareMock,
+        });
     });
 
     afterEach(() => {
         if (clickSpy && typeof clickSpy.mockRestore === 'function') {
             clickSpy.mockRestore();
+        }
+        shareMock = null;
+        if (typeof originalNavigatorShare === 'undefined') {
+            delete navigator.share;
+        } else {
+            Object.defineProperty(navigator, 'share', {
+                configurable: true,
+                writable: true,
+                value: originalNavigatorShare,
+            });
         }
         delete window.mga_settings;
         delete global.Swiper;
@@ -486,5 +507,20 @@ describe('download button integration', () => {
             appendSpy.mockRestore();
             removeSpy.mockRestore();
         }
+    });
+
+    it('renders share control and uses Web Share API with the active image', () => {
+        expect(shareButton).not.toBeNull();
+        expect(testExports.getActiveHighResUrl()).toBe('https://example.com/high-1.jpg');
+
+        shareMock.mockReturnValue(Promise.resolve());
+
+        shareButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(shareMock.mock.calls.length).toBeGreaterThanOrEqual(1);
+        const [sharePayload] = shareMock.mock.calls[0];
+        expect(sharePayload.url).toBe('https://example.com/high-1.jpg');
+        expect(sharePayload.title).toBe('Image 1');
+        expect(sharePayload.text).toBe('Image 1');
     });
 });
