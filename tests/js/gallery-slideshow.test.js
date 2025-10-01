@@ -301,3 +301,105 @@ describe('thumbnail accessibility controls', () => {
         }
     });
 });
+
+describe('download button integration', () => {
+    const originalMatchMedia = window.matchMedia;
+    let testExports;
+    let viewer;
+    let downloadButton;
+    let clickSpy;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = '<main></main>';
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        window.mga_settings = {
+            allowBodyFallback: true,
+            loop: false,
+            background_style: 'echo',
+            autoplay_start: false,
+            delay: 4,
+        };
+
+        const { SwiperMock } = createSwiperMockFactory();
+        global.Swiper = function(...args) {
+            const createdInstance = SwiperMock(...args);
+            if (createdInstance.slides.length === 0 && createdInstance.el) {
+                createdInstance.slides = Array.from(createdInstance.el.querySelectorAll('.swiper-slide'));
+            }
+            return createdInstance;
+        };
+
+        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        testExports = module.__testExports;
+
+        viewer = testExports.getViewer();
+        testExports.openViewer([
+            {
+                highResUrl: 'https://example.com/high-1.jpg',
+                thumbUrl: 'https://example.com/thumb-1.jpg',
+                caption: 'Image 1',
+            },
+            {
+                highResUrl: 'https://example.com/high-2.jpg',
+                thumbUrl: 'https://example.com/thumb-2.jpg',
+                caption: 'Image 2',
+            },
+        ], 0);
+
+        downloadButton = viewer.querySelector('#mga-download');
+        clickSpy = jest.spyOn(HTMLElement.prototype, 'click').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        if (clickSpy && typeof clickSpy.mockRestore === 'function') {
+            clickSpy.mockRestore();
+        }
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        window.matchMedia = originalMatchMedia;
+    });
+
+    it('renders download control and triggers download for the active image', () => {
+        expect(downloadButton).not.toBeNull();
+        expect(testExports.getActiveHighResUrl()).toBe('https://example.com/high-1.jpg');
+
+        const appendSpy = jest.spyOn(document.body, 'appendChild');
+        const removeSpy = jest.spyOn(document.body, 'removeChild');
+        const initialClickCount = clickSpy.mock.calls.length;
+
+        try {
+            downloadButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+            const appendedAnchorCall = appendSpy.mock.calls.find(call => call[0] && call[0].tagName === 'A');
+            expect(appendedAnchorCall).toBeTruthy();
+            const appendedAnchor = appendedAnchorCall[0];
+            expect(appendedAnchor.href).toBe('https://example.com/high-1.jpg');
+            expect(appendedAnchor.download).toBe('high-1.jpg');
+
+            const newClickInstances = clickSpy.mock.instances.slice(initialClickCount);
+            const anchorClickInstance = newClickInstances.find(instance => instance && instance.tagName === 'A');
+            expect(anchorClickInstance).toBe(appendedAnchor);
+
+            const removedAnchorCall = removeSpy.mock.calls.find(call => call[0] === appendedAnchor);
+            expect(removedAnchorCall).toBeTruthy();
+        } finally {
+            appendSpy.mockRestore();
+            removeSpy.mockRestore();
+        }
+    });
+});
