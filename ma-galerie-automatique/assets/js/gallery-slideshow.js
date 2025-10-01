@@ -752,12 +752,18 @@
 
                 const captionContainer = document.createElement('div');
                 captionContainer.className = 'mga-caption-container';
+                captionContainer.setAttribute('role', 'status');
+                captionContainer.setAttribute('aria-live', 'polite');
                 header.appendChild(captionContainer);
 
                 const caption = document.createElement('p');
                 caption.id = 'mga-caption';
                 caption.className = 'mga-caption';
                 captionContainer.appendChild(caption);
+
+                const captionLiveRegion = document.createElement('span');
+                captionLiveRegion.className = 'mga-screen-reader-text mga-caption-live';
+                captionContainer.appendChild(captionLiveRegion);
 
                 const toolbar = document.createElement('div');
                 toolbar.className = 'mga-toolbar';
@@ -1758,10 +1764,32 @@
         }
 
         function updateInfo(viewer, images, index) {
-            if (images[index]) {
-                viewer.querySelector('#mga-caption').textContent = images[index].caption;
-                viewer.querySelector('.mga-caption-container').style.visibility = images[index].caption ? 'visible' : 'hidden';
-                viewer.querySelector('#mga-counter').textContent = mgaSprintf(mga__( '%1$s / %2$s', 'lightbox-jlg' ), index + 1, images.length);
+            if (!images[index]) {
+                return;
+            }
+
+            const captionContainer = viewer.querySelector('.mga-caption-container');
+            const captionElement = viewer.querySelector('#mga-caption');
+            const counterElement = viewer.querySelector('#mga-counter');
+            const liveRegion = captionContainer ? captionContainer.querySelector('.mga-caption-live') : null;
+
+            const imageData = images[index];
+            const captionText = imageData.caption || '';
+            const counterText = mgaSprintf(mga__( '%1$s / %2$s', 'lightbox-jlg' ), index + 1, images.length);
+            const announcementCounterText = mgaSprintf(mga__( 'Image %1$s sur %2$s', 'lightbox-jlg' ), index + 1, images.length);
+            const announcementText = captionText ? `${announcementCounterText}. ${captionText}` : announcementCounterText;
+
+            if (captionElement) {
+                captionElement.textContent = captionText;
+                captionElement.style.display = captionText ? '' : 'none';
+            }
+
+            if (counterElement) {
+                counterElement.textContent = counterText;
+            }
+
+            if (liveRegion && liveRegion.textContent !== announcementText) {
+                liveRegion.textContent = announcementText;
             }
         }
 
