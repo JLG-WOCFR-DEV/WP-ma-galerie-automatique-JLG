@@ -916,10 +916,14 @@
 
                 const nextButton = document.createElement('div');
                 nextButton.className = 'swiper-button-next';
+                nextButton.id = 'mga-next';
+                nextButton.setAttribute('aria-label', mga__( 'Image suivante', 'lightbox-jlg' ));
                 mainSwiper.appendChild(nextButton);
 
                 const prevButton = document.createElement('div');
                 prevButton.className = 'swiper-button-prev';
+                prevButton.id = 'mga-prev';
+                prevButton.setAttribute('aria-label', mga__( 'Image précédente', 'lightbox-jlg' ));
                 mainSwiper.appendChild(prevButton);
 
                 const thumbsSwiper = document.createElement('div');
