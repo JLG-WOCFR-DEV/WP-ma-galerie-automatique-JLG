@@ -48,6 +48,25 @@
         }
     }
 
+    function updateAutoplayButtonState(viewer, isRunning) {
+        if (!viewer) {
+            return;
+        }
+
+        const playPauseButton = viewer.querySelector('#mga-play-pause');
+        if (!playPauseButton) {
+            return;
+        }
+
+        playPauseButton.setAttribute('aria-pressed', isRunning ? 'true' : 'false');
+        playPauseButton.setAttribute(
+            'aria-label',
+            isRunning
+                ? mga__( 'Mettre le diaporama en pause', 'lightbox-jlg' )
+                : mga__( 'Lancer le diaporama', 'lightbox-jlg' )
+        );
+    }
+
     function initGalleryViewer() {
         const settings = window.mga_settings || {};
         const IMAGE_FILE_PATTERN = /\.(jpe?g|png|gif|bmp|webp|avif|svg)(?:\?.*)?(?:#.*)?$/i;
@@ -634,7 +653,8 @@
                 playPauseButton.type = 'button';
                 playPauseButton.id = 'mga-play-pause';
                 playPauseButton.className = 'mga-toolbar-button';
-                playPauseButton.setAttribute('aria-label', mga__( 'Play/Pause', 'lightbox-jlg' ));
+                playPauseButton.setAttribute('aria-pressed', 'false');
+                playPauseButton.setAttribute('aria-label', mga__( 'Lancer le diaporama', 'lightbox-jlg' ));
                 toolbar.appendChild(playPauseButton);
 
                 const timerSvg = createSvgElement('svg', { class: 'mga-timer-svg', viewBox: '0 0 36 36' });
@@ -668,6 +688,8 @@
                 const pausePath = createSvgElement('path', { d: 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' });
                 pauseIcon.appendChild(pausePath);
                 playPauseButton.appendChild(pauseIcon);
+
+                updateAutoplayButtonState(viewer, false);
 
                 const zoomButton = document.createElement('button');
                 zoomButton.type = 'button';
@@ -1299,6 +1321,25 @@
 
             const prefersReducedMotion = !!(prefersReducedMotionQuery && prefersReducedMotionQuery.matches);
 
+            const handleAutoplayStart = () => {
+                debug.log(mga__( 'Autoplay DÉMARRÉ.', 'lightbox-jlg' ));
+                viewer.querySelector('.mga-play-icon').style.display = 'none';
+                viewer.querySelector('.mga-pause-icon').style.display = 'inline-block';
+                updateAutoplayButtonState(viewer, true);
+            };
+
+            const handleAutoplayStop = () => {
+                debug.log(mga__( 'Autoplay ARRÊTÉ.', 'lightbox-jlg' ));
+                viewer.querySelector('.mga-play-icon').style.display = 'inline-block';
+                viewer.querySelector('.mga-pause-icon').style.display = 'none';
+                const progressCircle = viewer.querySelector('.mga-timer-progress');
+                if (progressCircle) {
+                    progressCircle.style.strokeDashoffset = 100;
+                }
+                debug.updateInfo('mga-debug-autoplay-time', mga__( 'Stoppé', 'lightbox-jlg' ));
+                updateAutoplayButtonState(viewer, false);
+            };
+
             const mainSwiperConfig = {
                 zoom: true,
                 spaceBetween: 10,
@@ -1335,8 +1376,8 @@
                             };
                         }
                     },
-                    autoplayStart: () => { debug.log(mga__( 'Autoplay DÉMARRÉ.', 'lightbox-jlg' )); viewer.querySelector('.mga-play-icon').style.display = 'none'; viewer.querySelector('.mga-pause-icon').style.display = 'inline-block'; },
-                    autoplayStop: () => { debug.log(mga__( 'Autoplay ARRÊTÉ.', 'lightbox-jlg' )); viewer.querySelector('.mga-play-icon').style.display = 'inline-block'; viewer.querySelector('.mga-pause-icon').style.display = 'none'; const progressCircle = viewer.querySelector('.mga-timer-progress'); if (progressCircle) progressCircle.style.strokeDashoffset = 100; debug.updateInfo('mga-debug-autoplay-time', mga__( 'Stoppé', 'lightbox-jlg' )); },
+                    autoplayStart: handleAutoplayStart,
+                    autoplayStop: handleAutoplayStop,
                     touchStart: () => { debug.log(mga__( 'Interaction manuelle DÉTECTÉE (touch).', 'lightbox-jlg' )); },
                     sliderMove: () => { debug.log(mga__( 'Interaction manuelle DÉTECTÉE (drag).', 'lightbox-jlg' )); }
                 },
@@ -1348,6 +1389,14 @@
 
             if (thumbsSwiper) {
                 mainSwiperConfig.thumbs = { swiper: thumbsSwiper };
+            }
+
+            if (typeof module !== 'undefined' && module.exports) {
+                module.exports.__testExports = module.exports.__testExports || {};
+                module.exports.__testExports.getAutoplayHandlers = () => ({
+                    autoplayStart: handleAutoplayStart,
+                    autoplayStop: handleAutoplayStop,
+                });
             }
 
             mainSwiper = createSwiperInstance(mainSwiperContainer, mainSwiperConfig);
@@ -1475,7 +1524,18 @@
                 return;
             }
             if (eventTarget.closest('#mga-close')) closeViewer(viewer);
-            if (eventTarget.closest('#mga-play-pause')) { if (mainSwiper && mainSwiper.autoplay && mainSwiper.autoplay.running) mainSwiper.autoplay.stop(); else if (mainSwiper && mainSwiper.autoplay) mainSwiper.autoplay.start(); }
+            if (eventTarget.closest('#mga-play-pause')) {
+                if (mainSwiper && mainSwiper.autoplay) {
+                    const autoplayInstance = mainSwiper.autoplay;
+                    const willRun = !autoplayInstance.running;
+                    if (willRun) {
+                        autoplayInstance.start();
+                    } else {
+                        autoplayInstance.stop();
+                    }
+                    updateAutoplayButtonState(viewer, willRun);
+                }
+            }
             if (eventTarget.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
             if (eventTarget.closest('#mga-fullscreen')) {
                 const { request: requestFullscreen, exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
@@ -1508,7 +1568,7 @@
             }
         });
         
-        document.addEventListener('keydown', (e) => { 
+        document.addEventListener('keydown', (e) => {
             const viewer = document.getElementById('mga-viewer');
             if (!viewer || viewer.style.display === 'none') return;
             switch (e.key) {
@@ -1517,6 +1577,12 @@
                 case 'ArrowRight': if (mainSwiper) mainSwiper.slideNext(); break;
             }
         });
+
+        if (typeof module !== 'undefined' && module.exports) {
+            module.exports.__testExports = module.exports.__testExports || {};
+            module.exports.__testExports.openViewer = openViewer;
+            module.exports.__testExports.getViewer = getViewer;
+        }
 
         function closeViewer(viewer) {
             const { exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
@@ -1597,5 +1663,6 @@
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports.updateEchoBackground = updateEchoBackground;
+        module.exports.updateAutoplayButtonState = updateAutoplayButtonState;
     }
 })();

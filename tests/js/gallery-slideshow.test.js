@@ -60,3 +60,124 @@ describe('updateEchoBackground', () => {
         expect(oldImg.classList.contains('mga-visible')).toBe(false);
     });
 });
+
+describe('autoplay accessibility handlers', () => {
+    let testExports;
+    let playPauseButton;
+    let autoplayHandlers;
+    const originalMatchMedia = window.matchMedia;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = '<main></main>';
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        window.mga_settings = {
+            allowBodyFallback: true,
+            loop: false,
+            background_style: 'echo',
+            autoplay_start: false,
+            delay: 4,
+        };
+
+        global.Swiper = jest.fn().mockImplementation((container, config) => {
+            const instance = {
+                el: container,
+                destroyed: false,
+                params: {},
+                originalParams: {},
+                update: jest.fn(),
+                slides: [],
+                activeIndex: 0,
+            };
+
+            const slide = document.createElement('div');
+            const img = document.createElement('img');
+            slide.appendChild(img);
+            instance.slides.push(slide);
+
+            if (config && config.on) {
+                instance.autoplay = {
+                    running: false,
+                    start: jest.fn(() => {
+                        instance.autoplay.running = true;
+                        if (typeof config.on.autoplayStart === 'function') {
+                            config.on.autoplayStart();
+                        }
+                    }),
+                    stop: jest.fn(() => {
+                        instance.autoplay.running = false;
+                        if (typeof config.on.autoplayStop === 'function') {
+                            config.on.autoplayStop();
+                        }
+                    }),
+                };
+                instance.realIndex = 0;
+            } else {
+                instance.autoplay = null;
+            }
+
+            return instance;
+        });
+
+        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        testExports = module.__testExports;
+
+        const viewer = testExports.getViewer();
+        testExports.openViewer([
+            {
+                highResUrl: 'https://example.com/high-1.jpg',
+                thumbUrl: 'https://example.com/thumb-1.jpg',
+                caption: 'Image 1',
+            },
+            {
+                highResUrl: 'https://example.com/high-2.jpg',
+                thumbUrl: 'https://example.com/thumb-2.jpg',
+                caption: 'Image 2',
+            },
+        ], 0);
+
+        playPauseButton = viewer.querySelector('#mga-play-pause');
+        autoplayHandlers = testExports.getAutoplayHandlers();
+    });
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        window.matchMedia = originalMatchMedia;
+    });
+
+    it('updates aria attributes when handlers are invoked', () => {
+        expect(playPauseButton.getAttribute('aria-pressed')).toBe('false');
+        expect(playPauseButton.getAttribute('aria-label')).toBe('Lancer le diaporama');
+
+        autoplayHandlers.autoplayStart();
+        expect(playPauseButton.getAttribute('aria-pressed')).toBe('true');
+        expect(playPauseButton.getAttribute('aria-label')).toBe('Mettre le diaporama en pause');
+
+        autoplayHandlers.autoplayStop();
+        expect(playPauseButton.getAttribute('aria-pressed')).toBe('false');
+        expect(playPauseButton.getAttribute('aria-label')).toBe('Lancer le diaporama');
+
+        playPauseButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(playPauseButton.getAttribute('aria-pressed')).toBe('true');
+        expect(playPauseButton.getAttribute('aria-label')).toBe('Mettre le diaporama en pause');
+
+        playPauseButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(playPauseButton.getAttribute('aria-pressed')).toBe('false');
+        expect(playPauseButton.getAttribute('aria-label')).toBe('Lancer le diaporama');
+    });
+});

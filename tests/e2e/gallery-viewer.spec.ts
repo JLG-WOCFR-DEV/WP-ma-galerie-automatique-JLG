@@ -527,4 +527,33 @@ test.describe('Gallery viewer', () => {
             await cleanup();
         }
     });
+
+    test('updates ARIA state when toggling autoplay from the toolbar', async ({ page, requestUtils }) => {
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(requestUtils, 'Gallery autoplay aria state');
+
+        try {
+            await page.goto(post.link);
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`);
+            await expect(trigger.locator('img')).toBeVisible();
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+
+            const toggle = page.locator('#mga-play-pause');
+            await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+            await expect(toggle).toHaveAttribute('aria-label', 'Lancer le diaporama');
+
+            await toggle.click();
+            await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+            await expect(toggle).toHaveAttribute('aria-label', 'Mettre le diaporama en pause');
+
+            await toggle.click();
+            await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+            await expect(toggle).toHaveAttribute('aria-label', 'Lancer le diaporama');
+        } finally {
+            await cleanup();
+        }
+    });
 });
