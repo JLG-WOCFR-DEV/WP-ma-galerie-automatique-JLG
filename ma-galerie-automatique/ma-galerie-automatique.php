@@ -1040,6 +1040,7 @@ function mga_get_default_settings() {
         'bg_opacity' => 0.95,
         'loop' => true,
         'autoplay_start' => false,
+        'show_download_button' => false,
         'background_style' => 'echo',
         'z_index' => 99999,
         'debug_mode' => false,
@@ -1100,6 +1101,13 @@ function mga_sanitize_settings( $input, $existing_settings = null ) {
     $output['bg_opacity'] = isset($input['bg_opacity']) ? max(min(floatval($input['bg_opacity']), 1), 0) : $defaults['bg_opacity'];
     $output['loop'] = ! empty( $input['loop'] );
     $output['autoplay_start'] = ! empty( $input['autoplay_start'] );
+    if ( array_key_exists( 'show_download_button', $input ) ) {
+        $output['show_download_button'] = ! empty( $input['show_download_button'] );
+    } elseif ( array_key_exists( 'show_download_button', $existing_settings ) ) {
+        $output['show_download_button'] = ! empty( $existing_settings['show_download_button'] );
+    } else {
+        $output['show_download_button'] = ! empty( $defaults['show_download_button'] );
+    }
     
     $sanitize_group_attribute = static function( $value ) use ( $defaults ) {
         if ( ! is_string( $value ) ) {

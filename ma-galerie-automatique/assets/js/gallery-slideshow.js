@@ -81,6 +81,7 @@
             restartTimer: noop,
             table: noop,
         };
+        const shouldShowDownloadButton = !!settings.show_download_button;
         const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
         let mainSwiper = null;
         let thumbsSwiper = null;
@@ -712,6 +713,28 @@
                 zoomIcon.appendChild(zoomPrimaryPath);
                 zoomIcon.appendChild(zoomSecondaryPath);
                 zoomButton.appendChild(zoomIcon);
+
+                if (shouldShowDownloadButton) {
+                    const downloadButton = document.createElement('a');
+                    downloadButton.id = 'mga-download';
+                    downloadButton.className = 'mga-toolbar-button mga-toolbar-button--disabled';
+                    downloadButton.setAttribute('aria-label', mga__( 'Télécharger l’image', 'lightbox-jlg' ));
+                    downloadButton.setAttribute('aria-disabled', 'true');
+                    downloadButton.setAttribute('tabindex', '-1');
+                    toolbar.appendChild(downloadButton);
+
+                    const downloadIcon = createSvgElement('svg', {
+                        class: 'mga-icon',
+                        viewBox: '0 0 24 24',
+                        fill: 'currentColor',
+                        'aria-hidden': 'true',
+                    });
+                    const downloadPath = createSvgElement('path', {
+                        d: 'M5 20h14v-2H5v2zm7-18-7 7h4v4h6v-4h4l-7-7z',
+                    });
+                    downloadIcon.appendChild(downloadPath);
+                    downloadButton.appendChild(downloadIcon);
+                }
 
                 const fullscreenButton = document.createElement('button');
                 fullscreenButton.type = 'button';
@@ -1509,10 +1532,32 @@
         }
 
         function updateInfo(viewer, images, index) {
-            if (images[index]) {
-                viewer.querySelector('#mga-caption').textContent = images[index].caption;
-                viewer.querySelector('.mga-caption-container').style.visibility = images[index].caption ? 'visible' : 'hidden';
+            const currentImage = images[index];
+
+            if (currentImage) {
+                viewer.querySelector('#mga-caption').textContent = currentImage.caption;
+                viewer.querySelector('.mga-caption-container').style.visibility = currentImage.caption ? 'visible' : 'hidden';
                 viewer.querySelector('#mga-counter').textContent = mgaSprintf(mga__( '%1$s / %2$s', 'lightbox-jlg' ), index + 1, images.length);
+            }
+
+            const downloadButton = viewer.querySelector('#mga-download');
+
+            if (downloadButton) {
+                const targetUrl = currentImage && (currentImage.downloadUrl || currentImage.highResUrl);
+
+                if (targetUrl) {
+                    downloadButton.setAttribute('href', targetUrl);
+                    downloadButton.setAttribute('download', '');
+                    downloadButton.setAttribute('aria-disabled', 'false');
+                    downloadButton.removeAttribute('tabindex');
+                    downloadButton.classList.remove('mga-toolbar-button--disabled');
+                } else {
+                    downloadButton.removeAttribute('href');
+                    downloadButton.removeAttribute('download');
+                    downloadButton.setAttribute('aria-disabled', 'true');
+                    downloadButton.setAttribute('tabindex', '-1');
+                    downloadButton.classList.add('mga-toolbar-button--disabled');
+                }
             }
         }
 
@@ -1582,6 +1627,7 @@
             module.exports.__testExports = module.exports.__testExports || {};
             module.exports.__testExports.openViewer = openViewer;
             module.exports.__testExports.getViewer = getViewer;
+            module.exports.__testExports.updateInfo = updateInfo;
         }
 
         function closeViewer(viewer) {

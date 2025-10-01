@@ -417,6 +417,73 @@ test.describe('Gallery viewer', () => {
         }
     });
 
+    test('allows downloading the current slide when enabled', async ({ page, requestUtils }) => {
+        await page.addInitScript(() => {
+            let internalSettings: Record<string, unknown> | undefined;
+            const applyPreference = (value: Record<string, unknown> | undefined) => {
+                const next = Object.assign({}, value || {});
+                next.show_download_button = true;
+                internalSettings = next;
+                return internalSettings;
+            };
+
+            Object.defineProperty(window, 'mga_settings', {
+                configurable: true,
+                get() {
+                    return internalSettings ?? applyPreference(undefined);
+                },
+                set(value) {
+                    applyPreference(value as Record<string, unknown> | undefined);
+                },
+            });
+
+            Object.defineProperty(window, 'mgaSettings', {
+                configurable: true,
+                get() {
+                    return window.mga_settings;
+                },
+                set(value) {
+                    window.mga_settings = value as Record<string, unknown> | undefined;
+                },
+            });
+        });
+
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            'Gallery viewer download button',
+        );
+
+        try {
+            await page.goto(post.link);
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`);
+            await expect(trigger.locator('img')).toBeVisible();
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+
+            const downloadButton = page.locator('#mga-download');
+            await expect(downloadButton).toBeVisible();
+            await expect(downloadButton).toHaveAttribute('href', uploads[0].source_url);
+            await expect(downloadButton).toHaveAttribute('aria-disabled', 'false');
+
+            const [download] = await Promise.all([
+                page.waitForEvent('download'),
+                downloadButton.click(),
+            ]);
+            expect(download.url()).toBe(uploads[0].source_url);
+            await download.delete();
+
+            const nextButton = page.locator('.mga-main-swiper .swiper-button-next');
+            await nextButton.click();
+            await expect(page.locator('#mga-counter')).toHaveText(`2 / ${uploads.length}`);
+            await expect(downloadButton).toHaveAttribute('href', uploads[1].source_url);
+        } finally {
+            await cleanup();
+        }
+    });
+
     test('prevents layout shift when locking scroll', async ({ page, requestUtils }) => {
         const { post, uploads, cleanup } = await createPublishedGalleryPost(requestUtils, 'Gallery viewer layout shift');
 

@@ -20,6 +20,7 @@ Lightbox - JLG est un plugin WordPress qui transforme les galeries d'images en d
 - **Opacité de l’arrière-plan** : transparence du fond de la visionneuse (0.5–1).
 - **Effets d’arrière-plan** : flou d’écho, texture ou flou en temps réel.
 - **Lecture en boucle** et **lancement automatique** du diaporama.
+- **Bouton de téléchargement** : affiche un lien direct vers le fichier courant dans la barre d’outils.
 - **Z‑index** de la galerie et **mode débogage**.
 
 ## Fonctionnalités

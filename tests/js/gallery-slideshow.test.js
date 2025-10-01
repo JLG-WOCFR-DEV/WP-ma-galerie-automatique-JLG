@@ -181,3 +181,117 @@ describe('autoplay accessibility handlers', () => {
         expect(playPauseButton.getAttribute('aria-label')).toBe('Lancer le diaporama');
     });
 });
+
+describe('download button behaviour', () => {
+    let testExports;
+    const originalMatchMedia = window.matchMedia;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = '<main></main>';
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        window.mga_settings = {
+            allowBodyFallback: true,
+            loop: false,
+            background_style: 'echo',
+            autoplay_start: false,
+            delay: 4,
+            show_download_button: true,
+        };
+
+        global.Swiper = jest.fn().mockImplementation((container) => {
+            const instance = {
+                el: container,
+                destroyed: false,
+                params: {},
+                originalParams: {},
+                update: jest.fn(),
+                slides: [],
+                activeIndex: 0,
+                autoplay: null,
+            };
+
+            const slide = document.createElement('div');
+            const img = document.createElement('img');
+            slide.appendChild(img);
+            instance.slides.push(slide);
+
+            return instance;
+        });
+    });
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        window.matchMedia = originalMatchMedia;
+    });
+
+    it('renders the download button and updates its href', () => {
+        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        testExports = module.__testExports;
+
+        const viewer = testExports.getViewer();
+        const images = [
+            {
+                highResUrl: 'https://example.com/high-1.jpg',
+                thumbUrl: 'https://example.com/thumb-1.jpg',
+                caption: 'Image 1',
+            },
+            {
+                highResUrl: 'https://example.com/high-2.jpg',
+                thumbUrl: 'https://example.com/thumb-2.jpg',
+                caption: 'Image 2',
+            },
+        ];
+
+        testExports.openViewer(images, 0);
+
+        const downloadButton = viewer.querySelector('#mga-download');
+        expect(downloadButton).not.toBeNull();
+        expect(downloadButton?.getAttribute('href')).toBe(images[0].highResUrl);
+        expect(downloadButton?.getAttribute('download')).toBe('');
+        expect(downloadButton?.getAttribute('aria-label')).toBe('Télécharger l’image');
+        expect(downloadButton?.getAttribute('aria-disabled')).toBe('false');
+        expect(downloadButton?.hasAttribute('tabindex')).toBe(false);
+
+        testExports.updateInfo(viewer, images, 1);
+        expect(downloadButton?.getAttribute('href')).toBe(images[1].highResUrl);
+    });
+
+    it('omits the download button when disabled in settings', () => {
+        window.mga_settings.show_download_button = false;
+        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        testExports = module.__testExports;
+
+        const viewer = testExports.getViewer();
+        const images = [
+            {
+                highResUrl: 'https://example.com/high-1.jpg',
+                thumbUrl: 'https://example.com/thumb-1.jpg',
+                caption: 'Image 1',
+            },
+            {
+                highResUrl: 'https://example.com/high-2.jpg',
+                thumbUrl: 'https://example.com/thumb-2.jpg',
+                caption: 'Image 2',
+            },
+        ];
+
+        testExports.openViewer(images, 0);
+        expect(viewer.querySelector('#mga-download')).toBeNull();
+    });
+});
