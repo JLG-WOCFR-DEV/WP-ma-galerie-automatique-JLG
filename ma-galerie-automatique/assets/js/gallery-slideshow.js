@@ -853,9 +853,38 @@
             ? settings.groupAttribute.trim()
             : '';
 
+        const REL_GROUP_PREFIX = 'mga-group:';
+
+        const extractRelGroupToken = (relValue) => {
+            if (typeof relValue !== 'string') {
+                return null;
+            }
+
+            const tokens = relValue
+                .split(/\s+/)
+                .map(token => token.trim())
+                .filter(Boolean);
+
+            for (const token of tokens) {
+                if (token.toLowerCase().startsWith(REL_GROUP_PREFIX)) {
+                    const suffix = token.slice(REL_GROUP_PREFIX.length).trim();
+                    if (suffix) {
+                        return suffix;
+                    }
+                }
+            }
+
+            return null;
+        };
+
         const resolveLinkGroupId = (link) => {
             if (!(link instanceof Element)) {
                 return FALLBACK_GROUP_ID;
+            }
+
+            const relGroupToken = extractRelGroupToken(link.getAttribute('rel'));
+            if (relGroupToken) {
+                return `rel:${relGroupToken}`;
             }
 
             const attributeCandidates = [];
@@ -864,7 +893,7 @@
                 attributeCandidates.push(configuredGroupAttribute);
             }
 
-            attributeCandidates.push('data-mga-gallery', 'rel');
+            attributeCandidates.push('data-mga-gallery');
 
             const normalizedConfiguredGroupAttribute = configuredGroupAttribute
                 ? configuredGroupAttribute.toLowerCase()
@@ -875,13 +904,21 @@
                     continue;
                 }
 
-                const rawValue = link.getAttribute(attrName);
-                if (typeof rawValue === 'string') {
-                    const trimmed = rawValue.trim();
-                    if (trimmed) {
-                        return `${attrName}:${trimmed}`;
-                    }
+                if (attrName.toLowerCase() === 'rel') {
+                    continue;
                 }
+
+                const rawValue = link.getAttribute(attrName);
+                if (typeof rawValue !== 'string') {
+                    continue;
+                }
+
+                const trimmed = rawValue.trim();
+                if (!trimmed) {
+                    continue;
+                }
+
+                return `${attrName}:${trimmed}`;
             }
 
             if (normalizedConfiguredGroupAttribute === 'href') {
@@ -910,7 +947,7 @@
 
             if (shouldUpdateDebug) {
                 const groupCount = Object.keys(grouped).length;
-                const summary = `${links.length} (${groupCount} groupe${groupCount > 1 ? 's' : ''})`;
+                const summary = `${links.length} (${groupCount} groupe${groupCount > 1 ? 's' : ''} après filtrage)`;
                 debug.updateInfo('mga-debug-trigger-img', summary);
             }
 

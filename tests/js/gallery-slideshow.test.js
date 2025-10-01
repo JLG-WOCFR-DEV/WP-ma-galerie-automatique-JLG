@@ -61,6 +61,74 @@ describe('updateEchoBackground', () => {
     });
 });
 
+describe('resolveLinkGroupId rel token filtering', () => {
+    let helpers;
+    const originalMatchMedia = window.matchMedia;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = '<main></main>';
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.mga_settings = {
+            allowBodyFallback: true,
+            groupAttribute: 'href',
+        };
+
+        global.Swiper = function() {};
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+        });
+
+        ({ helpers } = require('../../ma-galerie-automatique/assets/js/gallery-slideshow'));
+    });
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        document.body.innerHTML = '';
+
+        if (typeof originalMatchMedia === 'undefined') {
+            delete window.matchMedia;
+        } else {
+            window.matchMedia = originalMatchMedia;
+        }
+    });
+
+    it('ignores generic rel tokens but groups targeted tokens', () => {
+        const linkA = document.createElement('a');
+        linkA.setAttribute('href', '#a');
+        linkA.setAttribute('rel', 'nofollow');
+
+        const linkB = document.createElement('a');
+        linkB.setAttribute('href', '#b');
+        linkB.setAttribute('rel', 'nofollow');
+
+        const linkC = document.createElement('a');
+        linkC.setAttribute('href', '#c');
+        linkC.setAttribute('rel', 'nofollow mga-group:galerie-a');
+
+        const linkD = document.createElement('a');
+        linkD.setAttribute('href', '#d');
+        linkD.setAttribute('rel', 'mga-group:galerie-a noopener');
+
+        expect(helpers.resolveLinkGroupId(linkA)).toBe('href:#a');
+        expect(helpers.resolveLinkGroupId(linkB)).toBe('href:#b');
+        expect(helpers.resolveLinkGroupId(linkC)).toBe('rel:galerie-a');
+        expect(helpers.resolveLinkGroupId(linkD)).toBe('rel:galerie-a');
+    });
+});
+
 function createSwiperMockFactory() {
     const instances = {
         main: null,
