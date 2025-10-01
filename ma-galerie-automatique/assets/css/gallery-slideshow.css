@@ -138,9 +138,22 @@
         flex-wrap: wrap;
         justify-content: space-between;
         row-gap: 8px;
+        column-gap: 8px;
     }
-    .mga-counter { width: 50%; text-align: left; }
-    .mga-toolbar { width: 50%; display: flex; justify-content: flex-end; }
+    .mga-counter {
+        flex: 1 1 150px;
+        order: 0;
+        text-align: left;
+    }
+    .mga-toolbar {
+        order: 1;
+        flex: 1 1 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+        width: 100%;
+    }
 
     .mga-caption-container {
         width: 100%;
