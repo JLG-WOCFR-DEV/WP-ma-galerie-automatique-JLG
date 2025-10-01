@@ -69,7 +69,8 @@
 .mga-toolbar-button { position: relative; background: transparent; border: none; color: var(--mga-accent-color, #fff); cursor: pointer; padding: 10px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.2s ease; line-height: 0; }
 .mga-toolbar-button:hover { background-color: rgba(255, 255, 255, 0.2); }
 .mga-toolbar-button .mga-icon { width: 22px; height: 22px; fill: var(--mga-accent-color, #fff); position: relative; z-index: 1; }
-.mga-toolbar-button .mga-download-icon { width: 22px; height: 22px; }
+.mga-toolbar-button .mga-download-icon,
+.mga-toolbar-button .mga-share-icon { width: 22px; height: 22px; }
 
 .mga-timer-svg { position: absolute; top: 50%; left: 50%; width: calc(100% + 6px); height: calc(100% + 6px); transform: translate(-50%, -50%) rotate(-90deg); }
 .mga-timer-svg path { fill: none; stroke-width: 2.5; }
@@ -178,6 +179,8 @@
         gap: 6px;
         width: 100%;
     }
+    .mga-toolbar-button { flex: 0 1 44px; }
+    .mga-toolbar-button .mga-icon { width: 20px; height: 20px; }
 
     .mga-caption-container {
         width: 100%;
