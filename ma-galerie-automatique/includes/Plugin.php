@@ -27,6 +27,7 @@ class Plugin {
     public function register_hooks(): void {
         add_action( 'plugins_loaded', [ $this, 'load_textdomain' ] );
         add_action( 'wp_enqueue_scripts', [ $this->frontend_assets, 'enqueue_assets' ] );
+        add_action( 'enqueue_block_editor_assets', [ $this->frontend_assets, 'enqueue_block_editor_assets' ] );
         add_action( 'upgrader_process_complete', [ $this->frontend_assets, 'maybe_refresh_swiper_asset_sources' ], 10, 2 );
         add_action( 'save_post', [ $this->detection, 'refresh_post_linked_images_cache_on_save' ], 10, 2 );
         add_action( 'admin_menu', [ $this->settings, 'add_admin_menu' ] );

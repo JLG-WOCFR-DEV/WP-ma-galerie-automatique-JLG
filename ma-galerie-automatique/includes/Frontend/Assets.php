@@ -176,6 +176,80 @@ class Assets {
         wp_add_inline_style( 'mga-gallery-style', $dynamic_styles );
     }
 
+    public function enqueue_block_editor_assets(): void {
+        $style_handle  = 'mga-block-editor-preview';
+        $script_handle = 'mga-block-editor-preview';
+
+        wp_enqueue_style(
+            $style_handle,
+            $this->plugin->get_plugin_dir_url() . 'assets/css/block-editor-preview.css',
+            [],
+            MGA_VERSION
+        );
+
+        $settings = $this->settings->get_sanitized_settings();
+        $defaults = $this->settings->get_default_settings();
+
+        $accent_color = isset( $settings['accent_color'] ) ? sanitize_hex_color( $settings['accent_color'] ) : '';
+
+        if ( ! $accent_color && isset( $defaults['accent_color'] ) ) {
+            $accent_color = sanitize_hex_color( $defaults['accent_color'] );
+        }
+
+        if ( ! $accent_color ) {
+            $accent_color = '#c9356b';
+        }
+
+        $bg_opacity = isset( $settings['bg_opacity'] ) ? floatval( $settings['bg_opacity'] ) : ( $defaults['bg_opacity'] ?? 0.95 );
+        $bg_opacity = max( 0, min( 1, (float) $bg_opacity ) );
+
+        $inline_styles = sprintf(
+            ':root{--mga-accent-color:%1$s;--mga-bg-opacity:%2$s;--mga-editor-note-bg:rgba(10,10,10,%2$s);}',
+            esc_html( $accent_color ),
+            esc_html( (string) $bg_opacity )
+        );
+
+        wp_add_inline_style( $style_handle, $inline_styles );
+
+        $default_block_names = [ 'core/gallery', 'core/image', 'core/media-text' ];
+        $linked_block_names  = apply_filters( 'mga_linked_image_blocks', $default_block_names );
+
+        if ( ! is_array( $linked_block_names ) ) {
+            $linked_block_names = $default_block_names;
+        }
+
+        $linked_block_names = array_values( array_unique( array_filter( array_map( 'strval', $linked_block_names ) ) ) );
+
+        $allowed_block_names = apply_filters( 'mga_allowed_media_blocks', $linked_block_names, null );
+
+        if ( ! is_array( $allowed_block_names ) || empty( $allowed_block_names ) ) {
+            $allowed_block_names = $linked_block_names;
+        }
+
+        $allowed_block_names = array_values( array_unique( array_filter( array_map( 'strval', $allowed_block_names ) ) ) );
+
+        wp_register_script(
+            $script_handle,
+            $this->plugin->get_plugin_dir_url() . 'assets/js/block-editor-preview.js',
+            [ 'wp-dom-ready', 'wp-data', 'wp-i18n' ],
+            MGA_VERSION,
+            true
+        );
+
+        $localization = [
+            'noteText'        => \__( 'Lightbox active', 'lightbox-jlg' ),
+            'supportedBlocks' => $allowed_block_names,
+        ];
+
+        wp_localize_script( $script_handle, 'mgaBlockEditorPreview', $localization );
+
+        if ( $this->plugin->languages_directory_exists() ) {
+            wp_set_script_translations( $script_handle, 'lightbox-jlg', $this->plugin->get_languages_path() );
+        }
+
+        wp_enqueue_script( $script_handle );
+    }
+
     public function refresh_swiper_asset_sources(): array {
         $local_swiper_css_path = $this->plugin->get_plugin_dir_path() . 'assets/vendor/swiper/swiper-bundle.min.css';
         $local_swiper_js_path  = $this->plugin->get_plugin_dir_path() . 'assets/vendor/swiper/swiper-bundle.min.js';
