@@ -62,6 +62,9 @@
     var defaultLoop = !! getDefault( 'loop', true );
     var defaultDelay = parseInt( getDefault( 'delay', 4 ), 10 ) || 4;
     var defaultBgOpacity = parseFloat( getDefault( 'bgOpacity', 0.95 ) ) || 0.95;
+    var defaultSpeed = parseInt( getDefault( 'speed', 600 ), 10 ) || 600;
+    var defaultEffect = getDefault( 'effect', 'slide' );
+    var defaultEasing = getDefault( 'easing', 'ease-out' );
     var defaultThumbsMobile = !! getDefault( 'showThumbsMobile', true );
     var defaultZoom = !! getDefault( 'showZoom', true );
     var defaultDownload = !! getDefault( 'showDownload', true );
@@ -74,6 +77,22 @@
         { color: '#c9356b', label: __( 'Portrait', 'lightbox-jlg' ) },
         { color: '#f4a261', label: __( 'Architecture', 'lightbox-jlg' ) }
     ];
+
+    var EFFECT_LABELS = {
+        slide: __( 'Glissement', 'lightbox-jlg' ),
+        fade: __( 'Fondu', 'lightbox-jlg' ),
+        cube: __( 'Cube 3D', 'lightbox-jlg' ),
+        coverflow: __( 'Coverflow 3D', 'lightbox-jlg' ),
+        flip: __( 'Flip 3D', 'lightbox-jlg' )
+    };
+
+    var EASING_LABELS = {
+        'ease-out': __( 'Décélération', 'lightbox-jlg' ),
+        'ease-in-out': __( 'Douce', 'lightbox-jlg' ),
+        'ease-in': __( 'Accélération progressive', 'lightbox-jlg' ),
+        ease: __( 'Standard', 'lightbox-jlg' ),
+        linear: __( 'Linéaire', 'lightbox-jlg' )
+    };
 
     function createPlaceholder( color, label ) {
         var safeColor = color || '#888888';
@@ -208,12 +227,22 @@
         var autoplay = typeof attributes.autoplay === 'boolean' ? attributes.autoplay : defaultAutoplay;
         var loop = typeof attributes.loop === 'boolean' ? attributes.loop : defaultLoop;
         var delay = attributes.delay || defaultDelay;
+        var speed = attributes.speed || defaultSpeed;
+        var effect = attributes.effect || defaultEffect;
+        var easing = attributes.easing || defaultEasing;
         var bgOpacity = attributes.bgOpacity || defaultBgOpacity;
         var showThumbsMobile = typeof attributes.showThumbsMobile === 'boolean' ? attributes.showThumbsMobile : defaultThumbsMobile;
         var showZoom = typeof attributes.showZoom === 'boolean' ? attributes.showZoom : defaultZoom;
         var showDownload = typeof attributes.showDownload === 'boolean' ? attributes.showDownload : defaultDownload;
         var showShare = typeof attributes.showShare === 'boolean' ? attributes.showShare : defaultShare;
         var showFullscreen = typeof attributes.showFullscreen === 'boolean' ? attributes.showFullscreen : defaultFullscreen;
+
+        var effectLabel = EFFECT_LABELS[ effect ] || effect;
+        var easingLabel = EASING_LABELS[ easing ] || easing;
+        var transitionDuration = parseInt( speed, 10 );
+        if ( isNaN( transitionDuration ) ) {
+            transitionDuration = defaultSpeed;
+        }
 
         var viewerClasses = [ 'mga-viewer', 'mga-block-preview__viewer' ];
 
@@ -314,7 +343,10 @@
                 { className: 'mga-block-preview__meta' },
                 el( 'span', { className: 'mga-block-preview__chip' }, autoplay ? __( 'Lecture auto activée', 'lightbox-jlg' ) : __( 'Lecture manuelle', 'lightbox-jlg' ) ),
                 el( 'span', { className: 'mga-block-preview__chip' }, loop ? __( 'Boucle', 'lightbox-jlg' ) : __( 'Une seule lecture', 'lightbox-jlg' ) ),
-                el( 'span', { className: 'mga-block-preview__chip' }, __( 'Délai : ', 'lightbox-jlg' ) + delay + 's' )
+                el( 'span', { className: 'mga-block-preview__chip' }, __( 'Délai : ', 'lightbox-jlg' ) + delay + 's' ),
+                el( 'span', { className: 'mga-block-preview__chip' }, __( 'Effet : ', 'lightbox-jlg' ) + effectLabel ),
+                el( 'span', { className: 'mga-block-preview__chip' }, __( 'Transition : ', 'lightbox-jlg' ) + transitionDuration + 'ms' ),
+                el( 'span', { className: 'mga-block-preview__chip' }, __( 'Courbe : ', 'lightbox-jlg' ) + easingLabel )
             )
         );
     }
@@ -383,6 +415,58 @@
                         label: __( 'Lecture en boucle', 'lightbox-jlg' ),
                         checked: typeof attributes.loop === 'boolean' ? attributes.loop : defaultLoop,
                         onChange: onToggle( 'loop' )
+                    } )
+                ),
+                el(
+                    PanelBody,
+                    { title: __( 'Transitions', 'lightbox-jlg' ), initialOpen: false },
+                    el( SelectControl, {
+                        label: __( 'Effet Swiper', 'lightbox-jlg' ),
+                        value: attributes.effect || defaultEffect,
+                        options: [
+                            { label: __( 'Glissement (recommandé)', 'lightbox-jlg' ), value: 'slide' },
+                            { label: __( 'Fondu', 'lightbox-jlg' ), value: 'fade' },
+                            { label: __( 'Cube 3D', 'lightbox-jlg' ), value: 'cube' },
+                            { label: __( 'Coverflow 3D', 'lightbox-jlg' ), value: 'coverflow' },
+                            { label: __( 'Flip 3D', 'lightbox-jlg' ), value: 'flip' }
+                        ],
+                        onChange: function( value ) {
+                            setAttributes( { effect: value || defaultEffect } );
+                        }
+                    } ),
+                    el( RangeControl, {
+                        label: __( 'Vitesse de transition (ms)', 'lightbox-jlg' ),
+                        min: 100,
+                        max: 5000,
+                        step: 50,
+                        value: attributes.speed || defaultSpeed,
+                        onChange: function( value ) {
+                            var parsed = parseInt( value, 10 );
+                            if ( isNaN( parsed ) ) {
+                                parsed = defaultSpeed;
+                            }
+                            if ( parsed < 100 ) {
+                                parsed = 100;
+                            }
+                            if ( parsed > 5000 ) {
+                                parsed = 5000;
+                            }
+                            setAttributes( { speed: parsed } );
+                        }
+                    } ),
+                    el( SelectControl, {
+                        label: __( 'Courbe d’animation', 'lightbox-jlg' ),
+                        value: attributes.easing || defaultEasing,
+                        options: [
+                            { label: __( 'Décélération (par défaut)', 'lightbox-jlg' ), value: 'ease-out' },
+                            { label: __( 'Douce (aller-retour)', 'lightbox-jlg' ), value: 'ease-in-out' },
+                            { label: __( 'Accélération progressive', 'lightbox-jlg' ), value: 'ease-in' },
+                            { label: __( 'Standard CSS', 'lightbox-jlg' ), value: 'ease' },
+                            { label: __( 'Linéaire', 'lightbox-jlg' ), value: 'linear' }
+                        ],
+                        onChange: function( value ) {
+                            setAttributes( { easing: value || defaultEasing } );
+                        }
                     } )
                 ),
                 el(
@@ -484,6 +568,9 @@
             autoplay: { type: 'boolean', default: defaultAutoplay },
             loop: { type: 'boolean', default: defaultLoop },
             delay: { type: 'number', default: defaultDelay },
+            speed: { type: 'number', default: defaultSpeed },
+            effect: { type: 'string', default: defaultEffect },
+            easing: { type: 'string', default: defaultEasing },
             backgroundStyle: { type: 'string', default: defaultBackgroundStyle },
             accentColor: { type: 'string', default: defaultAccent },
             bgOpacity: { type: 'number', default: defaultBgOpacity },

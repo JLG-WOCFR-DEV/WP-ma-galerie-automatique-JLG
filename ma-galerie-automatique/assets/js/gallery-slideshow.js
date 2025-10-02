@@ -43,6 +43,49 @@
         ? mgaI18n.sprintf
         : fallbackSprintf;
 
+    const DEFAULT_EFFECT = 'slide';
+    const DEFAULT_SPEED = 600;
+    const DEFAULT_EASING = 'ease-out';
+    const ALLOWED_EFFECTS = [ 'slide', 'fade', 'cube', 'coverflow', 'flip' ];
+    const HEAVY_EFFECTS = new Set( [ 'cube', 'coverflow', 'flip' ] );
+    const ALLOWED_EASINGS = [ 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear' ];
+
+    const sanitizeEffect = ( rawEffect ) => {
+        if ( typeof rawEffect !== 'string' ) {
+            return DEFAULT_EFFECT;
+        }
+
+        const normalized = rawEffect.trim().toLowerCase();
+        return ALLOWED_EFFECTS.includes( normalized ) ? normalized : DEFAULT_EFFECT;
+    };
+
+    const sanitizeSpeed = ( rawSpeed ) => {
+        const parsed = parseInt( rawSpeed, 10 );
+
+        if ( Number.isNaN( parsed ) ) {
+            return DEFAULT_SPEED;
+        }
+
+        return Math.min( Math.max( parsed, 100 ), 5000 );
+    };
+
+    const sanitizeEasing = ( rawEasing ) => {
+        if ( typeof rawEasing !== 'string' ) {
+            return DEFAULT_EASING;
+        }
+
+        const normalized = rawEasing.trim().toLowerCase();
+        return ALLOWED_EASINGS.includes( normalized ) ? normalized : DEFAULT_EASING;
+    };
+
+    const applyTransitionEasing = ( swiperInstance, easing ) => {
+        if ( ! swiperInstance || ! swiperInstance.wrapperEl ) {
+            return;
+        }
+
+        swiperInstance.wrapperEl.style.transitionTimingFunction = easing;
+    };
+
     function updateEchoBackground(viewer, imageUrl) {
         if (!viewer) {
             return;
@@ -1715,6 +1758,10 @@
             }
             autoplayWasRunningBeforePreferenceChange = false;
 
+            const sanitizedEffect = sanitizeEffect(settings.effect);
+            const sanitizedSpeed = sanitizeSpeed(settings.speed);
+            const sanitizedEasing = sanitizeEasing(settings.easing);
+
             const mainSwiperContainer = viewer.querySelector('.mga-main-swiper');
             const thumbsSwiperContainer = viewer.querySelector('.mga-thumbs-swiper');
 
@@ -1725,6 +1772,10 @@
                 watchSlidesProgress: true,
                 passiveListeners: true,
             });
+
+            if (thumbsSwiper) {
+                applyTransitionEasing(thumbsSwiper, sanitizedEasing);
+            }
 
             if (!thumbsSwiper) {
                 const thumbsMessage = mga__( 'Initialisation des miniatures Swiper impossible. La visionneuse fonctionnera sans elles.', 'lightbox-jlg' );
@@ -1749,6 +1800,25 @@
 
             const prefersReducedMotion = !!(prefersReducedMotionQuery && prefersReducedMotionQuery.matches);
 
+            let resolvedEffect = sanitizedEffect;
+            let resolvedSpeed = sanitizedSpeed;
+            let enableCssMode = false;
+
+            if (prefersReducedMotion) {
+                enableCssMode = true;
+
+                if (HEAVY_EFFECTS.has(resolvedEffect)) {
+                    if (debug && typeof debug.log === 'function') {
+                        debug.log(mga__( 'Effet 3D désactivé pour respecter la préférence de réduction des animations.', 'lightbox-jlg' ));
+                    }
+                    resolvedEffect = DEFAULT_EFFECT;
+                }
+
+                resolvedSpeed = Math.min(resolvedSpeed, 300);
+            }
+
+            const shouldUseCssMode = enableCssMode && resolvedEffect === 'slide';
+
             const handleAutoplayStart = () => {
                 debug.log(mga__( 'Autoplay DÉMARRÉ.', 'lightbox-jlg' ));
                 viewer.querySelector('.mga-play-icon').style.display = 'none';
@@ -1772,6 +1842,9 @@
                 zoom: showZoom,
                 spaceBetween: 10,
                 loop: !!settings.loop,
+                effect: resolvedEffect,
+                speed: resolvedSpeed,
+                cssMode: shouldUseCssMode,
                 navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
                 on: {
                     init: function(swiper) {
@@ -1811,6 +1884,10 @@
                 },
             };
 
+            if (resolvedEffect === 'fade') {
+                mainSwiperConfig.fadeEffect = { crossFade: true };
+            }
+
             if (!prefersReducedMotion) {
                 mainSwiperConfig.autoplay = Object.assign({}, autoplayConfig);
             }
@@ -1818,6 +1895,23 @@
             if (thumbsSwiper) {
                 mainSwiperConfig.thumbs = { swiper: thumbsSwiper };
             }
+
+            const originalInitHandler = mainSwiperConfig.on.init;
+            mainSwiperConfig.on.init = function(swiper) {
+                if (typeof originalInitHandler === 'function') {
+                    originalInitHandler.call(this, swiper);
+                }
+                applyTransitionEasing(swiper, sanitizedEasing);
+            };
+
+            const originalSetTransition = mainSwiperConfig.on.setTransition;
+            mainSwiperConfig.on.setTransition = function(swiper) {
+                if (typeof originalSetTransition === 'function') {
+                    originalSetTransition.apply(this, arguments);
+                }
+                const targetSwiper = swiper && swiper.wrapperEl ? swiper : this;
+                applyTransitionEasing(targetSwiper, sanitizedEasing);
+            };
 
             if (typeof module !== 'undefined' && module.exports) {
                 module.exports.__testExports = module.exports.__testExports || {};
@@ -1838,6 +1932,8 @@
                 }
                 return;
             }
+
+            applyTransitionEasing(mainSwiper, sanitizedEasing);
 
             const autoplayInstance = mainSwiper.autoplay;
             const hasAutoplayModule = !!(autoplayInstance && typeof autoplayInstance.start === 'function' && typeof autoplayInstance.stop === 'function');
@@ -1890,19 +1986,66 @@
                         }
 
                         const matchesReducedMotion = !!event.matches;
+                        const targetEffect = matchesReducedMotion && HEAVY_EFFECTS.has(sanitizedEffect)
+                            ? DEFAULT_EFFECT
+                            : sanitizedEffect;
+                        const targetSpeed = matchesReducedMotion ? Math.min(sanitizedSpeed, 300) : sanitizedSpeed;
+                        const targetCssMode = matchesReducedMotion && targetEffect === 'slide';
 
                         if (matchesReducedMotion) {
                             autoplayWasRunningBeforePreferenceChange = Boolean(instance.running);
                             instance.stop();
+                            if (targetEffect !== sanitizedEffect && debug && typeof debug.log === 'function') {
+                                debug.log(mga__( 'Effet de transition réduit suite au changement de préférence système.', 'lightbox-jlg' ));
+                            }
                         } else {
                             const shouldResume = autoplayWasRunningBeforePreferenceChange || !!settings.autoplay_start;
                             autoplayWasRunningBeforePreferenceChange = false;
                             applyAutoplayParams();
+                            if (targetEffect !== sanitizedEffect && debug && typeof debug.log === 'function') {
+                                debug.log(mga__( 'Effet de transition restauré après désactivation de la réduction des animations.', 'lightbox-jlg' ));
+                            }
                             if (shouldResume) {
                                 instance.start();
                             } else if (instance.running) {
                                 instance.stop();
                             }
+                        }
+
+                        resolvedEffect = targetEffect;
+                        resolvedSpeed = targetSpeed;
+
+                        if (mainSwiper.params && typeof mainSwiper.params === 'object') {
+                            mainSwiper.params.effect = targetEffect;
+                            mainSwiper.params.speed = targetSpeed;
+                            mainSwiper.params.cssMode = targetCssMode;
+
+                            if (targetEffect === 'fade') {
+                                mainSwiper.params.fadeEffect = Object.assign({}, mainSwiper.params.fadeEffect || {}, { crossFade: true });
+                            } else if (mainSwiper.params.fadeEffect) {
+                                delete mainSwiper.params.fadeEffect;
+                            }
+                        }
+
+                        if (mainSwiper.originalParams && typeof mainSwiper.originalParams === 'object') {
+                            mainSwiper.originalParams.effect = targetEffect;
+                            mainSwiper.originalParams.speed = targetSpeed;
+                            mainSwiper.originalParams.cssMode = targetCssMode;
+
+                            if (targetEffect === 'fade') {
+                                mainSwiper.originalParams.fadeEffect = Object.assign({}, mainSwiper.originalParams.fadeEffect || {}, { crossFade: true });
+                            } else if (mainSwiper.originalParams.fadeEffect) {
+                                delete mainSwiper.originalParams.fadeEffect;
+                            }
+                        }
+
+                        applyTransitionEasing(mainSwiper, sanitizedEasing);
+                        if (thumbsSwiper && !thumbsSwiper.destroyed) {
+                            applyTransitionEasing(thumbsSwiper, sanitizedEasing);
+                        }
+
+                        if (typeof mainSwiper.update === 'function') {
+                            mainSwiper.update();
                         }
                     };
 
