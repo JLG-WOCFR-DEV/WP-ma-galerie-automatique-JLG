@@ -3,38 +3,41 @@
 
     const mgaI18n = global.wp && global.wp.i18n ? global.wp.i18n : null;
     const mga__ = mgaI18n && typeof mgaI18n.__ === 'function' ? mgaI18n.__ : ( text ) => text;
+    const fallbackSprintf = ( format, ...args ) => {
+        let autoIndex = 0;
+
+        return format.replace(/%(\d+\$)?([sd])/g, (match, position, type) => {
+            let argIndex;
+
+            if (position) {
+                argIndex = parseInt(position, 10) - 1;
+            } else {
+                argIndex = autoIndex;
+                autoIndex += 1;
+            }
+
+            if (argIndex < 0 || argIndex >= args.length) {
+                return '';
+            }
+
+            const value = args[argIndex];
+
+            if (typeof value === 'undefined') {
+                return '';
+            }
+
+            if (type === 'd') {
+                const coerced = parseInt(value, 10);
+                return Number.isNaN(coerced) ? '' : String(coerced);
+            }
+
+            return String(value);
+        });
+    };
+
     const mgaSprintf = mgaI18n && typeof mgaI18n.sprintf === 'function'
         ? mgaI18n.sprintf
-        : ( format, ...args ) => {
-            let autoIndex = 0;
-            return format.replace(/%(\d+\$)?([sd])/g, (match, position, type) => {
-                let argIndex;
-
-                if (position) {
-                    argIndex = parseInt(position, 10) - 1;
-                } else {
-                    argIndex = autoIndex;
-                    autoIndex += 1;
-                }
-
-                if (argIndex < 0 || argIndex >= args.length) {
-                    return '';
-                }
-
-                const value = args[argIndex];
-
-                if (typeof value === 'undefined') {
-                    return '';
-                }
-
-                if (type === 'd') {
-                    const coerced = parseInt(value, 10);
-                    return Number.isNaN(coerced) ? '' : String(coerced);
-                }
-
-                return String(value);
-            });
-        };
+        : fallbackSprintf;
 
     const state = {
         panel: null,
