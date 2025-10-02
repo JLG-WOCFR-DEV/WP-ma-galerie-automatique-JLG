@@ -1464,6 +1464,7 @@
             if (!viewer) return false;
 
             viewer.className = 'mga-viewer';
+            viewer.classList.toggle('mga-has-caption', false);
             if (settings.background_style === 'blur') viewer.classList.add('mga-has-blur');
             if (settings.background_style === 'texture') viewer.classList.add('mga-has-texture');
             if (!showThumbsMobile) {
