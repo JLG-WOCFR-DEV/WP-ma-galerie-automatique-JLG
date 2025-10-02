@@ -243,6 +243,13 @@
             (value) => mgaAdminSprintf(mgaAdmin__('%s opacity', 'lightbox-jlg'), value)
         );
 
+        bindRangeToOutput(
+            'mga_transition_speed',
+            'mga_transition_speed_value',
+            (value) => mgaAdminSprintf(mgaAdmin__('%sms', 'lightbox-jlg'), value),
+            (value) => mgaAdminSprintf(mgaAdmin__('%s millisecondes', 'lightbox-jlg'), value)
+        );
+
         const accentColorInput = doc.getElementById('mga_accent_color');
         const accentColorPreview = doc.getElementById('mga_accent_color_preview');
 

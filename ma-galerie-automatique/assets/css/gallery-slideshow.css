@@ -16,6 +16,20 @@
     overflow: hidden;
 }
 
+.mga-viewer.mga-layout-fullwidth {
+    align-items: stretch;
+}
+
+.mga-viewer.mga-layout-fullwidth .mga-main-swiper {
+    max-width: none;
+    width: 100%;
+}
+
+.mga-viewer.mga-layout-fullwidth .mga-thumbs-swiper,
+.mga-viewer.mga-layout-fullwidth .mga-caption-container {
+    width: 100%;
+}
+
 .mga-screen-reader-text {
     position: absolute;
     width: 1px;
@@ -50,6 +64,7 @@
     z-index: 20;
 }
 
+
 .mga-counter { font-size: 16px; font-variant-numeric: tabular-nums; }
 .mga-caption-container {
     color: #fff;
@@ -81,10 +96,35 @@
 .mga-timer-bg { stroke: rgba(255, 255, 255, 0.2); }
 .mga-timer-progress { stroke: var(--mga-accent-color, #fff); stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 0.2s linear; }
 
+
 .mga-main-swiper {
     width: 100%;
     height: 75%;
     max-width: 98vw;
+}
+
+@media (min-width: 769px) {
+    .mga-viewer.mga-toolbar-desktop-bottom .mga-header {
+        top: auto;
+        bottom: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+        padding: 15px 15px calc(20px + env(safe-area-inset-bottom, 0px)) 15px;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    .mga-viewer.mga-toolbar-desktop-bottom .mga-main-swiper {
+        padding-bottom: 120px;
+    }
+
+    .mga-viewer.mga-toolbar-desktop-bottom .mga-caption-container {
+        padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .mga-viewer.mga-toolbar-desktop-bottom .mga-thumbs-swiper {
+        margin-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    }
 }
 
 .mga-main-swiper .swiper-slide { position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; will-change: transform; }
@@ -167,6 +207,36 @@
 
 /* --- RESPONSIVE --- */
 
+@media (max-width: 900px) {
+    .mga-viewer.mga-toolbar-mobile-bottom .mga-toolbar {
+        position: absolute;
+        bottom: calc(var(--mga-thumb-size-mobile, 70px) + 24px + env(safe-area-inset-bottom, 0px));
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.65);
+        padding: 10px 18px;
+        border-radius: 999px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        width: auto;
+        max-width: calc(100% - 40px);
+        justify-content: center;
+        gap: 10px;
+        z-index: 35;
+    }
+
+    .mga-viewer.mga-toolbar-mobile-bottom .mga-toolbar-button {
+        flex: 0 0 auto;
+    }
+
+    .mga-viewer.mga-toolbar-mobile-bottom .mga-header {
+        padding-bottom: calc(10px + env(safe-area-inset-top, 0px));
+    }
+
+    .mga-viewer.mga-toolbar-mobile-bottom.mga-hide-thumbs-mobile .mga-toolbar {
+        bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
 @media (max-width: 768px) and (orientation: portrait) {
     .mga-header {
         height: auto;
@@ -208,8 +278,15 @@
         margin-top: calc(110px + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
         max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 130px + env(safe-area-inset-bottom, 0px)));
     }
+    .mga-viewer.mga-toolbar-mobile-bottom .mga-main-swiper {
+        margin-top: calc(70px + env(safe-area-inset-top, 0px));
+        padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+    }
     .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper {
         max-height: calc(100vh - (130px + env(safe-area-inset-bottom, 0px)));
+    }
+    .mga-viewer.mga-toolbar-mobile-bottom.mga-hide-thumbs-mobile .mga-main-swiper {
+        padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
     }
     .mga-thumbs-swiper {
         height: calc(var(--mga-thumb-size-mobile, 70px) + env(safe-area-inset-bottom, 0px));
@@ -251,6 +328,12 @@
     }
     .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper {
         max-height: calc(100vh - (80px + env(safe-area-inset-bottom, 0px)));
+    }
+    .mga-viewer.mga-toolbar-mobile-bottom .mga-main-swiper {
+        padding-bottom: calc(var(--mga-thumb-size-mobile, 70px) + 150px + env(safe-area-inset-bottom, 0px));
+    }
+    .mga-viewer.mga-toolbar-mobile-bottom.mga-hide-thumbs-mobile .mga-main-swiper {
+        padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
     }
 }
 

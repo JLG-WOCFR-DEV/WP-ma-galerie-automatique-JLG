@@ -56,6 +56,11 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'show_share'     => true,
                     'show_fullscreen'=> true,
                     'show_thumbs_mobile' => true,
+                    'transition_effect' => $defaults['transition_effect'],
+                    'transition_speed'  => $defaults['transition_speed'],
+                    'toolbar_layout_desktop' => $defaults['toolbar_layout_desktop'],
+                    'toolbar_layout_mobile'  => $defaults['toolbar_layout_mobile'],
+                    'enable_fullwidth' => (bool) $defaults['enable_fullwidth'],
                 ],
             ],
             'bg_opacity_lower_bound' => [
@@ -144,6 +149,42 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 [],
                 [
                     'contentSelectors' => [ '.main', '.article-content', '.gallery img' ],
+                ],
+            ],
+            'transition_bounds_and_layout' => [
+                [
+                    'transition_effect'      => 'cube',
+                    'transition_speed'       => 50,
+                    'toolbar_layout_desktop' => 'bottom',
+                    'toolbar_layout_mobile'  => 'invalid',
+                    'enable_fullwidth'       => '1',
+                ],
+                [],
+                [
+                    'transition_effect'      => 'cube',
+                    'transition_speed'       => 100,
+                    'toolbar_layout_desktop' => 'bottom',
+                    'toolbar_layout_mobile'  => $defaults['toolbar_layout_mobile'],
+                    'enable_fullwidth'       => true,
+                ],
+            ],
+            'transition_existing_fallback' => [
+                [
+                    'transition_effect' => 'unknown',
+                ],
+                [
+                    'transition_effect'      => 'fade',
+                    'transition_speed'       => 1800,
+                    'toolbar_layout_desktop' => 'bottom',
+                    'toolbar_layout_mobile'  => 'bottom',
+                    'enable_fullwidth'       => true,
+                ],
+                [
+                    'transition_effect'      => 'fade',
+                    'transition_speed'       => 1800,
+                    'toolbar_layout_desktop' => 'bottom',
+                    'toolbar_layout_mobile'  => 'bottom',
+                    'enable_fullwidth'       => true,
                 ],
             ],
         ];

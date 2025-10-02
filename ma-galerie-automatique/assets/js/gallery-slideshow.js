@@ -126,6 +126,56 @@
 
             return Boolean(value);
         };
+        const clampValue = (value, min, max, fallback) => {
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return Math.min(Math.max(value, min), max);
+            }
+
+            const parsed = parseInt(value, 10);
+
+            if (Number.isNaN(parsed)) {
+                return fallback;
+            }
+
+            return Math.min(Math.max(parsed, min), max);
+        };
+        const normalizeChoice = (value, allowedValues, defaultValue) => {
+            if (typeof value === 'string') {
+                const normalized = value.trim().toLowerCase();
+
+                if (allowedValues.includes(normalized)) {
+                    return normalized;
+                }
+            }
+
+            return defaultValue;
+        };
+        const assignEffectOptions = (target, effect) => {
+            if (!target || typeof target !== 'object') {
+                return;
+            }
+
+            target.effect = effect;
+
+            if (effect === 'fade') {
+                target.fadeEffect = Object.assign({}, target.fadeEffect || {}, { crossFade: true });
+                if (Object.prototype.hasOwnProperty.call(target, 'cubeEffect')) {
+                    delete target.cubeEffect;
+                }
+            } else if (effect === 'cube') {
+                target.cubeEffect = Object.assign({}, target.cubeEffect || {}, { shadow: false, slideShadows: false });
+                if (Object.prototype.hasOwnProperty.call(target, 'fadeEffect')) {
+                    delete target.fadeEffect;
+                }
+            } else {
+                if (Object.prototype.hasOwnProperty.call(target, 'fadeEffect')) {
+                    delete target.fadeEffect;
+                }
+                if (Object.prototype.hasOwnProperty.call(target, 'cubeEffect')) {
+                    delete target.cubeEffect;
+                }
+            }
+        };
         const debug = window.mgaDebug || {
             enabled: false,
             init: noop,
@@ -141,6 +191,12 @@
         const showShare = normalizeFlag(settings.show_share, true);
         const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
         const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
+        const allowedTransitionEffects = ['slide', 'fade', 'cube'];
+        const baseTransitionEffect = normalizeChoice(settings.transition_effect, allowedTransitionEffects, 'slide');
+        const baseTransitionSpeed = clampValue(settings.transition_speed, 100, 5000, 600);
+        const toolbarLayoutDesktop = normalizeChoice(settings.toolbar_layout_desktop, ['top', 'bottom'], 'top');
+        const toolbarLayoutMobile = normalizeChoice(settings.toolbar_layout_mobile, ['top', 'bottom'], 'top');
+        const fullwidthLayoutEnabled = normalizeFlag(settings.enable_fullwidth, false);
         const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
         let mainSwiper = null;
         let thumbsSwiper = null;
@@ -1369,6 +1425,15 @@
             viewer.className = 'mga-viewer';
             if (settings.background_style === 'blur') viewer.classList.add('mga-has-blur');
             if (settings.background_style === 'texture') viewer.classList.add('mga-has-texture');
+            viewer.classList.add(
+                toolbarLayoutDesktop === 'bottom' ? 'mga-toolbar-desktop-bottom' : 'mga-toolbar-desktop-top'
+            );
+            viewer.classList.add(
+                toolbarLayoutMobile === 'bottom' ? 'mga-toolbar-mobile-bottom' : 'mga-toolbar-mobile-top'
+            );
+            if (fullwidthLayoutEnabled) {
+                viewer.classList.add('mga-layout-fullwidth');
+            }
             if (!showThumbsMobile) {
                 viewer.classList.add('mga-hide-thumbs-mobile');
             }
@@ -1670,6 +1735,29 @@
                 updateAutoplayButtonState(viewer, false);
             };
 
+            const applyMotionSettings = (swiperInstance, reduceMotion) => {
+                if (!swiperInstance || swiperInstance.destroyed) {
+                    return;
+                }
+
+                const targetEffect = reduceMotion ? 'slide' : baseTransitionEffect;
+                const targetSpeed = reduceMotion ? 0 : baseTransitionSpeed;
+
+                if (swiperInstance.params && typeof swiperInstance.params === 'object') {
+                    swiperInstance.params.speed = targetSpeed;
+                    assignEffectOptions(swiperInstance.params, targetEffect);
+                }
+
+                if (swiperInstance.originalParams && typeof swiperInstance.originalParams === 'object') {
+                    swiperInstance.originalParams.speed = targetSpeed;
+                    assignEffectOptions(swiperInstance.originalParams, targetEffect);
+                }
+
+                if (typeof swiperInstance.update === 'function') {
+                    swiperInstance.update();
+                }
+            };
+
             const mainSwiperConfig = {
                 zoom: true,
                 spaceBetween: 10,
@@ -1713,6 +1801,11 @@
                 },
             };
 
+            const initialEffect = prefersReducedMotion ? 'slide' : baseTransitionEffect;
+            const initialSpeed = prefersReducedMotion ? 0 : baseTransitionSpeed;
+            assignEffectOptions(mainSwiperConfig, initialEffect);
+            mainSwiperConfig.speed = initialSpeed;
+
             if (!prefersReducedMotion) {
                 mainSwiperConfig.autoplay = Object.assign({}, autoplayConfig);
             }
@@ -1744,6 +1837,8 @@
             const autoplayInstance = mainSwiper.autoplay;
             const hasAutoplayModule = !!(autoplayInstance && typeof autoplayInstance.start === 'function' && typeof autoplayInstance.stop === 'function');
 
+            applyMotionSettings(mainSwiper, prefersReducedMotion);
+
             const applyAutoplayParams = () => {
                 if (!mainSwiper || mainSwiper.destroyed) {
                     return;
@@ -1767,6 +1862,24 @@
             if (!hasAutoplayModule) {
                 if (!prefersReducedMotion) {
                     debug.log(mga__( 'L’extension autoplay de Swiper est indisponible.', 'lightbox-jlg' ), true);
+                }
+
+                if (prefersReducedMotionQuery) {
+                    const handleReducedMotionChange = (event) => {
+                        applyMotionSettings(mainSwiper, !!event.matches);
+                    };
+
+                    if (typeof prefersReducedMotionQuery.addEventListener === 'function') {
+                        prefersReducedMotionQuery.addEventListener('change', handleReducedMotionChange);
+                        cleanupAutoplayPreferenceListener = () => {
+                            prefersReducedMotionQuery.removeEventListener('change', handleReducedMotionChange);
+                        };
+                    } else if (typeof prefersReducedMotionQuery.addListener === 'function') {
+                        prefersReducedMotionQuery.addListener(handleReducedMotionChange);
+                        cleanupAutoplayPreferenceListener = () => {
+                            prefersReducedMotionQuery.removeListener(handleReducedMotionChange);
+                        };
+                    }
                 }
             } else {
                 if (!prefersReducedMotion) {
@@ -1792,6 +1905,8 @@
                         }
 
                         const matchesReducedMotion = !!event.matches;
+
+                        applyMotionSettings(mainSwiper, matchesReducedMotion);
 
                         if (matchesReducedMotion) {
                             autoplayWasRunningBeforePreferenceChange = Boolean(instance.running);

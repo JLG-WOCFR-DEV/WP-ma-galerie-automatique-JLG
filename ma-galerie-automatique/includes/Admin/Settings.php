@@ -93,6 +93,11 @@ class Settings {
             'loop'               => true,
             'autoplay_start'     => false,
             'background_style'   => 'echo',
+            'transition_effect'  => 'slide',
+            'transition_speed'   => 600,
+            'toolbar_layout_desktop' => 'top',
+            'toolbar_layout_mobile'  => 'top',
+            'enable_fullwidth'   => false,
             'z_index'            => 99999,
             'debug_mode'         => false,
             'show_zoom'          => true,
@@ -163,6 +168,68 @@ class Settings {
 
         $output['loop']           = ! empty( $input['loop'] );
         $output['autoplay_start'] = ! empty( $input['autoplay_start'] );
+
+        $allowed_effects = [ 'slide', 'fade', 'cube' ];
+        $resolve_choice  = static function ( string $key, array $allowed, array $source, array $fallback_source, string $default ) {
+            if ( array_key_exists( $key, $source ) && is_string( $source[ $key ] ) ) {
+                $candidate = strtolower( trim( $source[ $key ] ) );
+                if ( in_array( $candidate, $allowed, true ) ) {
+                    return $candidate;
+                }
+            }
+
+            if ( array_key_exists( $key, $fallback_source ) && is_string( $fallback_source[ $key ] ) ) {
+                $candidate = strtolower( trim( $fallback_source[ $key ] ) );
+                if ( in_array( $candidate, $allowed, true ) ) {
+                    return $candidate;
+                }
+            }
+
+            return $default;
+        };
+
+        $output['transition_effect'] = $resolve_choice(
+            'transition_effect',
+            $allowed_effects,
+            $input,
+            $existing_settings,
+            $defaults['transition_effect']
+        );
+
+        $transition_speed = $defaults['transition_speed'];
+
+        if ( isset( $input['transition_speed'] ) ) {
+            $transition_speed = (int) $input['transition_speed'];
+        } elseif ( isset( $existing_settings['transition_speed'] ) ) {
+            $transition_speed = (int) $existing_settings['transition_speed'];
+        }
+
+        $output['transition_speed'] = max( 100, min( 5000, $transition_speed ) );
+
+        $allowed_toolbar_layouts = [ 'top', 'bottom' ];
+
+        $output['toolbar_layout_desktop'] = $resolve_choice(
+            'toolbar_layout_desktop',
+            $allowed_toolbar_layouts,
+            $input,
+            $existing_settings,
+            $defaults['toolbar_layout_desktop']
+        );
+
+        $output['toolbar_layout_mobile'] = $resolve_choice(
+            'toolbar_layout_mobile',
+            $allowed_toolbar_layouts,
+            $input,
+            $existing_settings,
+            $defaults['toolbar_layout_mobile']
+        );
+
+        $output['enable_fullwidth'] = isset( $input['enable_fullwidth'] )
+            ? (bool) $input['enable_fullwidth']
+            : ( isset( $existing_settings['enable_fullwidth'] )
+                ? (bool) $existing_settings['enable_fullwidth']
+                : (bool) $defaults['enable_fullwidth']
+            );
 
         $sanitize_group_attribute = static function ( $value ) use ( $defaults ) {
             if ( ! is_string( $value ) ) {

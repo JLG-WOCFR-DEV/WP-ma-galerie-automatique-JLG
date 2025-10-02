@@ -59,6 +59,38 @@ $settings = wp_parse_args( $settings, $defaults );
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php echo esc_html__( 'Transitions', 'lightbox-jlg' ); ?></th>
+                    <td>
+                        <label for="mga_transition_effect"><?php echo esc_html__( 'Effet de transition', 'lightbox-jlg' ); ?></label><br>
+                        <select name="mga_settings[transition_effect]" id="mga_transition_effect">
+                            <option value="slide" <?php selected( $settings['transition_effect'], 'slide' ); ?>><?php echo esc_html__( 'Glissement classique', 'lightbox-jlg' ); ?></option>
+                            <option value="fade" <?php selected( $settings['transition_effect'], 'fade' ); ?>><?php echo esc_html__( 'Fondu enchaîné', 'lightbox-jlg' ); ?></option>
+                            <option value="cube" <?php selected( $settings['transition_effect'], 'cube' ); ?>><?php echo esc_html__( 'Cube 3D', 'lightbox-jlg' ); ?></option>
+                        </select>
+                        <p class="description"><?php echo esc_html__( 'Choisissez le style d’animation appliqué lors du changement de diapositive.', 'lightbox-jlg' ); ?></p>
+                        <br>
+                        <label for="mga_transition_speed"><?php echo esc_html__( 'Durée de la transition', 'lightbox-jlg' ); ?></label><br>
+                        <input
+                            name="mga_settings[transition_speed]"
+                            type="range"
+                            id="mga_transition_speed"
+                            value="<?php echo esc_attr( $settings['transition_speed'] ); ?>"
+                            min="100"
+                            max="3000"
+                            step="50"
+                            aria-valuemin="100"
+                            aria-valuemax="3000"
+                            aria-valuenow="<?php echo esc_attr( $settings['transition_speed'] ); ?>"
+                            aria-valuetext="<?php echo esc_attr( sprintf( __( '%s millisecondes', 'lightbox-jlg' ), intval( $settings['transition_speed'] ) ) ); ?>"
+                            aria-describedby="mga_transition_speed_value"
+                        />
+                        <output id="mga_transition_speed_value" for="mga_transition_speed" class="mga-range-output" aria-live="polite">
+                            <?php printf( esc_html__( '%d ms', 'lightbox-jlg' ), intval( $settings['transition_speed'] ) ); ?>
+                        </output>
+                        <p class="description"><?php echo esc_html__( 'Plus la valeur est faible, plus l’animation est rapide. Un mode sans animation sera automatiquement appliqué si le visiteur préfère réduire les mouvements.', 'lightbox-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php echo esc_html__( 'Taille des miniatures', 'lightbox-jlg' ); ?></th>
                     <td>
                         <label for="mga_thumb_size"><?php echo esc_html__( 'PC', 'lightbox-jlg' ); ?></label><br>
@@ -235,6 +267,77 @@ $settings = wp_parse_args( $settings, $defaults );
                             </label>
                             <p class="description"><?php echo esc_html__( "Permet d'activer le mode plein écran depuis la barre d'outils.", 'lightbox-jlg' ); ?></p>
                         </fieldset>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php echo esc_html__( 'Position de la barre d’outils', 'lightbox-jlg' ); ?></th>
+                    <td>
+                        <fieldset>
+                            <legend class="screen-reader-text"><?php echo esc_html__( 'Choisissez où afficher la barre d’outils', 'lightbox-jlg' ); ?></legend>
+                            <p><strong><?php echo esc_html__( 'Ordinateur', 'lightbox-jlg' ); ?></strong></p>
+                            <label for="mga_toolbar_layout_desktop_top">
+                                <input
+                                    type="radio"
+                                    name="mga_settings[toolbar_layout_desktop]"
+                                    id="mga_toolbar_layout_desktop_top"
+                                    value="top"
+                                    <?php checked( 'top', $settings['toolbar_layout_desktop'] ); ?>
+                                />
+                                <span><?php echo esc_html__( 'En haut de l’écran', 'lightbox-jlg' ); ?></span>
+                            </label>
+                            <br>
+                            <label for="mga_toolbar_layout_desktop_bottom">
+                                <input
+                                    type="radio"
+                                    name="mga_settings[toolbar_layout_desktop]"
+                                    id="mga_toolbar_layout_desktop_bottom"
+                                    value="bottom"
+                                    <?php checked( 'bottom', $settings['toolbar_layout_desktop'] ); ?>
+                                />
+                                <span><?php echo esc_html__( 'En bas de l’écran', 'lightbox-jlg' ); ?></span>
+                            </label>
+                            <hr>
+                            <p><strong><?php echo esc_html__( 'Mobile', 'lightbox-jlg' ); ?></strong></p>
+                            <label for="mga_toolbar_layout_mobile_top">
+                                <input
+                                    type="radio"
+                                    name="mga_settings[toolbar_layout_mobile]"
+                                    id="mga_toolbar_layout_mobile_top"
+                                    value="top"
+                                    <?php checked( 'top', $settings['toolbar_layout_mobile'] ); ?>
+                                />
+                                <span><?php echo esc_html__( 'En haut de l’écran', 'lightbox-jlg' ); ?></span>
+                            </label>
+                            <br>
+                            <label for="mga_toolbar_layout_mobile_bottom">
+                                <input
+                                    type="radio"
+                                    name="mga_settings[toolbar_layout_mobile]"
+                                    id="mga_toolbar_layout_mobile_bottom"
+                                    value="bottom"
+                                    <?php checked( 'bottom', $settings['toolbar_layout_mobile'] ); ?>
+                                />
+                                <span><?php echo esc_html__( 'Au-dessus de la zone des miniatures', 'lightbox-jlg' ); ?></span>
+                            </label>
+                            <p class="description"><?php echo esc_html__( 'Adaptez la barre d’outils aux habitudes de vos visiteurs selon l’appareil utilisé.', 'lightbox-jlg' ); ?></p>
+                        </fieldset>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php echo esc_html__( 'Mise en page avancée', 'lightbox-jlg' ); ?></th>
+                    <td>
+                        <input type="hidden" name="mga_settings[enable_fullwidth]" value="0" />
+                        <label for="mga_enable_fullwidth">
+                            <input
+                                name="mga_settings[enable_fullwidth]"
+                                type="checkbox"
+                                id="mga_enable_fullwidth"
+                                value="1"
+                                <?php checked( ! empty( $settings['enable_fullwidth'] ), 1 ); ?>
+                            />
+                            <span><?php echo esc_html__( 'Étendre le diaporama sur toute la largeur', 'lightbox-jlg' ); ?></span>
+                        </label>
+                        <p class="description"><?php echo esc_html__( 'Idéal pour les écrans panoramiques ou les sites en pleine largeur. Les marges latérales sont réduites et la zone d’image est maximisée.', 'lightbox-jlg' ); ?></p>
                     </td>
                 </tr>
                 <tr>
