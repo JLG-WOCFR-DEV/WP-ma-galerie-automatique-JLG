@@ -168,51 +168,61 @@ $settings = wp_parse_args( $settings, $defaults );
                     <th scope="row"><?php echo esc_html__( 'Options diverses', 'lightbox-jlg' ); ?></th>
                     <td>
                         <fieldset>
-                            <label for="mga_loop">
-                                <input name="mga_settings[loop]" type="checkbox" id="mga_loop" value="1" <?php checked( ! empty( $settings['loop'] ), 1 ); ?> />
-                                <span><?php echo esc_html__( 'Lecture en boucle', 'lightbox-jlg' ); ?></span>
-                            </label>
-                            <p class="description"><?php echo esc_html__( 'Permet au diaporama de recommencer au début après la dernière image.', 'lightbox-jlg' ); ?></p>
-                            <br>
-                            <label for="mga_autoplay_start">
-                                <input name="mga_settings[autoplay_start]" type="checkbox" id="mga_autoplay_start" value="1" <?php checked( ! empty( $settings['autoplay_start'] ), 1 ); ?> />
-                                <span><?php echo esc_html__( 'Lancement auto. du diaporama', 'lightbox-jlg' ); ?></span>
-                            </label>
-                            <p class="description"><?php echo esc_html__( "Si coché, le diaporama démarre automatiquement à l'ouverture de la galerie.", 'lightbox-jlg' ); ?></p>
-                            <br>
-                            <label for="mga_allow_body_fallback">
-                                <input name="mga_settings[allowBodyFallback]" type="checkbox" id="mga_allow_body_fallback" value="1" <?php checked( ! empty( $settings['allowBodyFallback'] ), 1 ); ?> />
-                                <span><?php echo esc_html__( 'Autoriser le repli sur &lt;body&gt;', 'lightbox-jlg' ); ?></span>
-                            </label>
-                            <p class="description"><?php echo esc_html__( "Active un repli sur l'élément &lt;body&gt; si le thème ne propose pas de zone de contenu compatible.", 'lightbox-jlg' ); ?></p>
-                            <br>
-                            <input type="hidden" name="mga_settings[show_zoom]" value="0" />
-                            <label for="mga_show_zoom">
-                                <input name="mga_settings[show_zoom]" type="checkbox" id="mga_show_zoom" value="1" <?php checked( ! empty( $settings['show_zoom'] ), 1 ); ?> />
-                                <span><?php echo esc_html__( 'Afficher le bouton de zoom', 'lightbox-jlg' ); ?></span>
-                            </label>
-                            <p class="description"><?php echo esc_html__( "Permet aux visiteurs de zoomer sur l'image affichée.", 'lightbox-jlg' ); ?></p>
-                            <br>
-                            <input type="hidden" name="mga_settings[show_download]" value="0" />
-                            <label for="mga_show_download">
-                                <input name="mga_settings[show_download]" type="checkbox" id="mga_show_download" value="1" <?php checked( ! empty( $settings['show_download'] ), 1 ); ?> />
-                                <span><?php echo esc_html__( 'Afficher le bouton de téléchargement', 'lightbox-jlg' ); ?></span>
-                            </label>
-                            <p class="description"><?php echo esc_html__( "Autorise le téléchargement direct de l'image en cours.", 'lightbox-jlg' ); ?></p>
-                            <br>
-                            <input type="hidden" name="mga_settings[show_share]" value="0" />
-                            <label for="mga_show_share">
-                                <input name="mga_settings[show_share]" type="checkbox" id="mga_show_share" value="1" <?php checked( ! empty( $settings['show_share'] ), 1 ); ?> />
-                                <span><?php echo esc_html__( 'Afficher le bouton de partage', 'lightbox-jlg' ); ?></span>
-                            </label>
-                            <p class="description"><?php echo esc_html__( "Affiche le bouton de partage via le navigateur ou un nouvel onglet.", 'lightbox-jlg' ); ?></p>
-                            <br>
-                            <input type="hidden" name="mga_settings[show_fullscreen]" value="0" />
-                            <label for="mga_show_fullscreen">
-                                <input name="mga_settings[show_fullscreen]" type="checkbox" id="mga_show_fullscreen" value="1" <?php checked( ! empty( $settings['show_fullscreen'] ), 1 ); ?> />
-                                <span><?php echo esc_html__( 'Afficher le bouton plein écran', 'lightbox-jlg' ); ?></span>
-                            </label>
-                            <p class="description"><?php echo esc_html__( "Permet d'activer le mode plein écran depuis la barre d'outils.", 'lightbox-jlg' ); ?></p>
+                            <div class="mga-option-toggle">
+                                <label for="mga_loop">
+                                    <input name="mga_settings[loop]" type="checkbox" id="mga_loop" value="1" <?php checked( ! empty( $settings['loop'] ), 1 ); ?> />
+                                    <span><?php echo esc_html__( 'Lecture en boucle', 'lightbox-jlg' ); ?></span>
+                                </label>
+                                <p class="description"><?php echo esc_html__( 'Permet au diaporama de recommencer au début après la dernière image.', 'lightbox-jlg' ); ?></p>
+                            </div>
+                            <div class="mga-option-toggle">
+                                <label for="mga_autoplay_start">
+                                    <input name="mga_settings[autoplay_start]" type="checkbox" id="mga_autoplay_start" value="1" <?php checked( ! empty( $settings['autoplay_start'] ), 1 ); ?> />
+                                    <span><?php echo esc_html__( 'Lancement auto. du diaporama', 'lightbox-jlg' ); ?></span>
+                                </label>
+                                <p class="description"><?php echo esc_html__( "Si coché, le diaporama démarre automatiquement à l'ouverture de la galerie.", 'lightbox-jlg' ); ?></p>
+                            </div>
+                            <div class="mga-option-toggle">
+                                <label for="mga_allow_body_fallback">
+                                    <input name="mga_settings[allowBodyFallback]" type="checkbox" id="mga_allow_body_fallback" value="1" <?php checked( ! empty( $settings['allowBodyFallback'] ), 1 ); ?> />
+                                    <span><?php echo esc_html__( 'Autoriser le repli sur &lt;body&gt;', 'lightbox-jlg' ); ?></span>
+                                </label>
+                                <p class="description"><?php echo esc_html__( "Active un repli sur l'élément &lt;body&gt; si le thème ne propose pas de zone de contenu compatible.", 'lightbox-jlg' ); ?></p>
+                            </div>
+                            <div class="mga-toolbar-options" role="group" aria-label="<?php echo esc_attr__( 'Commandes de la barre d’outils', 'lightbox-jlg' ); ?>">
+                                <div class="mga-option-toggle">
+                                    <input type="hidden" name="mga_settings[show_zoom]" value="0" />
+                                    <label for="mga_show_zoom">
+                                        <input name="mga_settings[show_zoom]" type="checkbox" id="mga_show_zoom" value="1" <?php checked( ! empty( $settings['show_zoom'] ), 1 ); ?> />
+                                        <span><?php echo esc_html__( 'Afficher le bouton de zoom', 'lightbox-jlg' ); ?></span>
+                                    </label>
+                                    <p class="description"><?php echo esc_html__( "Permet aux visiteurs de zoomer sur l'image affichée.", 'lightbox-jlg' ); ?></p>
+                                </div>
+                                <div class="mga-option-toggle">
+                                    <input type="hidden" name="mga_settings[show_download]" value="0" />
+                                    <label for="mga_show_download">
+                                        <input name="mga_settings[show_download]" type="checkbox" id="mga_show_download" value="1" <?php checked( ! empty( $settings['show_download'] ), 1 ); ?> />
+                                        <span><?php echo esc_html__( 'Afficher le bouton de téléchargement', 'lightbox-jlg' ); ?></span>
+                                    </label>
+                                    <p class="description"><?php echo esc_html__( "Autorise le téléchargement direct de l'image en cours.", 'lightbox-jlg' ); ?></p>
+                                </div>
+                                <div class="mga-option-toggle">
+                                    <input type="hidden" name="mga_settings[show_share]" value="0" />
+                                    <label for="mga_show_share">
+                                        <input name="mga_settings[show_share]" type="checkbox" id="mga_show_share" value="1" <?php checked( ! empty( $settings['show_share'] ), 1 ); ?> />
+                                        <span><?php echo esc_html__( 'Afficher le bouton de partage', 'lightbox-jlg' ); ?></span>
+                                    </label>
+                                    <p class="description"><?php echo esc_html__( "Affiche le bouton de partage via le navigateur ou un nouvel onglet.", 'lightbox-jlg' ); ?></p>
+                                </div>
+                                <div class="mga-option-toggle">
+                                    <input type="hidden" name="mga_settings[show_fullscreen]" value="0" />
+                                    <label for="mga_show_fullscreen">
+                                        <input name="mga_settings[show_fullscreen]" type="checkbox" id="mga_show_fullscreen" value="1" <?php checked( ! empty( $settings['show_fullscreen'] ), 1 ); ?> />
+                                        <span><?php echo esc_html__( 'Afficher le bouton plein écran', 'lightbox-jlg' ); ?></span>
+                                    </label>
+                                    <p class="description"><?php echo esc_html__( "Permet d'activer le mode plein écran depuis la barre d'outils.", 'lightbox-jlg' ); ?></p>
+                                </div>
+                            </div>
                         </fieldset>
                     </td>
                 </tr>

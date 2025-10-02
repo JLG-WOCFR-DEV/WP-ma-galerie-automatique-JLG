@@ -113,6 +113,26 @@ class Settings {
         $defaults = $this->get_default_settings();
         $output   = [];
 
+        $normalize_boolean_flag = static function ( $value, bool $default ): bool {
+            if ( is_bool( $value ) ) {
+                return $value;
+            }
+
+            if ( null === $value ) {
+                return $default;
+            }
+
+            if ( is_scalar( $value ) ) {
+                $filtered = filter_var( $value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+
+                if ( null !== $filtered ) {
+                    return $filtered;
+                }
+            }
+
+            return (bool) $value;
+        };
+
         if ( null === $existing_settings ) {
             $existing_settings = get_option( 'mga_settings', [] );
         }
@@ -156,8 +176,21 @@ class Settings {
             ? max( min( (float) $input['bg_opacity'], 1 ), 0 )
             : $defaults['bg_opacity'];
 
-        $output['loop']           = ! empty( $input['loop'] );
-        $output['autoplay_start'] = ! empty( $input['autoplay_start'] );
+        if ( array_key_exists( 'loop', $input ) ) {
+            $output['loop'] = $normalize_boolean_flag( $input['loop'], (bool) $defaults['loop'] );
+        } elseif ( array_key_exists( 'loop', $existing_settings ) ) {
+            $output['loop'] = $normalize_boolean_flag( $existing_settings['loop'], (bool) $defaults['loop'] );
+        } else {
+            $output['loop'] = (bool) $defaults['loop'];
+        }
+
+        if ( array_key_exists( 'autoplay_start', $input ) ) {
+            $output['autoplay_start'] = $normalize_boolean_flag( $input['autoplay_start'], (bool) $defaults['autoplay_start'] );
+        } elseif ( array_key_exists( 'autoplay_start', $existing_settings ) ) {
+            $output['autoplay_start'] = $normalize_boolean_flag( $existing_settings['autoplay_start'], (bool) $defaults['autoplay_start'] );
+        } else {
+            $output['autoplay_start'] = (bool) $defaults['autoplay_start'];
+        }
 
         $sanitize_group_attribute = static function ( $value ) use ( $defaults ) {
             if ( ! is_string( $value ) ) {
@@ -194,8 +227,6 @@ class Settings {
         } else {
             $output['z_index'] = $defaults['z_index'];
         }
-
-        $output['debug_mode'] = ! empty( $input['debug_mode'] );
 
         $sanitize_selectors = static function ( $selectors ) {
             $sanitized = [];
@@ -237,17 +268,29 @@ class Settings {
             $output['contentSelectors'] = $existing_selectors;
         }
 
-        $output['allowBodyFallback'] = isset( $input['allowBodyFallback'] )
-            ? (bool) $input['allowBodyFallback']
-            : (bool) $defaults['allowBodyFallback'];
+        if ( array_key_exists( 'allowBodyFallback', $input ) ) {
+            $output['allowBodyFallback'] = $normalize_boolean_flag( $input['allowBodyFallback'], (bool) $defaults['allowBodyFallback'] );
+        } elseif ( array_key_exists( 'allowBodyFallback', $existing_settings ) ) {
+            $output['allowBodyFallback'] = $normalize_boolean_flag( $existing_settings['allowBodyFallback'], (bool) $defaults['allowBodyFallback'] );
+        } else {
+            $output['allowBodyFallback'] = (bool) $defaults['allowBodyFallback'];
+        }
 
-        $resolve_toolbar_toggle = static function ( string $key ) use ( $input, $existing_settings, $defaults ) {
+        if ( array_key_exists( 'debug_mode', $input ) ) {
+            $output['debug_mode'] = $normalize_boolean_flag( $input['debug_mode'], (bool) $defaults['debug_mode'] );
+        } elseif ( array_key_exists( 'debug_mode', $existing_settings ) ) {
+            $output['debug_mode'] = $normalize_boolean_flag( $existing_settings['debug_mode'], (bool) $defaults['debug_mode'] );
+        } else {
+            $output['debug_mode'] = (bool) $defaults['debug_mode'];
+        }
+
+        $resolve_toolbar_toggle = static function ( string $key ) use ( $input, $existing_settings, $defaults, $normalize_boolean_flag ) {
             if ( is_array( $input ) && array_key_exists( $key, $input ) ) {
-                return (bool) $input[ $key ];
+                return $normalize_boolean_flag( $input[ $key ], (bool) $defaults[ $key ] );
             }
 
             if ( is_array( $existing_settings ) && array_key_exists( $key, $existing_settings ) ) {
-                return (bool) $existing_settings[ $key ];
+                return $normalize_boolean_flag( $existing_settings[ $key ], (bool) $defaults[ $key ] );
             }
 
             return (bool) $defaults[ $key ];

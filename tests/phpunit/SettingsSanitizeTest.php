@@ -102,6 +102,29 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'show_fullscreen' => $defaults['show_fullscreen'],
                 ],
             ],
+            'boolean_string_values' => [
+                [
+                    'loop'              => 'false',
+                    'autoplay_start'    => 'yes',
+                    'debug_mode'        => 'off',
+                    'allowBodyFallback' => 'false',
+                    'show_zoom'         => 'true',
+                    'show_download'     => 'no',
+                    'show_share'        => 'off',
+                    'show_fullscreen'   => 'on',
+                ],
+                [],
+                [
+                    'loop'              => false,
+                    'autoplay_start'    => true,
+                    'debug_mode'        => false,
+                    'allowBodyFallback' => false,
+                    'show_zoom'         => true,
+                    'show_download'     => false,
+                    'show_share'        => false,
+                    'show_fullscreen'   => true,
+                ],
+            ],
             'bogus_post_types_fall_back_to_defaults' => [
                 [
                     'tracked_post_types' => [ 'not-real', 'also_bad' ],

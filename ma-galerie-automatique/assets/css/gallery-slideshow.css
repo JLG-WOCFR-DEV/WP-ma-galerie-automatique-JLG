@@ -64,7 +64,8 @@
     white-space: normal;
     overflow-wrap: anywhere;
 }
-.mga-toolbar { display: flex; align-items: center; gap: 10px; }
+.mga-toolbar { display: flex; align-items: center; gap: var(--mga-toolbar-gap, 10px); }
+.mga-toolbar:empty { display: none; }
 
 .mga-toolbar-button { position: relative; background: transparent; border: none; color: var(--mga-accent-color, #fff); cursor: pointer; padding: 10px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.2s ease, box-shadow 0.2s ease; line-height: 0; }
 .mga-toolbar-button[hidden],
@@ -234,7 +235,7 @@
 @media (max-width: 480px) {
     .mga-toolbar {
         justify-content: center;
-        gap: 8px;
+        --mga-toolbar-gap: 8px;
     }
     .mga-toolbar-button {
         min-width: 40px;
