@@ -33,6 +33,7 @@ class Plugin {
         add_action( 'admin_menu', [ $this->settings, 'add_admin_menu' ] );
         add_action( 'admin_init', [ $this->settings, 'register_settings' ] );
         add_action( 'admin_enqueue_scripts', [ $this->settings, 'enqueue_assets' ] );
+        add_action( 'init', [ $this, 'register_block' ] );
     }
 
     public function activate(): void {
@@ -144,5 +145,61 @@ class Plugin {
 
     public function frontend_assets(): Assets {
         return $this->frontend_assets;
+    }
+
+    public function register_block(): void {
+        if ( ! function_exists( 'register_block_type' ) ) {
+            return;
+        }
+
+        $script_handle = 'mga-lightbox-editor-block';
+        $style_handle  = 'mga-lightbox-editor-block';
+
+        wp_register_script(
+            $script_handle,
+            $this->get_plugin_dir_url() . 'assets/js/block/index.js',
+            [ 'wp-blocks', 'wp-element', 'wp-i18n', 'wp-components', 'wp-block-editor', 'wp-compose', 'wp-data' ],
+            MGA_VERSION,
+            true
+        );
+
+        wp_register_style(
+            $style_handle,
+            $this->get_plugin_dir_url() . 'assets/css/block/editor.css',
+            [ 'wp-edit-blocks' ],
+            MGA_VERSION
+        );
+
+        $defaults = $this->settings->get_default_settings();
+
+        $localization = [
+            'accentColor'      => $defaults['accent_color'] ?? '#ffffff',
+            'backgroundStyle'  => $defaults['background_style'] ?? 'echo',
+            'autoplay'         => (bool) ( $defaults['autoplay_start'] ?? false ),
+            'loop'             => (bool) ( $defaults['loop'] ?? true ),
+            'delay'            => (int) ( $defaults['delay'] ?? 4 ),
+            'bgOpacity'        => isset( $defaults['bg_opacity'] ) ? (float) $defaults['bg_opacity'] : 0.95,
+            'showThumbsMobile' => (bool) ( $defaults['show_thumbs_mobile'] ?? true ),
+            'showZoom'         => (bool) ( $defaults['show_zoom'] ?? true ),
+            'showDownload'     => (bool) ( $defaults['show_download'] ?? true ),
+            'showShare'        => (bool) ( $defaults['show_share'] ?? true ),
+            'showFullscreen'   => (bool) ( $defaults['show_fullscreen'] ?? true ),
+            'noteText'         => \__( 'Lightbox active', 'lightbox-jlg' ),
+        ];
+
+        wp_localize_script( $script_handle, 'mgaBlockDefaults', $localization );
+
+        if ( $this->languages_directory_exists() ) {
+            wp_set_script_translations( $script_handle, 'lightbox-jlg', $this->get_languages_path() );
+        }
+
+        register_block_type(
+            'ma-galerie-automatique/lightbox-preview',
+            [
+                'editor_script'   => $script_handle,
+                'editor_style'    => $style_handle,
+                'render_callback' => '__return_empty_string',
+            ]
+        );
     }
 }
