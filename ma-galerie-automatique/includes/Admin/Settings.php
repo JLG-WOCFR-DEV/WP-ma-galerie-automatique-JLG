@@ -225,14 +225,16 @@ class Settings {
             $raw_selectors = $input['contentSelectors'];
 
             if ( is_string( $raw_selectors ) ) {
-                $raw_selectors = preg_split( '/\r\n|\r|\n/', $raw_selectors );
+                $raw_selectors = preg_split( '/\r\n|\r|\n/', $raw_selectors, -1, PREG_SPLIT_NO_EMPTY );
+            } elseif ( null === $raw_selectors ) {
+                $raw_selectors = [];
             }
 
-            if ( is_array( $raw_selectors ) ) {
-                $output['contentSelectors'] = $sanitize_selectors( $raw_selectors );
-            } else {
-                $output['contentSelectors'] = $existing_selectors;
+            if ( ! is_array( $raw_selectors ) ) {
+                $raw_selectors = [];
             }
+
+            $output['contentSelectors'] = $sanitize_selectors( $raw_selectors );
         } else {
             $output['contentSelectors'] = $existing_selectors;
         }

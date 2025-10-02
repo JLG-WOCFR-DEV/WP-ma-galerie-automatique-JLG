@@ -218,32 +218,50 @@ $settings = wp_parse_args( $settings, $defaults );
                 </tr>
                 <tr>
                     <th scope="row">
-                        <label for="mga-content-selector-0">
+                        <label for="mga-content-selectors-textarea">
                             <?php echo esc_html__( 'Sélecteurs CSS personnalisés', 'lightbox-jlg' ); ?>
                         </label>
                     </th>
                     <td>
                         <?php
-                        $configured_selectors = (array) $settings['contentSelectors'];
-
-                        if ( empty( $configured_selectors ) ) {
-                            $configured_selectors = [ '' ];
-                        }
+                        $configured_selectors = array_filter(
+                            array_map(
+                                static function ( $selector ) {
+                                    return trim( (string) $selector );
+                                },
+                                (array) $settings['contentSelectors']
+                            ),
+                            static function ( $selector ) {
+                                return '' !== $selector;
+                            }
+                        );
+                        $selectors_placeholder = esc_attr__( '.entry-content a[href$=".jpg"]', 'lightbox-jlg' );
                         ?>
-                        <div class="mga-content-selectors" data-mga-content-selectors>
+                        <div
+                            class="mga-content-selectors"
+                            data-mga-content-selectors
+                            data-mga-selector-placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
+                        >
+                            <textarea
+                                id="mga-content-selectors-textarea"
+                                name="mga_settings[contentSelectors]"
+                                rows="4"
+                                class="large-text code"
+                                data-mga-content-selectors-textarea
+                                placeholder="<?php echo esc_attr__( "Un sélecteur CSS par ligne\n.exemple article a[href$=\".jpg\"]", 'lightbox-jlg' ); ?>"
+                                aria-describedby="mga-content-selectors-help"
+                            ><?php echo esc_textarea( implode( "\n", $configured_selectors ) ); ?></textarea>
                             <div class="mga-content-selectors__list" data-mga-content-selectors-list>
                                 <?php foreach ( $configured_selectors as $index => $selector ) : ?>
-                                    <?php
-                                    $input_id = sprintf( 'mga-content-selector-%d', (int) $index );
-                                    ?>
+                                    <?php $input_id = sprintf( 'mga-content-selector-%d', (int) $index ); ?>
                                     <div class="mga-content-selectors__row" data-mga-content-selector-row>
                                         <input
                                             type="text"
                                             id="<?php echo esc_attr( $input_id ); ?>"
                                             class="regular-text"
-                                            name="mga_settings[contentSelectors][]"
                                             value="<?php echo esc_attr( $selector ); ?>"
-                                            placeholder="<?php echo esc_attr__( '.entry-content a[href$=".jpg"]', 'lightbox-jlg' ); ?>"
+                                            data-mga-content-selector-input
+                                            placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
                                         />
                                         <button
                                             type="button"
@@ -265,17 +283,31 @@ $settings = wp_parse_args( $settings, $defaults );
                                     <?php echo esc_html__( 'Ajouter un sélecteur', 'lightbox-jlg' ); ?>
                                 </button>
                             </p>
-                            <p class="description">
-                                <?php echo wp_kses_post( __( 'Ajoutez ici vos propres sélecteurs lorsque le contenu principal de votre thème n’utilise pas les classes par défaut (par exemple <code>.entry-content</code>). Chaque ligne ou champ correspond à un sélecteur complet utilisé pour détecter les images liées.', 'lightbox-jlg' ) ); ?>
+                            <p class="description" id="mga-content-selectors-help">
+                                <?php
+                                echo wp_kses_post(
+                                    __( 'Ajoutez ici vos propres sélecteurs lorsque le contenu principal de votre thème n’utilise pas les classes par défaut (par exemple <code>.entry-content</code>). Chaque ligne correspond à un sélecteur complet qui sera combiné avec ceux fournis par défaut.', 'lightbox-jlg' )
+                                );
+                                ?>
                             </p>
+                            <div class="mga-content-selectors__details">
+                                <p><strong><?php echo esc_html__( 'Quand personnaliser ces sélecteurs ?', 'lightbox-jlg' ); ?></strong></p>
+                                <p>
+                                    <?php
+                                    echo wp_kses_post(
+                                        __( 'Utilisez cette liste si votre thème encapsule les images dans des conteneurs spécifiques (ex. <code>.site-main .article-body</code>) ou si vous avez besoin d’inclure des blocs personnalisés. Le plugin parcourra chaque sélecteur pour repérer les liens vers des fichiers médias.', 'lightbox-jlg' )
+                                    );
+                                    ?>
+                                </p>
+                            </div>
                         </div>
                         <template id="mga-content-selector-template">
                             <div class="mga-content-selectors__row" data-mga-content-selector-row>
                                 <input
                                     type="text"
                                     class="regular-text"
-                                    name="mga_settings[contentSelectors][]"
-                                    placeholder="<?php echo esc_attr__( '.entry-content a[href$=".jpg"]', 'lightbox-jlg' ); ?>"
+                                    data-mga-content-selector-input
+                                    placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
                                 />
                                 <button
                                     type="button"
