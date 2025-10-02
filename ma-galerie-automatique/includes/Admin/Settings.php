@@ -99,6 +99,7 @@ class Settings {
             'show_download'      => true,
             'show_share'         => true,
             'show_fullscreen'    => true,
+            'show_thumbs_mobile' => true,
             'groupAttribute'     => 'data-mga-gallery',
             'contentSelectors'   => [],
             'allowBodyFallback'  => false,
@@ -257,7 +258,7 @@ class Settings {
             return (bool) $defaults[ $key ];
         };
 
-        foreach ( [ 'show_zoom', 'show_download', 'show_share', 'show_fullscreen' ] as $toolbar_toggle ) {
+        foreach ( [ 'show_zoom', 'show_download', 'show_share', 'show_fullscreen', 'show_thumbs_mobile' ] as $toolbar_toggle ) {
             $output[ $toolbar_toggle ] = $resolve_toolbar_toggle( $toolbar_toggle );
         }
 

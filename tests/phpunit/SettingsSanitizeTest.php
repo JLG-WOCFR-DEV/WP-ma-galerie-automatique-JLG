@@ -55,6 +55,7 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'show_download'  => true,
                     'show_share'     => true,
                     'show_fullscreen'=> true,
+                    'show_thumbs_mobile' => true,
                 ],
             ],
             'bg_opacity_lower_bound' => [
@@ -100,6 +101,18 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'show_download'   => false,
                     'show_share'      => true,
                     'show_fullscreen' => $defaults['show_fullscreen'],
+                    'show_thumbs_mobile' => $defaults['show_thumbs_mobile'],
+                ],
+            ],
+            'show_thumbs_mobile_toggle' => [
+                [
+                    'show_thumbs_mobile' => '0',
+                ],
+                [
+                    'show_thumbs_mobile' => true,
+                ],
+                [
+                    'show_thumbs_mobile' => false,
                 ],
             ],
             'bogus_post_types_fall_back_to_defaults' => [
