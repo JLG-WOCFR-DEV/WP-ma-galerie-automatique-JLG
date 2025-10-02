@@ -5,11 +5,33 @@
     const mgaAdminSprintf = mgaAdminI18n && typeof mgaAdminI18n.sprintf === 'function'
         ? mgaAdminI18n.sprintf
         : ( format, ...args ) => {
-            let index = 0;
-            return format.replace(/%s/g, () => {
-                const replacement = typeof args[index] !== 'undefined' ? args[index] : '';
-                index += 1;
-                return replacement;
+            let autoIndex = 0;
+            return format.replace(/%(\d+\$)?([sd])/g, (match, position, type) => {
+                let argIndex;
+
+                if (position) {
+                    argIndex = parseInt(position, 10) - 1;
+                } else {
+                    argIndex = autoIndex;
+                    autoIndex += 1;
+                }
+
+                if (argIndex < 0 || argIndex >= args.length) {
+                    return '';
+                }
+
+                const value = args[argIndex];
+
+                if (typeof value === 'undefined') {
+                    return '';
+                }
+
+                if (type === 'd') {
+                    const coerced = parseInt(value, 10);
+                    return Number.isNaN(coerced) ? '' : String(coerced);
+                }
+
+                return String(value);
             });
         };
 
