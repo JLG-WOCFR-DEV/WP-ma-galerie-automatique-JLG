@@ -130,6 +130,7 @@
         const showDownload = normalizeFlag(settings.show_download, true);
         const showShare = normalizeFlag(settings.show_share, true);
         const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
+        const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
         const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
         let mainSwiper = null;
         let thumbsSwiper = null;
@@ -1358,6 +1359,9 @@
             viewer.className = 'mga-viewer';
             if (settings.background_style === 'blur') viewer.classList.add('mga-has-blur');
             if (settings.background_style === 'texture') viewer.classList.add('mga-has-texture');
+            if (!showThumbsMobile) {
+                viewer.classList.add('mga-hide-thumbs-mobile');
+            }
 
             try {
                 if (mainSwiper) {

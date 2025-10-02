@@ -118,6 +118,12 @@
     max-width: 1200px;
 }
 
+@media (max-width: 768px) {
+    .mga-viewer.mga-hide-thumbs-mobile .mga-thumbs-swiper {
+        display: none;
+    }
+}
+
 .mga-thumbs-swiper .swiper-slide { height: 100%; width: auto; opacity: 0.5; transition: opacity 0.3s ease; cursor: pointer; border: 2px solid transparent; border-radius: 6px; box-sizing: border-box; will-change: opacity; flex-shrink: 0; }
 .mga-thumbs-swiper .swiper-slide:hover { opacity: 0.8; }
 .mga-thumbs-swiper .swiper-slide-thumb-active { opacity: 1; border-color: var(--mga-accent-color, #fff); }
@@ -202,10 +208,20 @@
         margin-top: calc(110px + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
         max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 130px + env(safe-area-inset-bottom, 0px)));
     }
+    .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper {
+        max-height: calc(100vh - (130px + env(safe-area-inset-bottom, 0px)));
+    }
     .mga-thumbs-swiper {
         height: calc(var(--mga-thumb-size-mobile, 70px) + env(safe-area-inset-bottom, 0px));
     }
+    .mga-viewer.mga-hide-thumbs-mobile .mga-thumbs-swiper {
+        height: auto;
+    }
     .mga-main-swiper .swiper-button-next, .mga-main-swiper .swiper-button-prev { display: none; }
+    .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper .swiper-button-next,
+    .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper .swiper-button-prev {
+        display: flex;
+    }
 }
 
 @media (max-width: 900px) and (orientation: landscape) {
@@ -223,11 +239,18 @@
         background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
         pointer-events: none;
     }
+    .mga-viewer.mga-hide-thumbs-mobile .mga-caption-container {
+        bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
+    }
     .mga-caption {
         white-space: normal;
     }
     .mga-main-swiper {
         max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 80px + env(safe-area-inset-bottom, 0px)));
+    }
+    .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper {
+        max-height: calc(100vh - (80px + env(safe-area-inset-bottom, 0px)));
     }
 }
 

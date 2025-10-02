@@ -99,6 +99,19 @@ $settings = wp_parse_args( $settings, $defaults );
                             <?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ); ?>
                         </output>
                         <p class="description"><?php echo esc_html__( "Ajustez la hauteur des miniatures en bas de la galerie pour chaque type d'appareil.", 'lightbox-jlg' ); ?></p>
+                        <br>
+                        <input type="hidden" name="mga_settings[show_thumbs_mobile]" value="0" />
+                        <label for="mga_show_thumbs_mobile">
+                            <input
+                                name="mga_settings[show_thumbs_mobile]"
+                                type="checkbox"
+                                id="mga_show_thumbs_mobile"
+                                value="1"
+                                <?php checked( ! empty( $settings['show_thumbs_mobile'] ), 1 ); ?>
+                            />
+                            <span><?php echo esc_html__( 'Afficher les miniatures sur mobile', 'lightbox-jlg' ); ?></span>
+                        </label>
+                        <p class="description"><?php echo esc_html__( 'Décochez pour masquer les miniatures sous 768px. Les flèches de navigation resteront visibles afin de permettre le changement d’image.', 'lightbox-jlg' ); ?></p>
                     </td>
                 </tr>
                 <tr>
