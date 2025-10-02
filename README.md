@@ -35,6 +35,12 @@ La visionneuse plein écran pilotée par `assets/js/gallery-slideshow.js` et mis
 - **Arrière-plan immersif et préchargement** : un effet d’écho flouté anime le fond tandis que les visuels suivants sont préchargés pour fluidifier la lecture.
 - **Compatibilité avec les pièces jointes WordPress** : les galeries configurées avec `linkDestination: "attachment"` ouvrent la visionneuse sur le média original en s’appuyant sur les attributs `data-full-url` / `data-orig-file` des images.
 
+### Prévisualisation dans l’éditeur de blocs
+- **Enfilement dédié** : le hook `enqueue_block_editor_assets` charge `assets/js/block-editor-preview.js` et `assets/css/block-editor-preview.css` uniquement dans Gutenberg pour éviter l’exécution de la lightbox complète côté administration.
+- **Mise en évidence immédiate** : les images liées détectées dans les blocs `core/gallery`, `core/image` et `core/media-text` sont entourées d’un halo reprenant la couleur d’accent définie dans les réglages et une pastille « Lightbox active » apparaît dans le coin du bloc.
+- **Blocs réutilisables pris en charge** : lorsqu’un bloc réutilisable (`core/block`) contient un bloc supporté, la pastille s’affiche également sur le conteneur afin de signaler que la lightbox restera active une fois publiée.
+- **Anti-cliques accidentels** : les liens d’aperçu sont neutralisés (clic ou touche Entrée) pour éviter toute navigation hors de l’éditeur tout en offrant un rendu proche du frontal.
+
 ### Mode débogage
 - **Activation** : cochez **Activer le mode débogage** dans les réglages du plugin (onglet **Réglages → Ma Galerie Automatique**), case ajoutée par `includes/admin-page-template.php`.
 - **Panneau d’analyse** : `assets/js/debug.js` affiche un panneau flottant regroupant un chronomètre temps réel, le timer d’autoplay synchronisé au cercle de progression et un journal d’événements détaillé.
