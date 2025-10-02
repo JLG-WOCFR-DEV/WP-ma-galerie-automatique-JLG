@@ -295,10 +295,12 @@
             const template = doc.getElementById('mga-content-selector-template');
             const placeholder = selectorsWrapper.getAttribute('data-mga-selector-placeholder') || '';
             let isSyncingSelectors = false;
+            let addRow = () => {};
 
             if (selectorsList) {
                 const queryRows = () => selectorsList.querySelectorAll('[data-mga-content-selector-row]');
                 const queryInputs = () => selectorsList.querySelectorAll('[data-mga-content-selector-input]');
+                const hasEmptyRow = () => Array.from(queryInputs()).some((input) => input.value.trim() === '');
 
                 const updateRemoveState = () => {
                     const rows = queryRows();
@@ -362,6 +364,37 @@
                         input.addEventListener('input', () => {
                             if (!isSyncingSelectors) {
                                 syncTextareaFromRows();
+                            }
+                        });
+
+                        input.addEventListener('keydown', (event) => {
+                            if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) {
+                                return;
+                            }
+
+                            event.preventDefault();
+
+                            if (!hasEmptyRow() && typeof addRow === 'function') {
+                                addRow('');
+                                return;
+                            }
+
+                            const rows = queryRows();
+
+                            if (rows.length === 0) {
+                                return;
+                            }
+
+                            const lastRow = rows[rows.length - 1];
+
+                            if (!lastRow) {
+                                return;
+                            }
+
+                            const lastInput = lastRow.querySelector('[data-mga-content-selector-input]');
+
+                            if (lastInput && lastInput !== event.target) {
+                                safeFocus(lastInput);
                             }
                         });
 
@@ -461,7 +494,7 @@
                     isSyncingSelectors = false;
                 };
 
-                const addRow = (value = '') => {
+                addRow = (value = '') => {
                     const row = createRow(value);
 
                     if (row) {

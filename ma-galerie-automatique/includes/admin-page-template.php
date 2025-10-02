@@ -307,7 +307,7 @@ $settings = wp_parse_args( $settings, $defaults );
                             <p class="description" id="mga-content-selectors-help">
                                 <?php
                                 echo wp_kses_post(
-                                    __( 'Ajoutez ici vos propres sélecteurs lorsque le contenu principal de votre thème n’utilise pas les classes par défaut (par exemple <code>.entry-content</code>). Chaque ligne correspond à un sélecteur complet qui sera combiné avec ceux fournis par défaut.', 'lightbox-jlg' )
+                                    __( 'Ajoutez ici vos propres sélecteurs lorsque le contenu principal de votre thème n’utilise pas les classes par défaut (par exemple <code>.entry-content</code>). Chaque ligne correspond à un sélecteur complet, combiné aux valeurs natives du plugin. Utilisez le bouton <strong>Ajouter un sélecteur</strong> ou appuyez sur la touche <kbd>Entrée</kbd> dans un champ pour créer rapidement une nouvelle ligne.', 'lightbox-jlg' )
                                 );
                                 ?>
                             </p>
@@ -316,7 +316,7 @@ $settings = wp_parse_args( $settings, $defaults );
                                 <p>
                                     <?php
                                     echo wp_kses_post(
-                                        __( 'Utilisez cette liste si votre thème encapsule les images dans des conteneurs spécifiques (ex. <code>.site-main .article-body</code>) ou si vous avez besoin d’inclure des blocs personnalisés. Le plugin parcourra chaque sélecteur pour repérer les liens vers des fichiers médias.', 'lightbox-jlg' )
+                                        __( 'Utilisez cette liste si votre thème encapsule les images dans des conteneurs spécifiques (ex. <code>.site-main .article-body</code>) ou si vous avez besoin d’inclure des blocs personnalisés. En cas de doute, inspectez votre page avec les outils du navigateur pour identifier la classe englobante, puis ajoutez-la ici afin que le plugin repère les liens vers les fichiers médias.', 'lightbox-jlg' )
                                     );
                                     ?>
                                 </p>
