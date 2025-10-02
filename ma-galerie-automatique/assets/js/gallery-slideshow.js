@@ -879,6 +879,7 @@
                 viewer = document.createElement('div');
                 viewer.id = 'mga-viewer';
                 viewer.className = 'mga-viewer';
+                viewer.classList.toggle('mga-has-caption', false);
                 viewer.style.display = 'none';
                 viewer.setAttribute('role', 'dialog');
                 viewer.setAttribute('aria-modal', 'true');
@@ -1935,7 +1936,7 @@
         }
 
         function updateInfo(viewer, images, index) {
-            if (!images[index]) {
+            if (!viewer || !images[index]) {
                 return;
             }
 
@@ -1946,6 +1947,7 @@
 
             const imageData = images[index];
             const captionText = imageData.caption || '';
+            viewer.classList.toggle('mga-has-caption', Boolean(captionText));
             const counterText = mgaSprintf(mga__( '%1$s / %2$s', 'lightbox-jlg' ), index + 1, images.length);
             const announcementCounterText = mgaSprintf(mga__( 'Image %1$s sur %2$s', 'lightbox-jlg' ), index + 1, images.length);
             const announcementText = captionText ? `${announcementCounterText}. ${captionText}` : announcementCounterText;
