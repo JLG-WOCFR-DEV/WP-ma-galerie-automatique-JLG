@@ -37,3 +37,46 @@
 .mga-toggle-list__item .description {
     margin: 4px 0 0 28px;
 }
+
+.mga-share-channels {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.mga-share-channels__item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background-color: #fff;
+}
+
+.mga-share-channels__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.mga-share-channels__template {
+    max-width: 100%;
+    width: 100%;
+}
+
+.mga-share-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.mga-share-actions__item label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}

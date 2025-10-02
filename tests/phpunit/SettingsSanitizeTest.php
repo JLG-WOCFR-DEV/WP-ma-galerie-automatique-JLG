@@ -56,6 +56,8 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'show_share'     => true,
                     'show_fullscreen'=> true,
                     'show_thumbs_mobile' => true,
+                    'share_copy'     => $defaults['share_copy'],
+                    'share_download' => $defaults['share_download'],
                 ],
             ],
             'bg_opacity_lower_bound' => [
@@ -94,6 +96,8 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'show_zoom'       => '0',
                     'show_download'   => 0,
                     'show_share'      => '1',
+                    'share_copy'      => '0',
+                    'share_download'  => '',
                 ],
                 [],
                 [
@@ -102,6 +106,8 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'show_share'      => true,
                     'show_fullscreen' => $defaults['show_fullscreen'],
                     'show_thumbs_mobile' => $defaults['show_thumbs_mobile'],
+                    'share_copy'      => false,
+                    'share_download'  => false,
                 ],
             ],
             'show_thumbs_mobile_toggle' => [
@@ -144,6 +150,51 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 [],
                 [
                     'contentSelectors' => [ '.main', '.article-content', '.gallery img' ],
+                ],
+            ],
+            'share_channel_customization' => [
+                [
+                    'share_channels' => [
+                        'facebook' => [
+                            'enabled'  => '0',
+                            'template' => ' https://example.com/?u=%url% ',
+                        ],
+                        'twitter' => [
+                            'enabled'  => 'yes',
+                        ],
+                    ],
+                ],
+                [
+                    'share_channels' => [
+                        'facebook' => [
+                            'enabled'  => true,
+                            'template' => 'https://persisted.test/?u=%url%',
+                        ],
+                        'linkedin' => [
+                            'enabled'  => false,
+                            'template' => 'https://linked.in/share?u=%url%',
+                        ],
+                    ],
+                ],
+                [
+                    'share_channels' => [
+                        'facebook' => [
+                            'enabled'  => false,
+                            'template' => 'https://example.com/?u=%url%',
+                        ],
+                        'twitter' => [
+                            'enabled'  => true,
+                            'template' => $defaults['share_channels']['twitter']['template'],
+                        ],
+                        'linkedin' => [
+                            'enabled'  => false,
+                            'template' => 'https://linked.in/share?u=%url%',
+                        ],
+                        'pinterest' => [
+                            'enabled'  => $defaults['share_channels']['pinterest']['enabled'],
+                            'template' => $defaults['share_channels']['pinterest']['template'],
+                        ],
+                    ],
                 ],
             ],
         ];

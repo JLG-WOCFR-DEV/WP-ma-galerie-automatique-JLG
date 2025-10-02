@@ -100,6 +100,26 @@ class Settings {
             'show_share'         => true,
             'show_fullscreen'    => true,
             'show_thumbs_mobile' => true,
+            'share_channels'     => [
+                'facebook' => [
+                    'enabled'  => true,
+                    'template' => 'https://www.facebook.com/sharer/sharer.php?u=%url%',
+                ],
+                'twitter'  => [
+                    'enabled'  => true,
+                    'template' => 'https://twitter.com/intent/tweet?url=%url%&text=%text%',
+                ],
+                'linkedin' => [
+                    'enabled'  => false,
+                    'template' => 'https://www.linkedin.com/sharing/share-offsite/?url=%url%',
+                ],
+                'pinterest' => [
+                    'enabled'  => false,
+                    'template' => 'https://pinterest.com/pin/create/button/?url=%url%&description=%text%',
+                ],
+            ],
+            'share_copy'         => true,
+            'share_download'     => true,
             'groupAttribute'     => 'data-mga-gallery',
             'contentSelectors'   => [],
             'allowBodyFallback'  => false,
@@ -292,6 +312,61 @@ class Settings {
 
         foreach ( [ 'show_zoom', 'show_download', 'show_share', 'show_fullscreen', 'show_thumbs_mobile' ] as $toolbar_toggle ) {
             $output[ $toolbar_toggle ] = $resolve_checkbox_value( $toolbar_toggle );
+        }
+
+        foreach ( [ 'share_copy', 'share_download' ] as $share_toggle ) {
+            $output[ $share_toggle ] = $resolve_checkbox_value( $share_toggle );
+        }
+
+        $default_share_channels = [];
+
+        if ( isset( $defaults['share_channels'] ) && is_array( $defaults['share_channels'] ) ) {
+            $default_share_channels = $defaults['share_channels'];
+        }
+
+        $existing_share_channels = [];
+
+        if ( isset( $existing_settings['share_channels'] ) && is_array( $existing_settings['share_channels'] ) ) {
+            $existing_share_channels = $existing_settings['share_channels'];
+        }
+
+        $raw_share_channels = [];
+
+        if ( isset( $input['share_channels'] ) && is_array( $input['share_channels'] ) ) {
+            $raw_share_channels = $input['share_channels'];
+        }
+
+        $sanitized_share_channels = [];
+
+        foreach ( $default_share_channels as $channel_key => $channel_defaults ) {
+            $channel_input    = $raw_share_channels[ $channel_key ] ?? [];
+            $channel_existing = $existing_share_channels[ $channel_key ] ?? [];
+
+            $channel_enabled = $channel_defaults['enabled'] ?? false;
+            $channel_template = $channel_defaults['template'] ?? '';
+
+            if ( array_key_exists( 'enabled', $channel_input ) ) {
+                $channel_enabled = $normalize_checkbox( $channel_input['enabled'], $channel_enabled );
+            } elseif ( array_key_exists( 'enabled', $channel_existing ) ) {
+                $channel_enabled = $normalize_checkbox( $channel_existing['enabled'], $channel_defaults['enabled'] ?? false );
+            }
+
+            if ( array_key_exists( 'template', $channel_input ) ) {
+                $channel_template = sanitize_text_field( (string) $channel_input['template'] );
+            } elseif ( array_key_exists( 'template', $channel_existing ) ) {
+                $channel_template = sanitize_text_field( (string) $channel_existing['template'] );
+            }
+
+            $sanitized_share_channels[ $channel_key ] = [
+                'enabled'  => (bool) $channel_enabled,
+                'template' => $channel_template,
+            ];
+        }
+
+        if ( ! empty( $sanitized_share_channels ) ) {
+            $output['share_channels'] = $sanitized_share_channels;
+        } else {
+            $output['share_channels'] = $default_share_channels;
         }
 
         $all_post_types               = get_post_types( [], 'names' );

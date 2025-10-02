@@ -259,6 +259,28 @@
         state.logContainer.scrollTop = state.logContainer.scrollHeight;
     }
 
+    function shareAction(action, details = {}) {
+        const normalizedAction = typeof action === 'string' && action ? action : 'unknown';
+        const hasDetails = details && typeof details === 'object' && Object.keys(details).length > 0;
+        const message = hasDetails
+            ? mgaSprintf(
+                mga__( 'Partage [%1$s] : %2$s', 'lightbox-jlg' ),
+                normalizedAction,
+                normalizeMessage(details)
+            )
+            : mgaSprintf(mga__( 'Partage [%s]', 'lightbox-jlg' ), normalizedAction);
+
+        log(message);
+
+        if (hasDetails && typeof console !== 'undefined' && typeof console.table === 'function') {
+            try {
+                console.table(details);
+            } catch (error) {
+                console.debug(details);
+            }
+        }
+    }
+
     function updateInfo(key, value, color = '#fff') {
         if (!ensureActive()) {
             return;
@@ -297,5 +319,6 @@
         stopTimer,
         restartTimer,
         table,
+        shareAction,
     };
 })(window);
