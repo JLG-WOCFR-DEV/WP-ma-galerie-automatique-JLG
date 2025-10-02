@@ -86,6 +86,9 @@ class Settings {
     public function get_default_settings(): array {
         return [
             'delay'              => 4,
+            'speed'              => 600,
+            'effect'             => 'slide',
+            'easing'             => 'ease-out',
             'thumb_size'         => 90,
             'thumb_size_mobile'  => 70,
             'accent_color'       => '#ffffff',
@@ -132,6 +135,17 @@ class Settings {
             $output['delay'] = $bounded_delay;
         } else {
             $output['delay'] = $defaults['delay'];
+        }
+
+        if ( isset( $input['speed'] ) ) {
+            $speed           = (int) $input['speed'];
+            $bounded_speed   = max( 100, min( 5000, $speed ) );
+            $output['speed'] = $bounded_speed;
+        } elseif ( isset( $existing_settings['speed'] ) ) {
+            $speed           = (int) $existing_settings['speed'];
+            $output['speed'] = max( 100, min( 5000, $speed ) );
+        } else {
+            $output['speed'] = $defaults['speed'];
         }
 
         if ( isset( $input['thumb_size'] ) ) {
@@ -239,6 +253,28 @@ class Settings {
         $output['background_style']   = isset( $input['background_style'] ) && in_array( $input['background_style'], $allowed_bg_styles, true )
             ? $input['background_style']
             : $defaults['background_style'];
+
+        $allowed_effects = [ 'slide', 'fade', 'cube', 'coverflow', 'flip' ];
+
+        if ( isset( $input['effect'] ) ) {
+            $effect           = is_string( $input['effect'] ) ? strtolower( $input['effect'] ) : '';
+            $output['effect'] = in_array( $effect, $allowed_effects, true ) ? $effect : $defaults['effect'];
+        } elseif ( isset( $existing_settings['effect'] ) && in_array( $existing_settings['effect'], $allowed_effects, true ) ) {
+            $output['effect'] = $existing_settings['effect'];
+        } else {
+            $output['effect'] = $defaults['effect'];
+        }
+
+        $allowed_easings = [ 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear' ];
+
+        if ( isset( $input['easing'] ) ) {
+            $easing           = is_string( $input['easing'] ) ? strtolower( $input['easing'] ) : '';
+            $output['easing'] = in_array( $easing, $allowed_easings, true ) ? $easing : $defaults['easing'];
+        } elseif ( isset( $existing_settings['easing'] ) && in_array( $existing_settings['easing'], $allowed_easings, true ) ) {
+            $output['easing'] = $existing_settings['easing'];
+        } else {
+            $output['easing'] = $defaults['easing'];
+        }
 
         if ( isset( $input['z_index'] ) ) {
             $raw_z_index        = (int) $input['z_index'];
