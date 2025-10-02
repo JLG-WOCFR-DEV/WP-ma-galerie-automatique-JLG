@@ -184,6 +184,9 @@ class Plugin {
             'showDownload'     => (bool) ( $defaults['show_download'] ?? true ),
             'showShare'        => (bool) ( $defaults['show_share'] ?? true ),
             'showFullscreen'   => (bool) ( $defaults['show_fullscreen'] ?? true ),
+            'enableVerticalSwipeClose' => (bool) ( $defaults['enable_vertical_swipe_close'] ?? true ),
+            'enableDoubleTapClose'     => (bool) ( $defaults['enable_double_tap_close'] ?? false ),
+            'enablePinchClose'         => (bool) ( $defaults['enable_pinch_close'] ?? false ),
             'noteText'         => \__( 'Lightbox active', 'lightbox-jlg' ),
         ];
 

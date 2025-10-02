@@ -16,6 +16,19 @@
     overflow: hidden;
 }
 
+.mga-viewer--closing {
+    opacity: 0;
+    transform: translateY(6%);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mga-viewer--closing {
+        transition: none;
+        transform: none;
+    }
+}
+
 .mga-screen-reader-text {
     position: absolute;
     width: 1px;

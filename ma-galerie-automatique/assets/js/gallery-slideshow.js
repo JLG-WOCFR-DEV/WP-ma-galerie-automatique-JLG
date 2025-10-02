@@ -96,6 +96,27 @@
         );
     }
 
+    let reducedMotionQueryCache = null;
+
+    function getReducedMotionMediaQuery() {
+        if (reducedMotionQueryCache !== null) {
+            return reducedMotionQueryCache;
+        }
+
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            reducedMotionQueryCache = null;
+            return reducedMotionQueryCache;
+        }
+
+        reducedMotionQueryCache = window.matchMedia('(prefers-reduced-motion: reduce)');
+        return reducedMotionQueryCache;
+    }
+
+    function prefersReducedMotionNow() {
+        const query = getReducedMotionMediaQuery();
+        return !!(query && query.matches);
+    }
+
     function initGalleryViewer() {
         const settings = window.mga_settings || {};
         const IMAGE_FILE_PATTERN = /\.(jpe?g|png|gif|bmp|webp|avif|svg)(?:\?.*)?(?:#.*)?$/i;
@@ -138,6 +159,9 @@
         const showShare = normalizeFlag(settings.show_share, true);
         const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
         const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
+        const enableVerticalSwipeClose = normalizeFlag(settings.enable_vertical_swipe_close, true);
+        const enableDoubleTapClose = normalizeFlag(settings.enable_double_tap_close, false);
+        const enablePinchClose = normalizeFlag(settings.enable_pinch_close, false);
         const optionalToolbarHandlers = [];
         const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
         let mainSwiper = null;
@@ -155,6 +179,7 @@
         let lastFocusedElementBeforeViewer = null;
         let viewerFocusTrapHandler = null;
         let currentGalleryImages = [];
+        let gestureController = null;
 
         debug.init();
 
@@ -1463,6 +1488,10 @@
             const viewer = getViewer();
             if (!viewer) return false;
 
+            if (gestureController && typeof gestureController.detach === 'function') {
+                gestureController.detach();
+            }
+            gestureController = null;
             viewer.className = 'mga-viewer';
             viewer.classList.toggle('mga-has-caption', false);
             if (settings.background_style === 'blur') viewer.classList.add('mga-has-blur');
@@ -1470,6 +1499,11 @@
             if (!showThumbsMobile) {
                 viewer.classList.add('mga-hide-thumbs-mobile');
             }
+            viewer.classList.remove('mga-viewer--closing');
+            viewer.removeAttribute('data-mga-closing');
+            viewer.style.transition = '';
+            viewer.style.transform = '';
+            viewer.style.opacity = '';
 
             try {
                 if (mainSwiper) {
@@ -1580,6 +1614,7 @@
                     return false;
                 }
 
+                gestureController = setupGestureCloseHandlers(viewer);
                 currentGalleryImages = Array.isArray(images) ? images : [];
 
                 if (typeof mainSwiper.slideToLoop === 'function') {
@@ -1708,6 +1743,278 @@
             }
         }
 
+        function setupGestureCloseHandlers(viewer) {
+            const allowSwipe = enableVerticalSwipeClose;
+            const allowDoubleTap = enableDoubleTapClose;
+            const allowPinch = enablePinchClose;
+
+            if (!viewer || (!allowSwipe && !allowDoubleTap && !allowPinch)) {
+                return null;
+            }
+
+            const listeners = [];
+            const passiveOptions = { passive: true };
+
+            const addListener = (type, handler, options) => {
+                const opts = options || false;
+                viewer.addEventListener(type, handler, opts);
+                listeners.push({ type, handler, options: opts });
+            };
+
+            const removeListeners = () => {
+                while (listeners.length) {
+                    const entry = listeners.pop();
+                    viewer.removeEventListener(entry.type, entry.handler, entry.options);
+                }
+            };
+
+            const SWIPE_MIN_DISTANCE = 80;
+            const SWIPE_HORIZONTAL_TOLERANCE = 80;
+            const DOUBLE_TAP_MAX_DELAY = 300;
+            const DOUBLE_TAP_DRIFT = 30;
+            const PINCH_CLOSE_THRESHOLD = 80;
+
+            const computeDistance = (touchA, touchB) => {
+                if (!touchA || !touchB) {
+                    return 0;
+                }
+                const dx = touchA.clientX - touchB.clientX;
+                const dy = touchA.clientY - touchB.clientY;
+                return Math.sqrt((dx * dx) + (dy * dy));
+            };
+
+            const state = {
+                startX: 0,
+                startY: 0,
+                lastTouchX: 0,
+                lastTouchY: 0,
+                isTrackingSwipe: false,
+                swipeActive: false,
+                pinchStartDistance: null,
+                pinchTriggered: false,
+                lastTapTime: 0,
+                lastTapX: 0,
+                lastTapY: 0,
+                hasTriggeredClose: false,
+            };
+
+            const applySwipePresentation = (offsetY) => {
+                if (!allowSwipe || offsetY <= 0) {
+                    return;
+                }
+
+                state.swipeOffset = offsetY;
+
+                if (prefersReducedMotionNow()) {
+                    return;
+                }
+
+                viewer.style.transition = '';
+                viewer.style.transform = `translateY(${Math.max(offsetY, 0)}px)`;
+                const normalized = Math.min(Math.max(offsetY / 320, 0), 0.7);
+                viewer.style.opacity = String(1 - normalized);
+            };
+
+            const resetSwipePresentation = (withAnimation) => {
+                if (prefersReducedMotionNow()) {
+                    withAnimation = false;
+                }
+
+                if (withAnimation) {
+                    viewer.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+                    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                        window.requestAnimationFrame(() => {
+                            viewer.style.transform = '';
+                            viewer.style.opacity = '';
+                        });
+                    } else {
+                        viewer.style.transform = '';
+                        viewer.style.opacity = '';
+                    }
+                    setTimeout(() => {
+                        if (viewer) {
+                            viewer.style.transition = '';
+                        }
+                    }, 220);
+                } else {
+                    viewer.style.transition = '';
+                    viewer.style.transform = '';
+                    viewer.style.opacity = '';
+                }
+
+                state.swipeOffset = 0;
+            };
+
+            const maybeCloseWithAnimation = () => {
+                if (state.hasTriggeredClose) {
+                    return;
+                }
+                state.hasTriggeredClose = true;
+                closeViewer(viewer, { animate: true });
+            };
+
+            const handleTouchStart = (event) => {
+                if (state.hasTriggeredClose) {
+                    return;
+                }
+
+                if (allowPinch && event.touches && event.touches.length >= 2) {
+                    const [firstTouch, secondTouch] = event.touches;
+                    state.pinchStartDistance = computeDistance(firstTouch, secondTouch);
+                    state.pinchTriggered = false;
+                } else {
+                    state.pinchStartDistance = null;
+                    state.pinchTriggered = false;
+                }
+
+                if (allowSwipe && event.touches && event.touches.length === 1) {
+                    const touch = event.touches[0];
+                    state.startX = touch.clientX;
+                    state.startY = touch.clientY;
+                    state.lastTouchX = touch.clientX;
+                    state.lastTouchY = touch.clientY;
+                    state.isTrackingSwipe = true;
+                    state.swipeActive = false;
+                } else {
+                    state.isTrackingSwipe = false;
+                }
+            };
+
+            const handleTouchMove = (event) => {
+                if (state.hasTriggeredClose) {
+                    return;
+                }
+
+                if (allowPinch && event.touches && event.touches.length >= 2) {
+                    const [firstTouch, secondTouch] = event.touches;
+                    const distance = computeDistance(firstTouch, secondTouch);
+
+                    if (!state.pinchStartDistance) {
+                        state.pinchStartDistance = distance;
+                    }
+
+                    if (
+                        !state.pinchTriggered &&
+                        state.pinchStartDistance &&
+                        distance >= 0 &&
+                        state.pinchStartDistance - distance >= PINCH_CLOSE_THRESHOLD
+                    ) {
+                        state.pinchTriggered = true;
+                        maybeCloseWithAnimation();
+                        return;
+                    }
+                }
+
+                if (!allowSwipe || !state.isTrackingSwipe || !event.touches || event.touches.length !== 1) {
+                    return;
+                }
+
+                const touch = event.touches[0];
+                const diffX = touch.clientX - state.startX;
+                const diffY = touch.clientY - state.startY;
+                state.lastTouchX = touch.clientX;
+                state.lastTouchY = touch.clientY;
+
+                if (!state.swipeActive) {
+                    if (diffY > 10 && Math.abs(diffY) > Math.abs(diffX) * 1.5) {
+                        state.swipeActive = true;
+                    } else if (Math.abs(diffX) > SWIPE_HORIZONTAL_TOLERANCE) {
+                        state.isTrackingSwipe = false;
+                    }
+                }
+
+                if (state.swipeActive && diffY > 0) {
+                    applySwipePresentation(diffY);
+                }
+            };
+
+            const handleTouchEnd = (event) => {
+                if (state.hasTriggeredClose) {
+                    return;
+                }
+
+                if (allowPinch && (!event.touches || event.touches.length < 2)) {
+                    state.pinchStartDistance = null;
+                    state.pinchTriggered = false;
+                }
+
+                if (allowSwipe && state.swipeActive) {
+                    const diffY = (state.lastTouchY || 0) - state.startY;
+                    if (diffY >= SWIPE_MIN_DISTANCE) {
+                        resetSwipePresentation(false);
+                        maybeCloseWithAnimation();
+                        return;
+                    }
+                    resetSwipePresentation(true);
+                } else if (allowSwipe) {
+                    resetSwipePresentation(true);
+                }
+
+                state.isTrackingSwipe = false;
+                state.swipeActive = false;
+
+                if (!allowDoubleTap || !event.changedTouches || event.touches.length) {
+                    return;
+                }
+
+                const touch = event.changedTouches[0];
+                if (!touch) {
+                    return;
+                }
+
+                const now = Date.now();
+                const elapsed = now - state.lastTapTime;
+                const driftX = Math.abs(touch.clientX - state.lastTapX);
+                const driftY = Math.abs(touch.clientY - state.lastTapY);
+
+                if (
+                    elapsed <= DOUBLE_TAP_MAX_DELAY &&
+                    driftX <= DOUBLE_TAP_DRIFT &&
+                    driftY <= DOUBLE_TAP_DRIFT
+                ) {
+                    if (mainSwiper && mainSwiper.zoom && typeof mainSwiper.zoom.scale === 'number' && mainSwiper.zoom.scale > 1.01) {
+                        state.lastTapTime = now;
+                        state.lastTapX = touch.clientX;
+                        state.lastTapY = touch.clientY;
+                        return;
+                    }
+                    maybeCloseWithAnimation();
+                    state.lastTapTime = 0;
+                    state.lastTapX = 0;
+                    state.lastTapY = 0;
+                    return;
+                }
+
+                state.lastTapTime = now;
+                state.lastTapX = touch.clientX;
+                state.lastTapY = touch.clientY;
+            };
+
+            const handleTouchCancel = () => {
+                state.isTrackingSwipe = false;
+                state.swipeActive = false;
+                state.pinchStartDistance = null;
+                state.pinchTriggered = false;
+                resetSwipePresentation(true);
+            };
+
+            addListener('touchstart', handleTouchStart, passiveOptions);
+            addListener('touchmove', handleTouchMove, passiveOptions);
+            addListener('touchend', handleTouchEnd, passiveOptions);
+            addListener('touchcancel', handleTouchCancel, passiveOptions);
+
+            return {
+                detach() {
+                    removeListeners();
+                    state.hasTriggeredClose = false;
+                    resetSwipePresentation(false);
+                },
+                resetPresentation() {
+                    resetSwipePresentation(false);
+                },
+            };
+        }
+
         function initSwiper(viewer, images) {
             if (typeof cleanupAutoplayPreferenceListener === 'function') {
                 cleanupAutoplayPreferenceListener();
@@ -1743,11 +2050,8 @@
                 pauseOnMouseEnter: false,
             };
 
-            const prefersReducedMotionQuery = (typeof window !== 'undefined' && typeof window.matchMedia === 'function')
-                ? window.matchMedia('(prefers-reduced-motion: reduce)')
-                : null;
-
-            const prefersReducedMotion = !!(prefersReducedMotionQuery && prefersReducedMotionQuery.matches);
+            const prefersReducedMotionQuery = getReducedMotionMediaQuery();
+            const prefersReducedMotion = prefersReducedMotionNow();
 
             const handleAutoplayStart = () => {
                 debug.log(mga__( 'Autoplay DÉMARRÉ.', 'lightbox-jlg' ));
@@ -2033,7 +2337,12 @@
             module.exports.__testExports.getActiveImageData = getActiveImageData;
         }
 
-        function closeViewer(viewer) {
+        function closeViewer(viewer, options = {}) {
+            if (!viewer) {
+                return;
+            }
+
+            const { animate = false } = options;
             const { exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
             if (fullscreenElement) {
                 if (exitFullscreen) {
@@ -2057,34 +2366,95 @@
                 cleanupAutoplayPreferenceListener = null;
             }
             autoplayWasRunningBeforePreferenceChange = false;
-            window.removeEventListener('resize', handleResize);
-            isResizeListenerAttached = false;
-            if (viewerFocusTrapHandler) {
-                viewer.removeEventListener('keydown', viewerFocusTrapHandler, true);
-                viewerFocusTrapHandler = null;
+
+            if (gestureController && typeof gestureController.resetPresentation === 'function') {
+                gestureController.resetPresentation();
             }
-            viewer.style.display = 'none';
-            if (bodyPaddingRightWasModified) {
-                document.body.style.paddingRight = initialBodyPaddingRight;
+
+            const shouldAnimate = !!animate && !prefersReducedMotionNow();
+            let hasFinalized = false;
+
+            const finalizeClose = () => {
+                if (hasFinalized) {
+                    return;
+                }
+                hasFinalized = true;
+
+                if (gestureController && typeof gestureController.detach === 'function') {
+                    gestureController.detach();
+                }
+                gestureController = null;
+
+                window.removeEventListener('resize', handleResize);
+                isResizeListenerAttached = false;
+                if (viewerFocusTrapHandler) {
+                    viewer.removeEventListener('keydown', viewerFocusTrapHandler, true);
+                    viewerFocusTrapHandler = null;
+                }
+
+                viewer.style.display = 'none';
+                viewer.classList.remove('mga-viewer--closing');
+                viewer.removeAttribute('data-mga-closing');
+                viewer.style.transition = '';
+                viewer.style.transform = '';
+                viewer.style.opacity = '';
+
+                if (bodyPaddingRightWasModified) {
+                    document.body.style.paddingRight = initialBodyPaddingRight;
+                }
+                if (bodyOverflowWasModified) {
+                    document.body.style.overflow = initialBodyOverflow;
+                }
+                if (bodyScrollLockClassAdded) {
+                    document.body.classList.remove(SCROLL_LOCK_CLASS);
+                }
+                initialBodyOverflow = null;
+                initialBodyPaddingRight = null;
+                bodyOverflowWasModified = false;
+                bodyPaddingRightWasModified = false;
+                bodyScrollLockClassAdded = false;
+                debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
+                debug.stopTimer();
+                currentGalleryImages = [];
+                if (lastFocusedElementBeforeViewer && typeof lastFocusedElementBeforeViewer.focus === 'function') {
+                    safeFocus(lastFocusedElementBeforeViewer);
+                }
+                lastFocusedElementBeforeViewer = null;
+            };
+
+            if (shouldAnimate) {
+                if (viewer.getAttribute('data-mga-closing') === 'true') {
+                    return;
+                }
+
+                viewer.setAttribute('data-mga-closing', 'true');
+
+                const handleAnimationEnd = (event) => {
+                    if (event && event.target !== viewer) {
+                        return;
+                    }
+                    cleanupAnimationListeners();
+                    finalizeClose();
+                };
+
+                const cleanupAnimationListeners = () => {
+                    viewer.removeEventListener('transitionend', handleAnimationEnd);
+                    viewer.removeEventListener('animationend', handleAnimationEnd);
+                };
+
+                viewer.addEventListener('transitionend', handleAnimationEnd);
+                viewer.addEventListener('animationend', handleAnimationEnd);
+
+                setTimeout(() => {
+                    cleanupAnimationListeners();
+                    finalizeClose();
+                }, 350);
+
+                viewer.classList.add('mga-viewer--closing');
+                return;
             }
-            if (bodyOverflowWasModified) {
-                document.body.style.overflow = initialBodyOverflow;
-            }
-            if (bodyScrollLockClassAdded) {
-                document.body.classList.remove(SCROLL_LOCK_CLASS);
-            }
-            initialBodyOverflow = null;
-            initialBodyPaddingRight = null;
-            bodyOverflowWasModified = false;
-            bodyPaddingRightWasModified = false;
-            bodyScrollLockClassAdded = false;
-            debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
-            debug.stopTimer();
-            currentGalleryImages = [];
-            if (lastFocusedElementBeforeViewer && typeof lastFocusedElementBeforeViewer.focus === 'function') {
-                safeFocus(lastFocusedElementBeforeViewer);
-            }
-            lastFocusedElementBeforeViewer = null;
+
+            finalizeClose();
         }
 
         function handleResize() {

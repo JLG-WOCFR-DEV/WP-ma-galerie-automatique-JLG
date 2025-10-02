@@ -248,6 +248,33 @@ $settings = wp_parse_args( $settings, $defaults );
                                 </label>
                                 <p class="description"><?php echo esc_html__( "Permet d'activer le mode plein écran depuis la barre d'outils.", 'lightbox-jlg' ); ?></p>
                             </div>
+
+                            <div class="mga-toggle-list__item">
+                                <input type="hidden" name="mga_settings[enable_vertical_swipe_close]" value="0" />
+                                <label for="mga_enable_vertical_swipe_close">
+                                    <input name="mga_settings[enable_vertical_swipe_close]" type="checkbox" id="mga_enable_vertical_swipe_close" value="1" <?php checked( ! empty( $settings['enable_vertical_swipe_close'] ), 1 ); ?> />
+                                    <span><?php echo esc_html__( 'Swipe vertical pour fermer', 'lightbox-jlg' ); ?></span>
+                                </label>
+                                <p class="description"><?php echo esc_html__( 'Autorise un tirage vers le bas pour quitter la lightbox tout en conservant le piège à focus.', 'lightbox-jlg' ); ?></p>
+                            </div>
+
+                            <div class="mga-toggle-list__item">
+                                <input type="hidden" name="mga_settings[enable_double_tap_close]" value="0" />
+                                <label for="mga_enable_double_tap_close">
+                                    <input name="mga_settings[enable_double_tap_close]" type="checkbox" id="mga_enable_double_tap_close" value="1" <?php checked( ! empty( $settings['enable_double_tap_close'] ), 1 ); ?> />
+                                    <span><?php echo esc_html__( 'Double-tap pour fermer', 'lightbox-jlg' ); ?></span>
+                                </label>
+                                <p class="description"><?php echo esc_html__( 'Déclenche une fermeture douce au double appui lorsque le zoom n’est pas actif.', 'lightbox-jlg' ); ?></p>
+                            </div>
+
+                            <div class="mga-toggle-list__item">
+                                <input type="hidden" name="mga_settings[enable_pinch_close]" value="0" />
+                                <label for="mga_enable_pinch_close">
+                                    <input name="mga_settings[enable_pinch_close]" type="checkbox" id="mga_enable_pinch_close" value="1" <?php checked( ! empty( $settings['enable_pinch_close'] ), 1 ); ?> />
+                                    <span><?php echo esc_html__( 'Pincer pour fermer', 'lightbox-jlg' ); ?></span>
+                                </label>
+                                <p class="description"><?php echo esc_html__( 'Ferme la lightbox si le geste de pincement se resserre, utile sur mobile sans bouton dédié.', 'lightbox-jlg' ); ?></p>
+                            </div>
                         </fieldset>
                     </td>
                 </tr>

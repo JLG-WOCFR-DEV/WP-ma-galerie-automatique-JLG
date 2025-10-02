@@ -100,6 +100,9 @@ class Settings {
             'show_share'         => true,
             'show_fullscreen'    => true,
             'show_thumbs_mobile' => true,
+            'enable_vertical_swipe_close' => true,
+            'enable_double_tap_close'     => false,
+            'enable_pinch_close'          => false,
             'groupAttribute'     => 'data-mga-gallery',
             'contentSelectors'   => [],
             'allowBodyFallback'  => false,
@@ -292,6 +295,14 @@ class Settings {
 
         foreach ( [ 'show_zoom', 'show_download', 'show_share', 'show_fullscreen', 'show_thumbs_mobile' ] as $toolbar_toggle ) {
             $output[ $toolbar_toggle ] = $resolve_checkbox_value( $toolbar_toggle );
+        }
+
+        foreach ( [
+            'enable_vertical_swipe_close',
+            'enable_double_tap_close',
+            'enable_pinch_close',
+        ] as $gesture_toggle ) {
+            $output[ $gesture_toggle ] = $resolve_checkbox_value( $gesture_toggle );
         }
 
         $all_post_types               = get_post_types( [], 'names' );

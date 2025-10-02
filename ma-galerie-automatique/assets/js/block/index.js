@@ -67,6 +67,9 @@
     var defaultDownload = !! getDefault( 'showDownload', true );
     var defaultShare = !! getDefault( 'showShare', true );
     var defaultFullscreen = !! getDefault( 'showFullscreen', true );
+    var defaultVerticalSwipeClose = !! getDefault( 'enableVerticalSwipeClose', true );
+    var defaultDoubleTapClose = !! getDefault( 'enableDoubleTapClose', false );
+    var defaultPinchClose = !! getDefault( 'enablePinchClose', false );
     var noteText = getDefault( 'noteText', __( 'Lightbox active', 'lightbox-jlg' ) );
 
     var PLACEHOLDER_IMAGES = [
@@ -214,6 +217,15 @@
         var showDownload = typeof attributes.showDownload === 'boolean' ? attributes.showDownload : defaultDownload;
         var showShare = typeof attributes.showShare === 'boolean' ? attributes.showShare : defaultShare;
         var showFullscreen = typeof attributes.showFullscreen === 'boolean' ? attributes.showFullscreen : defaultFullscreen;
+        var enableVerticalSwipeClose = typeof attributes.enableVerticalSwipeClose === 'boolean'
+            ? attributes.enableVerticalSwipeClose
+            : defaultVerticalSwipeClose;
+        var enableDoubleTapClose = typeof attributes.enableDoubleTapClose === 'boolean'
+            ? attributes.enableDoubleTapClose
+            : defaultDoubleTapClose;
+        var enablePinchClose = typeof attributes.enablePinchClose === 'boolean'
+            ? attributes.enablePinchClose
+            : defaultPinchClose;
 
         var viewerClasses = [ 'mga-viewer', 'mga-block-preview__viewer' ];
 
@@ -314,7 +326,10 @@
                 { className: 'mga-block-preview__meta' },
                 el( 'span', { className: 'mga-block-preview__chip' }, autoplay ? __( 'Lecture auto activée', 'lightbox-jlg' ) : __( 'Lecture manuelle', 'lightbox-jlg' ) ),
                 el( 'span', { className: 'mga-block-preview__chip' }, loop ? __( 'Boucle', 'lightbox-jlg' ) : __( 'Une seule lecture', 'lightbox-jlg' ) ),
-                el( 'span', { className: 'mga-block-preview__chip' }, __( 'Délai : ', 'lightbox-jlg' ) + delay + 's' )
+                el( 'span', { className: 'mga-block-preview__chip' }, __( 'Délai : ', 'lightbox-jlg' ) + delay + 's' ),
+                el( 'span', { className: 'mga-block-preview__chip' }, enableVerticalSwipeClose ? __( 'Swipe vers le bas', 'lightbox-jlg' ) : __( 'Swipe désactivé', 'lightbox-jlg' ) ),
+                enableDoubleTapClose ? el( 'span', { className: 'mga-block-preview__chip' }, __( 'Double-tap actif', 'lightbox-jlg' ) ) : null,
+                enablePinchClose ? el( 'span', { className: 'mga-block-preview__chip' }, __( 'Pincer pour fermer', 'lightbox-jlg' ) ) : null
             )
         );
     }
@@ -411,6 +426,34 @@
                 ),
                 el(
                     PanelBody,
+                    { title: __( 'Gestes tactiles', 'lightbox-jlg' ), initialOpen: false },
+                    el( ToggleControl, {
+                        label: __( 'Swipe vers le bas pour fermer', 'lightbox-jlg' ),
+                        checked: typeof attributes.enableVerticalSwipeClose === 'boolean'
+                            ? attributes.enableVerticalSwipeClose
+                            : defaultVerticalSwipeClose,
+                        onChange: onToggle( 'enableVerticalSwipeClose' ),
+                        help: __( 'Permet de tirer la diapositive vers le bas pour fermer la lightbox.', 'lightbox-jlg' )
+                    } ),
+                    el( ToggleControl, {
+                        label: __( 'Double-tap pour fermer', 'lightbox-jlg' ),
+                        checked: typeof attributes.enableDoubleTapClose === 'boolean'
+                            ? attributes.enableDoubleTapClose
+                            : defaultDoubleTapClose,
+                        onChange: onToggle( 'enableDoubleTapClose' ),
+                        help: __( 'Ignoré si un zoom est actif afin de préserver l’accessibilité.', 'lightbox-jlg' )
+                    } ),
+                    el( ToggleControl, {
+                        label: __( 'Pincer pour fermer', 'lightbox-jlg' ),
+                        checked: typeof attributes.enablePinchClose === 'boolean'
+                            ? attributes.enablePinchClose
+                            : defaultPinchClose,
+                        onChange: onToggle( 'enablePinchClose' ),
+                        help: __( 'Déclenche une fermeture douce quand le pincement se resserre.', 'lightbox-jlg' )
+                    } )
+                ),
+                el(
+                    PanelBody,
                     { title: __( 'Style', 'lightbox-jlg' ), initialOpen: false },
                     el( SelectControl, {
                         label: __( 'Arrière-plan', 'lightbox-jlg' ),
@@ -491,7 +534,10 @@
             showZoom: { type: 'boolean', default: defaultZoom },
             showDownload: { type: 'boolean', default: defaultDownload },
             showShare: { type: 'boolean', default: defaultShare },
-            showFullscreen: { type: 'boolean', default: defaultFullscreen }
+            showFullscreen: { type: 'boolean', default: defaultFullscreen },
+            enableVerticalSwipeClose: { type: 'boolean', default: defaultVerticalSwipeClose },
+            enableDoubleTapClose: { type: 'boolean', default: defaultDoubleTapClose },
+            enablePinchClose: { type: 'boolean', default: defaultPinchClose }
         },
         edit: Edit,
         save: function() {
