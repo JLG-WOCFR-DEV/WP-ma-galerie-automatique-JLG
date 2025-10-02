@@ -56,11 +56,58 @@ class Plugin {
     }
 
     public function load_textdomain(): void {
+        $domain        = 'lightbox-jlg';
         $relative_path = $this->languages_directory_exists()
             ? dirname( plugin_basename( $this->plugin_file ) ) . '/languages'
             : false;
 
-        load_plugin_textdomain( 'lightbox-jlg', false, $relative_path );
+        if ( load_plugin_textdomain( $domain, false, $relative_path ) ) {
+            return;
+        }
+
+        $base64_path = trailingslashit( $this->get_languages_path() ) . 'lightbox-jlg-fr_FR.mo.b64';
+
+        if ( ! file_exists( $base64_path ) ) {
+            return;
+        }
+
+        $encoded_contents = file_get_contents( $base64_path );
+
+        if ( false === $encoded_contents ) {
+            return;
+        }
+
+        $decoded_contents = base64_decode( $encoded_contents, true );
+
+        if ( false === $decoded_contents ) {
+            return;
+        }
+
+        if ( ! function_exists( 'wp_tempnam' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+
+        $temp_mofile = wp_tempnam( 'lightbox-jlg-fr_FR.mo' );
+
+        if ( ! $temp_mofile ) {
+            return;
+        }
+
+        $bytes_written = file_put_contents( $temp_mofile, $decoded_contents );
+
+        if ( false === $bytes_written ) {
+            if ( file_exists( $temp_mofile ) ) {
+                unlink( $temp_mofile );
+            }
+
+            return;
+        }
+
+        load_textdomain( $domain, $temp_mofile );
+
+        if ( file_exists( $temp_mofile ) ) {
+            unlink( $temp_mofile );
+        }
     }
 
     public function get_plugin_file(): string {
