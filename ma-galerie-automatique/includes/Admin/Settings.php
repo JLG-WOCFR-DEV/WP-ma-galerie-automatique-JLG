@@ -208,6 +208,7 @@ class Settings {
             foreach ( (array) $selectors as $selector ) {
                 $clean_selector = (string) $selector;
                 $clean_selector = wp_strip_all_tags( $clean_selector );
+                $clean_selector = str_replace( "\xC2\xA0", ' ', $clean_selector );
                 $clean_selector = preg_replace( '/[\x00-\x1F\x7F]+/u', '', $clean_selector );
                 $clean_selector = preg_replace( '/\s+/u', ' ', $clean_selector );
                 $clean_selector = trim( $clean_selector );
