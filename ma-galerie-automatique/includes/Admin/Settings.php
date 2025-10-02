@@ -36,12 +36,16 @@ class Settings {
             return;
         }
 
+        wp_enqueue_style( 'wp-color-picker' );
+
         wp_enqueue_style(
             'mga-admin-style',
             $this->plugin->get_plugin_dir_url() . 'assets/css/admin-style.css',
             [],
             MGA_VERSION
         );
+
+        wp_enqueue_script( 'wp-color-picker' );
 
         wp_register_script(
             'mga-focus-utils',
@@ -54,7 +58,7 @@ class Settings {
         wp_register_script(
             'mga-admin-script',
             $this->plugin->get_plugin_dir_url() . 'assets/js/admin-script.js',
-            [ 'wp-i18n', 'mga-focus-utils' ],
+            [ 'wp-i18n', 'mga-focus-utils', 'wp-color-picker' ],
             MGA_VERSION,
             true
         );

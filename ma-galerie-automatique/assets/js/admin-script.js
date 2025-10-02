@@ -82,6 +82,14 @@
 
     const doc = global.document;
 
+    const isValidHexColor = (value) => {
+        if (typeof value !== 'string') {
+            return false;
+        }
+
+        return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
+    };
+
     if (!doc || typeof doc.addEventListener !== 'function') {
         return;
     }
@@ -224,6 +232,50 @@
             (value) => value,
             (value) => mgaAdminSprintf(mgaAdmin__('%s opacity', 'lightbox-jlg'), value)
         );
+
+        const accentColorInput = doc.getElementById('mga_accent_color');
+        const accentColorPreview = doc.getElementById('mga_accent_color_preview');
+
+        if (accentColorInput) {
+            const defaultColorAttr = accentColorInput.getAttribute('data-default-color');
+            const fallbackColor = isValidHexColor(defaultColorAttr) ? defaultColorAttr : '#ffffff';
+
+            const applyPreviewColor = (rawColor) => {
+                const color = isValidHexColor(rawColor) ? rawColor : fallbackColor;
+
+                if (accentColorPreview) {
+                    accentColorPreview.style.backgroundColor = color;
+                }
+
+                return color;
+            };
+
+            applyPreviewColor(accentColorInput.value);
+
+            const maybeJQuery = global.jQuery;
+
+            if (maybeJQuery && typeof maybeJQuery.fn === 'object' && typeof maybeJQuery.fn.wpColorPicker === 'function') {
+                maybeJQuery(accentColorInput).wpColorPicker({
+                    change(event, ui) {
+                        const colorValue = ui && ui.color ? ui.color.toString() : event.target.value;
+                        applyPreviewColor(colorValue);
+                    },
+                    clear() {
+                        const defaultColor = accentColorInput.getAttribute('data-default-color') || fallbackColor;
+                        maybeJQuery(accentColorInput).val(defaultColor);
+                        applyPreviewColor(defaultColor);
+                    },
+                });
+
+                maybeJQuery(accentColorInput).on('input', (event) => {
+                    applyPreviewColor(event.target.value);
+                });
+            } else {
+                accentColorInput.addEventListener('input', () => {
+                    applyPreviewColor(accentColorInput.value);
+                });
+            }
+        }
 
         const selectorsWrapper = doc.querySelector('[data-mga-content-selectors]');
 
