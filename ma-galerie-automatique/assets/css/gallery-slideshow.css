@@ -67,6 +67,8 @@
 .mga-toolbar { display: flex; align-items: center; gap: 10px; }
 
 .mga-toolbar-button { position: relative; background: transparent; border: none; color: var(--mga-accent-color, #fff); cursor: pointer; padding: 10px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.2s ease, box-shadow 0.2s ease; line-height: 0; }
+.mga-toolbar-button[hidden],
+.mga-toolbar-button.is-hidden { display: none !important; }
 .mga-toolbar-button:focus { outline: none; }
 .mga-toolbar-button:focus-visible { box-shadow: 0 0 0 2px var(--mga-accent-color, #fff), 0 0 0 5px rgba(0, 0, 0, 0.65); }
 .mga-toolbar-button:hover { background-color: rgba(255, 255, 255, 0.2); }

@@ -51,6 +51,10 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'loop'           => false,
                     'autoplay_start' => true,
                     'debug_mode'     => true,
+                    'show_zoom'      => true,
+                    'show_download'  => true,
+                    'show_share'     => true,
+                    'show_fullscreen'=> true,
                 ],
             ],
             'bg_opacity_lower_bound' => [
@@ -82,6 +86,20 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'tracked_post_types'=> [ 'page' ],
                     'allowBodyFallback' => true,
                     'background_style'  => $defaults['background_style'],
+                ],
+            ],
+            'toolbar_toggles_casting_and_defaults' => [
+                [
+                    'show_zoom'       => '0',
+                    'show_download'   => 0,
+                    'show_share'      => '1',
+                ],
+                [],
+                [
+                    'show_zoom'       => false,
+                    'show_download'   => false,
+                    'show_share'      => true,
+                    'show_fullscreen' => $defaults['show_fullscreen'],
                 ],
             ],
             'bogus_post_types_fall_back_to_defaults' => [

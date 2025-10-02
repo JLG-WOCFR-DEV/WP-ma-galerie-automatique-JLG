@@ -91,6 +91,10 @@ class Settings {
             'background_style'   => 'echo',
             'z_index'            => 99999,
             'debug_mode'         => false,
+            'show_zoom'          => true,
+            'show_download'      => true,
+            'show_share'         => true,
+            'show_fullscreen'    => true,
             'groupAttribute'     => 'data-mga-gallery',
             'contentSelectors'   => [],
             'allowBodyFallback'  => false,
@@ -230,6 +234,22 @@ class Settings {
         $output['allowBodyFallback'] = isset( $input['allowBodyFallback'] )
             ? (bool) $input['allowBodyFallback']
             : (bool) $defaults['allowBodyFallback'];
+
+        $resolve_toolbar_toggle = static function ( string $key ) use ( $input, $existing_settings, $defaults ) {
+            if ( is_array( $input ) && array_key_exists( $key, $input ) ) {
+                return (bool) $input[ $key ];
+            }
+
+            if ( is_array( $existing_settings ) && array_key_exists( $key, $existing_settings ) ) {
+                return (bool) $existing_settings[ $key ];
+            }
+
+            return (bool) $defaults[ $key ];
+        };
+
+        foreach ( [ 'show_zoom', 'show_download', 'show_share', 'show_fullscreen' ] as $toolbar_toggle ) {
+            $output[ $toolbar_toggle ] = $resolve_toolbar_toggle( $toolbar_toggle );
+        }
 
         $all_post_types               = get_post_types( [], 'names' );
         $default_tracked_post_types   = array_values( array_intersect( (array) $defaults['tracked_post_types'], $all_post_types ) );
