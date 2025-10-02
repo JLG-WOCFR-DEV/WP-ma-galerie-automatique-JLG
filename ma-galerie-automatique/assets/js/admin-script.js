@@ -281,11 +281,17 @@
 
         if (selectorsWrapper) {
             const selectorsList = selectorsWrapper.querySelector('[data-mga-content-selectors-list]');
+            const selectorsTextarea = selectorsWrapper.querySelector('[data-mga-content-selectors-textarea]');
             const template = doc.getElementById('mga-content-selector-template');
+            const placeholder = selectorsWrapper.getAttribute('data-mga-selector-placeholder') || '';
+            let isSyncingSelectors = false;
 
             if (selectorsList) {
+                const queryRows = () => selectorsList.querySelectorAll('[data-mga-content-selector-row]');
+                const queryInputs = () => selectorsList.querySelectorAll('[data-mga-content-selector-input]');
+
                 const updateRemoveState = () => {
-                    const rows = selectorsList.querySelectorAll('[data-mga-content-selector-row]');
+                    const rows = queryRows();
                     const disable = rows.length <= 1;
 
                     rows.forEach((row) => {
@@ -298,42 +304,17 @@
                     });
                 };
 
-                const refreshRowIds = () => {
-                    const rows = selectorsList.querySelectorAll('[data-mga-content-selector-row]');
+                const getRowValues = () => Array.from(queryInputs()).map((input) => input.value.trim()).filter((value) => value !== '');
 
-                    rows.forEach((row, index) => {
-                        const input = row.querySelector('input[name="mga_settings[contentSelectors][]"]');
-
-                        if (input) {
-                            input.id = `mga-content-selector-${index}`;
-                        }
-                    });
-                };
-
-                const syncRowsState = () => {
-                    refreshRowIds();
-                    updateRemoveState();
-                };
-
-                const removeRow = (row) => {
-                    if (!row) {
+                const syncTextareaFromRows = () => {
+                    if (!selectorsTextarea || isSyncingSelectors) {
                         return;
                     }
 
-                    const rows = selectorsList.querySelectorAll('[data-mga-content-selector-row]');
-
-                    if (rows.length <= 1) {
-                        const input = row.querySelector('input[name="mga_settings[contentSelectors][]"]');
-
-                        if (input) {
-                            input.value = '';
-                        }
-
-                        return;
-                    }
-
-                    row.remove();
-                    syncRowsState();
+                    const values = getRowValues();
+                    isSyncingSelectors = true;
+                    selectorsTextarea.value = values.join('\n');
+                    isSyncingSelectors = false;
                 };
 
                 const bindRow = (row) => {
@@ -346,8 +327,37 @@
                     if (removeButton) {
                         removeButton.addEventListener('click', (event) => {
                             event.preventDefault();
-                            removeRow(row);
+                            const rows = queryRows();
+
+                            if (rows.length <= 1) {
+                                const input = row.querySelector('[data-mga-content-selector-input]');
+
+                                if (input) {
+                                    input.value = '';
+                                    syncTextareaFromRows();
+                                }
+
+                                return;
+                            }
+
+                            row.remove();
+                            updateRemoveState();
+                            syncTextareaFromRows();
                         });
+                    }
+
+                    const input = row.querySelector('[data-mga-content-selector-input]');
+
+                    if (input) {
+                        input.addEventListener('input', () => {
+                            if (!isSyncingSelectors) {
+                                syncTextareaFromRows();
+                            }
+                        });
+
+                        if (placeholder && !input.getAttribute('placeholder')) {
+                            input.setAttribute('placeholder', placeholder);
+                        }
                     }
 
                     row.setAttribute('data-mga-selector-bound', 'true');
@@ -361,12 +371,17 @@
 
                         row = fragment.firstElementChild;
                         if (row) {
-                            bindRow(row);
-                            const input = row.querySelector('input[name="mga_settings[contentSelectors][]"]');
+                            const input = row.querySelector('[data-mga-content-selector-input]');
 
                             if (input) {
                                 input.value = value;
+
+                                if (placeholder) {
+                                    input.setAttribute('placeholder', placeholder);
+                                }
                             }
+
+                            bindRow(row);
 
                             return row;
                         }
@@ -379,8 +394,13 @@
                     const input = doc.createElement('input');
                     input.type = 'text';
                     input.className = 'regular-text';
-                    input.name = 'mga_settings[contentSelectors][]';
+                    input.setAttribute('data-mga-content-selector-input', '');
                     input.value = value;
+
+                    if (placeholder) {
+                        input.setAttribute('placeholder', placeholder);
+                    }
+
                     row.appendChild(input);
 
                     const removeButton = doc.createElement('button');
@@ -395,30 +415,69 @@
                     return row;
                 };
 
+                const renderRows = (values) => {
+                    selectorsList.innerHTML = '';
+
+                    if (values.length === 0) {
+                        const emptyRow = createRow('');
+                        if (emptyRow) {
+                            selectorsList.appendChild(emptyRow);
+                        }
+                    } else {
+                        values.forEach((value) => {
+                            const row = createRow(value);
+
+                            if (row) {
+                                selectorsList.appendChild(row);
+                            }
+                        });
+                    }
+
+                    updateRemoveState();
+                };
+
+                const syncRowsFromTextarea = () => {
+                    if (!selectorsTextarea || isSyncingSelectors) {
+                        return;
+                    }
+
+                    const values = selectorsTextarea.value
+                        .split(/\r\n|\r|\n/)
+                        .map((selector) => selector.trim())
+                        .filter((selector) => selector.length > 0);
+
+                    isSyncingSelectors = true;
+                    renderRows(values);
+                    isSyncingSelectors = false;
+                };
+
                 const addRow = (value = '') => {
                     const row = createRow(value);
 
                     if (row) {
                         selectorsList.appendChild(row);
+                        updateRemoveState();
 
-                        const input = row.querySelector('input[name="mga_settings[contentSelectors][]"]');
+                        const input = row.querySelector('[data-mga-content-selector-input]');
 
                         if (input) {
                             safeFocus(input);
                         }
                     }
 
-                    syncRowsState();
+                    syncTextareaFromRows();
                 };
 
-                Array.from(selectorsList.querySelectorAll('[data-mga-content-selector-row]')).forEach((row) => {
-                    bindRow(row);
-                });
+                if (selectorsTextarea) {
+                    syncRowsFromTextarea();
 
-                if (!selectorsList.querySelector('[data-mga-content-selector-row]')) {
-                    addRow();
+                    selectorsTextarea.addEventListener('input', () => {
+                        if (!isSyncingSelectors) {
+                            syncRowsFromTextarea();
+                        }
+                    });
                 } else {
-                    syncRowsState();
+                    renderRows([]);
                 }
 
                 const addButton = selectorsWrapper.querySelector('[data-mga-add-selector]');
