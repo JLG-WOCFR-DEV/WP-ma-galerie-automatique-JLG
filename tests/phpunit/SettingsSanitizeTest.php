@@ -102,8 +102,17 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'tracked_post_types' => [ 'page', 'invalid', 'post' ],
                 ],
                 [
-                    'contentSelectors'   => [ '.existing', '#persisted' ],
+                    'contentSelectors'   => [ 'body' ],
                     'tracked_post_types' => [ 'page', 'post' ],
+                ],
+            ],
+            'newline_separated_selectors' => [
+                [
+                    'contentSelectors' => ".main\n.article-content\r\n\t\n .gallery img\n",
+                ],
+                [],
+                [
+                    'contentSelectors' => [ '.main', '.article-content', '.gallery img' ],
                 ],
             ],
         ];

@@ -218,8 +218,14 @@ class Settings {
         }
 
         if ( array_key_exists( 'contentSelectors', $input ) ) {
-            if ( is_array( $input['contentSelectors'] ) ) {
-                $output['contentSelectors'] = $sanitize_selectors( $input['contentSelectors'] );
+            $raw_selectors = $input['contentSelectors'];
+
+            if ( is_string( $raw_selectors ) ) {
+                $raw_selectors = preg_split( '/\r\n|\r|\n/', $raw_selectors );
+            }
+
+            if ( is_array( $raw_selectors ) ) {
+                $output['contentSelectors'] = $sanitize_selectors( $raw_selectors );
             } else {
                 $output['contentSelectors'] = $existing_selectors;
             }
