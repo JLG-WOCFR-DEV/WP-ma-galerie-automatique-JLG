@@ -93,6 +93,8 @@ class Settings {
             'loop'               => true,
             'autoplay_start'     => false,
             'background_style'   => 'echo',
+            'transition_effect'  => 'slide',
+            'transition_speed'   => 'normal',
             'z_index'            => 99999,
             'debug_mode'         => false,
             'show_zoom'          => true,
@@ -239,6 +241,58 @@ class Settings {
         $output['background_style']   = isset( $input['background_style'] ) && in_array( $input['background_style'], $allowed_bg_styles, true )
             ? $input['background_style']
             : $defaults['background_style'];
+
+        $allowed_effects = [ 'slide', 'fade' ];
+        $resolve_effect  = static function ( $value, $fallback ) use ( $allowed_effects ) {
+            if ( is_string( $value ) ) {
+                $normalized = strtolower( trim( $value ) );
+                if ( in_array( $normalized, $allowed_effects, true ) ) {
+                    return $normalized;
+                }
+            }
+
+            return $fallback;
+        };
+
+        if ( array_key_exists( 'transition_effect', $input ) ) {
+            $output['transition_effect'] = $resolve_effect( $input['transition_effect'], $defaults['transition_effect'] );
+        } elseif ( isset( $existing_settings['transition_effect'] ) ) {
+            $output['transition_effect'] = $resolve_effect( $existing_settings['transition_effect'], $defaults['transition_effect'] );
+        } else {
+            $output['transition_effect'] = $defaults['transition_effect'];
+        }
+
+        $allowed_speed_presets = [ 'slow', 'normal', 'fast' ];
+        $resolve_speed         = static function ( $value, $fallback ) use ( $allowed_speed_presets ) {
+            if ( is_numeric( $value ) && (int) $value > 0 ) {
+                return (int) $value;
+            }
+
+            if ( is_string( $value ) ) {
+                $normalized = strtolower( trim( $value ) );
+
+                if ( in_array( $normalized, $allowed_speed_presets, true ) ) {
+                    return $normalized;
+                }
+
+                if ( is_numeric( $normalized ) ) {
+                    $numeric = (int) $normalized;
+                    if ( $numeric > 0 ) {
+                        return $numeric;
+                    }
+                }
+            }
+
+            return $fallback;
+        };
+
+        if ( array_key_exists( 'transition_speed', $input ) ) {
+            $output['transition_speed'] = $resolve_speed( $input['transition_speed'], $defaults['transition_speed'] );
+        } elseif ( isset( $existing_settings['transition_speed'] ) ) {
+            $output['transition_speed'] = $resolve_speed( $existing_settings['transition_speed'], $defaults['transition_speed'] );
+        } else {
+            $output['transition_speed'] = $defaults['transition_speed'];
+        }
 
         if ( isset( $input['z_index'] ) ) {
             $raw_z_index        = (int) $input['z_index'];

@@ -184,6 +184,8 @@ class Plugin {
             'showDownload'     => (bool) ( $defaults['show_download'] ?? true ),
             'showShare'        => (bool) ( $defaults['show_share'] ?? true ),
             'showFullscreen'   => (bool) ( $defaults['show_fullscreen'] ?? true ),
+            'transitionEffect' => $defaults['transition_effect'] ?? 'slide',
+            'transitionSpeed'  => $defaults['transition_speed'] ?? 'normal',
             'noteText'         => \__( 'Lightbox active', 'lightbox-jlg' ),
         ];
 

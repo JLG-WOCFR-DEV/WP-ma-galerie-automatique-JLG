@@ -68,6 +68,114 @@
         return buffer.join( ' ' ).trim();
     }
 
+    var lightboxHelpers = root.mgaLightboxPreview || {};
+    var LIGHTBOX_ATTRIBUTE_KEY = typeof lightboxHelpers.lightboxAttributeKey === 'string' && lightboxHelpers.lightboxAttributeKey
+        ? lightboxHelpers.lightboxAttributeKey
+        : 'mgaLightboxOptions';
+    var EFFECT_WHITELIST = { slide: true, fade: true };
+    var SPEED_WHITELIST = { slow: true, normal: true, fast: true };
+    var SHARE_WHITELIST = { show: true, hide: true };
+
+    function sanitizeToken( value ) {
+        if ( typeof value === 'undefined' || null === value ) {
+            return '';
+        }
+
+        return String( value ).trim().toLowerCase().replace( /[^a-z0-9_-]/g, '' );
+    }
+
+    function fallbackSanitizeLightboxOptions( raw ) {
+        if ( ! raw || typeof raw !== 'object' ) {
+            return null;
+        }
+
+        var sanitized = {};
+        var hasValue = false;
+
+        if ( Object.prototype.hasOwnProperty.call( raw, 'effect' ) ) {
+            var effect = sanitizeToken( raw.effect );
+            if ( EFFECT_WHITELIST[ effect ] ) {
+                sanitized.effect = effect;
+                hasValue = true;
+            }
+        }
+
+        if ( Object.prototype.hasOwnProperty.call( raw, 'speed' ) ) {
+            var rawSpeed = raw.speed;
+            var speed = '';
+
+            if ( typeof rawSpeed === 'number' && rawSpeed > 0 ) {
+                speed = String( Math.round( rawSpeed ) );
+            } else if ( typeof rawSpeed === 'string' ) {
+                speed = sanitizeToken( rawSpeed );
+            }
+
+            if ( SPEED_WHITELIST[ speed ] ) {
+                sanitized.speed = speed;
+                hasValue = true;
+            } else if ( speed && ! isNaN( parseInt( speed, 10 ) ) ) {
+                sanitized.speed = String( parseInt( speed, 10 ) );
+                hasValue = true;
+            }
+        }
+
+        if ( Object.prototype.hasOwnProperty.call( raw, 'share' ) ) {
+            var share = sanitizeToken( raw.share );
+            if ( SHARE_WHITELIST[ share ] ) {
+                sanitized.share = share;
+                hasValue = true;
+            }
+        }
+
+        return hasValue ? sanitized : null;
+    }
+
+    function fallbackGetLightboxClasses( options ) {
+        if ( ! options ) {
+            return [];
+        }
+
+        var classes = [ 'mga-has-lightbox-options' ];
+
+        if ( options.effect ) {
+            classes.push( 'mga-effect-' + sanitizeToken( options.effect ) );
+        }
+
+        if ( options.speed ) {
+            classes.push( 'mga-speed-' + sanitizeToken( options.speed ) );
+        }
+
+        if ( options.share ) {
+            if ( 'hide' === options.share ) {
+                classes.push( 'mga-share-hidden' );
+            } else if ( 'show' === options.share ) {
+                classes.push( 'mga-share-visible' );
+            }
+        }
+
+        return classes;
+    }
+
+    var sanitizeLightboxOptions = typeof lightboxHelpers.sanitizeLightboxOptions === 'function'
+        ? lightboxHelpers.sanitizeLightboxOptions
+        : fallbackSanitizeLightboxOptions;
+
+    var deriveLightboxClasses = typeof lightboxHelpers.getLightboxOptionClasses === 'function'
+        ? lightboxHelpers.getLightboxOptionClasses
+        : fallbackGetLightboxClasses;
+
+    function encodeLightboxOptions( options ) {
+        if ( ! options ) {
+            return '';
+        }
+
+        try {
+            return JSON.stringify( options );
+        } catch ( error ) {
+            return '';
+        }
+    }
+
     function blockIsSupported( block ) {
         if ( ! block || ! block.name ) {
             return false;
@@ -142,6 +250,40 @@
             var wrapperProps = props.wrapperProps ? Object.assign( {}, props.wrapperProps ) : {};
             wrapperProps.className = classnames( wrapperProps.className, extraClass );
             wrapperProps[ 'data-mga-lightbox-note' ] = noteText;
+
+            var lightboxOptions = null;
+
+            if ( props.block && props.block.attributes ) {
+                lightboxOptions = sanitizeLightboxOptions( props.block.attributes[ LIGHTBOX_ATTRIBUTE_KEY ] );
+            }
+
+            if ( lightboxOptions ) {
+                var encodedOptions = encodeLightboxOptions( lightboxOptions );
+                var optionClasses = deriveLightboxClasses( lightboxOptions );
+
+                mergedClassName = classnames( mergedClassName, optionClasses );
+                wrapperProps.className = classnames( wrapperProps.className, optionClasses );
+
+                if ( encodedOptions ) {
+                    wrapperProps[ 'data-mga-lightbox' ] = encodedOptions;
+                }
+
+                if ( lightboxOptions.effect ) {
+                    wrapperProps[ 'data-mga-effect' ] = lightboxOptions.effect;
+                }
+
+                if ( lightboxOptions.speed ) {
+                    wrapperProps[ 'data-mga-speed' ] = lightboxOptions.speed;
+                }
+
+                if ( Object.prototype.hasOwnProperty.call( lightboxOptions, 'share' ) ) {
+                    if ( 'hide' === lightboxOptions.share ) {
+                        wrapperProps[ 'data-mga-share' ] = 'hide';
+                    } else if ( 'show' === lightboxOptions.share ) {
+                        wrapperProps[ 'data-mga-share' ] = 'show';
+                    }
+                }
+            }
 
             var enhancedProps = Object.assign( {}, props, {
                 className: mergedClassName,

@@ -133,12 +133,215 @@
             restartTimer: noop,
             table: noop,
         };
-        const showZoom = normalizeFlag(settings.show_zoom, true);
-        const showDownload = normalizeFlag(settings.show_download, true);
-        const showShare = normalizeFlag(settings.show_share, true);
-        const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
-        const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
-        const optionalToolbarHandlers = [];
+        const SPEED_PRESETS = {
+            slow: 900,
+            normal: 500,
+            fast: 300,
+        };
+
+        const normalizeEffect = (value, fallback = 'slide') => {
+            if (typeof value === 'string') {
+                const normalized = value.trim().toLowerCase();
+                if (normalized === 'slide' || normalized === 'fade') {
+                    return normalized;
+                }
+            }
+
+            return fallback;
+        };
+
+        const normalizeSpeedPreset = (value) => {
+            if (typeof value === 'string') {
+                const normalized = value.trim().toLowerCase();
+                if (Object.prototype.hasOwnProperty.call(SPEED_PRESETS, normalized)) {
+                    return normalized;
+                }
+            }
+
+            return '';
+        };
+
+        const resolveTransitionSpeed = (value, fallback = 500) => {
+            if (typeof value === 'number' && value > 0) {
+                return value;
+            }
+
+            if (typeof value === 'string') {
+                const normalized = value.trim().toLowerCase();
+
+                if (Object.prototype.hasOwnProperty.call(SPEED_PRESETS, normalized)) {
+                    return SPEED_PRESETS[ normalized ];
+                }
+
+                const parsed = parseInt(normalized, 10);
+
+                if (!Number.isNaN(parsed) && parsed > 0) {
+                    return parsed;
+                }
+            }
+
+            return fallback;
+        };
+
+        const DEFAULT_EFFECT = normalizeEffect(settings.transition_effect, 'slide');
+        const DEFAULT_TRANSITION_SPEED = resolveTransitionSpeed(settings.transition_speed, 500);
+
+        let optionalToolbarHandlers = [];
+
+        const createOptionalToolbarHandlers = (flags = {}) => {
+            const handlers = [];
+
+            if (flags.showZoom) {
+                handlers.push({
+                    selector: '#mga-zoom',
+                    handler: () => {
+                        if (mainSwiper && mainSwiper.zoom) {
+                            mainSwiper.zoom.toggle();
+                            return true;
+                        }
+
+                        return false;
+                    },
+                });
+            }
+
+            if (flags.showDownload) {
+                handlers.push({
+                    selector: '#mga-download',
+                    handler: (event) => {
+                        event.preventDefault();
+                        const highResUrl = getActiveHighResUrl();
+                        if (highResUrl) {
+                            const didDownload = triggerImageDownload(highResUrl);
+                            if (!didDownload) {
+                                debug.log(mga__( "Impossible de lancer le téléchargement de l’image active.", 'lightbox-jlg' ), true);
+                            }
+                        } else {
+                            debug.log(mga__( "URL haute résolution introuvable pour l’image active.", 'lightbox-jlg' ), true);
+                        }
+
+                        return true;
+                    },
+                });
+            }
+
+            if (flags.showShare) {
+                handlers.push({
+                    selector: '#mga-share',
+                    handler: (event) => {
+                        event.preventDefault();
+                        const activeData = getActiveImageData();
+                        if (!activeData || !activeData.image) {
+                            debug.log(mga__( "Impossible de partager l’image active.", 'lightbox-jlg' ), true);
+                            return true;
+                        }
+
+                        const shared = openSharePanel(activeData.image);
+                        if (!shared) {
+                            debug.log(mga__( "Aucune option de partage disponible pour l’image active.", 'lightbox-jlg' ), true);
+                        }
+
+                        return true;
+                    },
+                });
+            }
+
+            if (flags.showFullscreen) {
+                handlers.push({
+                    selector: '#mga-fullscreen',
+                    handler: (event, viewer) => {
+                        if (!viewer) {
+                            return false;
+                        }
+
+                        const { request: requestFullscreen, exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
+
+                        if (!fullscreenElement) {
+                            if (requestFullscreen) {
+                                try {
+                                    const result = requestFullscreen();
+                                    if (result && typeof result.catch === 'function') {
+                                        result.catch((err) => debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true));
+                                    }
+                                } catch (err) {
+                                    debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true);
+                                }
+                            } else {
+                                debug.log(mga__( 'API plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
+                            }
+                        } else if (exitFullscreen) {
+                            try {
+                                const result = exitFullscreen();
+                                if (result && typeof result.catch === 'function') {
+                                    result.catch((err) => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
+                                }
+                            } catch (err) {
+                                debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true);
+                            }
+                        } else {
+                            debug.log(mga__( 'API de fermeture du plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
+                        }
+
+                        return true;
+                    },
+                });
+            }
+
+            return handlers;
+        };
+
+        const applyToolbarVisibility = (viewer, flags = {}) => {
+            if (!viewer) {
+                return;
+            }
+
+            const ensureVisibility = (selector, isVisible) => {
+                const button = viewer.querySelector(selector);
+                if (!button) {
+                    return;
+                }
+
+                const visible = !!isVisible;
+                button.style.display = visible ? '' : 'none';
+
+                if (visible) {
+                    button.removeAttribute('aria-hidden');
+                    if (button.tabIndex === -1) {
+                        button.tabIndex = 0;
+                    }
+                } else {
+                    button.setAttribute('aria-hidden', 'true');
+                    button.tabIndex = -1;
+                }
+            };
+
+            ensureVisibility('#mga-zoom', flags.showZoom);
+            ensureVisibility('#mga-download', flags.showDownload);
+            ensureVisibility('#mga-share', flags.showShare);
+            ensureVisibility('#mga-fullscreen', flags.showFullscreen);
+
+            viewer.classList.toggle('mga-share-hidden', !flags.showShare);
+            viewer.classList.toggle('mga-share-visible', !!flags.showShare);
+
+            if (flags.showShare === true) {
+                viewer.setAttribute('data-mga-share', 'show');
+            } else if (flags.showShare === false) {
+                viewer.setAttribute('data-mga-share', 'hide');
+            } else {
+                viewer.removeAttribute('data-mga-share');
+            }
+        };
+
+        const updateOptionalToolbarMetadata = (viewer, count = 0) => {
+            if (!viewer) {
+                return;
+            }
+
+            const toolbar = viewer.querySelector('.mga-toolbar');
+            if (toolbar) {
+                toolbar.setAttribute('data-mga-optional-buttons', String(count));
+            }
+        };
         const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
         let mainSwiper = null;
         let thumbsSwiper = null;
@@ -155,104 +358,16 @@
         let lastFocusedElementBeforeViewer = null;
         let viewerFocusTrapHandler = null;
         let currentGalleryImages = [];
+        let currentViewerSettings = {
+            options: settings,
+            delayMs: (parseInt(settings.delay, 10) || 4) * 1000,
+            effect: DEFAULT_EFFECT,
+            transitionSpeed: DEFAULT_TRANSITION_SPEED,
+            speedPreset: normalizeSpeedPreset(settings.transition_speed),
+        };
 
         debug.init();
 
-        if (showZoom) {
-            optionalToolbarHandlers.push({
-                selector: '#mga-zoom',
-                handler: () => {
-                    if (mainSwiper && mainSwiper.zoom) {
-                        mainSwiper.zoom.toggle();
-                        return true;
-                    }
-
-                    return false;
-                },
-            });
-        }
-
-        if (showDownload) {
-            optionalToolbarHandlers.push({
-                selector: '#mga-download',
-                handler: (event) => {
-                    event.preventDefault();
-                    const highResUrl = getActiveHighResUrl();
-                    if (highResUrl) {
-                        const didDownload = triggerImageDownload(highResUrl);
-                        if (!didDownload) {
-                            debug.log(mga__( "Impossible de lancer le téléchargement de l’image active.", 'lightbox-jlg' ), true);
-                        }
-                    } else {
-                        debug.log(mga__( "URL haute résolution introuvable pour l’image active.", 'lightbox-jlg' ), true);
-                    }
-
-                    return true;
-                },
-            });
-        }
-
-        if (showShare) {
-            optionalToolbarHandlers.push({
-                selector: '#mga-share',
-                handler: (event) => {
-                    event.preventDefault();
-                    const activeData = getActiveImageData();
-                    if (!activeData || !activeData.image) {
-                        debug.log(mga__( "Impossible de partager l’image active.", 'lightbox-jlg' ), true);
-                        return true;
-                    }
-
-                    const shared = openSharePanel(activeData.image);
-                    if (!shared) {
-                        debug.log(mga__( "Aucune option de partage disponible pour l’image active.", 'lightbox-jlg' ), true);
-                    }
-
-                    return true;
-                },
-            });
-        }
-
-        if (showFullscreen) {
-            optionalToolbarHandlers.push({
-                selector: '#mga-fullscreen',
-                handler: (event, viewer) => {
-                    if (!viewer) {
-                        return false;
-                    }
-
-                    const { request: requestFullscreen, exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
-
-                    if (!fullscreenElement) {
-                        if (requestFullscreen) {
-                            try {
-                                const result = requestFullscreen();
-                                if (result && typeof result.catch === 'function') {
-                                    result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true));
-                                }
-                            } catch (err) {
-                                debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true);
-                            }
-                        } else {
-                            debug.log(mga__( 'API plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
-                        }
-                    } else if (exitFullscreen) {
-                        try {
-                            const result = exitFullscreen();
-                            if (result && typeof result.catch === 'function') {
-                                result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
-                            }
-                        } catch (err) {
-                            debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true);
-                        }
-                    } else {
-                        debug.log(mga__( 'API de fermeture du plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
-                    }
-
-                    return true;
-                },
-            });
-        }
 
         function resolveEventTarget(event) {
             if (!event || !event.target) {
@@ -966,6 +1081,14 @@
 
                 updateAutoplayButtonState(viewer, false);
 
+                const initialOptions = currentViewerSettings && currentViewerSettings.options
+                    ? currentViewerSettings.options
+                    : settings;
+                const showZoom = normalizeFlag(initialOptions.show_zoom, true);
+                const showDownload = normalizeFlag(initialOptions.show_download, true);
+                const showShare = normalizeFlag(initialOptions.show_share, true);
+                const showFullscreen = normalizeFlag(initialOptions.show_fullscreen, true);
+
                 if (showZoom) {
                     const zoomButton = document.createElement('button');
                     zoomButton.type = 'button';
@@ -1050,7 +1173,17 @@
                     fullscreenButton.appendChild(fullscreenIcon);
                 }
 
-                toolbar.setAttribute('data-mga-optional-buttons', String(optionalToolbarHandlers.length));
+                const initialToolbarFlags = {
+                    showZoom,
+                    showDownload,
+                    showShare,
+                    showFullscreen,
+                };
+
+                optionalToolbarHandlers = createOptionalToolbarHandlers(initialToolbarFlags);
+                updateOptionalToolbarMetadata(viewer, optionalToolbarHandlers.length);
+
+                applyToolbarVisibility(viewer, initialToolbarFlags);
 
                 const closeButton = document.createElement('button');
                 closeButton.type = 'button';
@@ -1306,6 +1439,156 @@
             module.exports.helpers = sharedHelpers;
         }
 
+        const parseOverridesFromDataset = (element) => {
+            if (!element || !element.dataset) {
+                return null;
+            }
+
+            const overrides = {};
+            const { dataset } = element;
+
+            if (typeof dataset.mgaEffect === 'string') {
+                const effect = normalizeEffect(dataset.mgaEffect, '');
+                if (effect) {
+                    overrides.transition_effect = effect;
+                }
+            }
+
+            if (typeof dataset.mgaSpeed === 'string') {
+                const speedPreset = normalizeSpeedPreset(dataset.mgaSpeed);
+                if (speedPreset) {
+                    overrides.transition_speed = speedPreset;
+                } else {
+                    const numeric = parseInt(dataset.mgaSpeed.trim(), 10);
+                    if (!Number.isNaN(numeric) && numeric > 0) {
+                        overrides.transition_speed = numeric;
+                    }
+                }
+            }
+
+            if (typeof dataset.mgaShare === 'string') {
+                const shareValue = dataset.mgaShare.trim().toLowerCase();
+                if ('show' === shareValue) {
+                    overrides.show_share = true;
+                } else if ('hide' === shareValue) {
+                    overrides.show_share = false;
+                }
+            }
+
+            return Object.keys(overrides).length ? overrides : null;
+        };
+
+        const parseOverridesFromClasses = (element) => {
+            if (!element) {
+                return null;
+            }
+
+            const className = typeof element.className === 'string' ? element.className : '';
+            if (!className) {
+                return null;
+            }
+
+            const overrides = {};
+            const tokens = className.split(/\s+/).filter(Boolean);
+
+            for (let i = 0; i < tokens.length; i += 1) {
+                const token = tokens[i];
+
+                if (token.indexOf('mga-effect-') === 0) {
+                    const candidate = token.slice('mga-effect-'.length);
+                    const effect = normalizeEffect(candidate, '');
+                    if (effect) {
+                        overrides.transition_effect = effect;
+                    }
+                } else if (token.indexOf('mga-speed-') === 0) {
+                    const candidate = token.slice('mga-speed-'.length);
+                    const speedPreset = normalizeSpeedPreset(candidate);
+                    if (speedPreset) {
+                        overrides.transition_speed = speedPreset;
+                    }
+                } else if ('mga-share-hidden' === token) {
+                    overrides.show_share = false;
+                } else if ('mga-share-visible' === token) {
+                    overrides.show_share = true;
+                }
+            }
+
+            return Object.keys(overrides).length ? overrides : null;
+        };
+
+        const parseLightboxConfig = (element) => {
+            if (!element) {
+                return null;
+            }
+
+            const getDomFallback = () => {
+                const datasetOverrides = parseOverridesFromDataset(element);
+                if (datasetOverrides) {
+                    return datasetOverrides;
+                }
+
+                return parseOverridesFromClasses(element);
+            };
+
+            const rawConfig = element.getAttribute('data-mga-lightbox');
+
+            if (!rawConfig) {
+                return getDomFallback();
+            }
+
+            try {
+                const parsed = JSON.parse(rawConfig);
+
+                if (!parsed || typeof parsed !== 'object') {
+                    return getDomFallback();
+                }
+
+                const overrides = {};
+
+                if (typeof parsed.effect === 'string') {
+                    const normalizedEffect = normalizeEffect(parsed.effect, DEFAULT_EFFECT);
+                    if (normalizedEffect) {
+                        overrides.transition_effect = normalizedEffect;
+                    }
+                }
+
+                if (Object.prototype.hasOwnProperty.call(parsed, 'speed')) {
+                    const rawSpeed = parsed.speed;
+
+                    if (typeof rawSpeed === 'string') {
+                        const preset = normalizeSpeedPreset(rawSpeed);
+                        if (preset) {
+                            overrides.transition_speed = preset;
+                        } else {
+                            const parsedNumeric = parseInt(rawSpeed.trim(), 10);
+                            if (!Number.isNaN(parsedNumeric) && parsedNumeric > 0) {
+                                overrides.transition_speed = parsedNumeric;
+                            }
+                        }
+                    } else if (typeof rawSpeed === 'number' && rawSpeed > 0) {
+                        overrides.transition_speed = rawSpeed;
+                    }
+                }
+
+                if (typeof parsed.share === 'string') {
+                    const normalizedShare = parsed.share.trim().toLowerCase();
+                    if ('show' === normalizedShare) {
+                        overrides.show_share = true;
+                    } else if ('hide' === normalizedShare) {
+                        overrides.show_share = false;
+                    }
+                }
+
+                return Object.keys(overrides).length ? overrides : getDomFallback();
+            } catch (error) {
+                if (debug && typeof debug.log === 'function') {
+                    debug.log(mga__( 'Impossible de lire la configuration Lightbox personnalisée (JSON invalide).', 'lightbox-jlg' ), true);
+                }
+            }
+
+            return getDomFallback();
+        };
+
         const { cleanup: triggerObserverCleanup, active: hasActiveObserver } = (() => {
             if (typeof MutationObserver !== 'function') {
                 return { cleanup: noop, active: false };
@@ -1442,7 +1725,9 @@
                 if (startIndex !== -1) {
                     const previouslyFocusedElement = document.activeElement;
                     lastFocusedElementBeforeViewer = previouslyFocusedElement;
-                    const viewerOpened = openViewer(galleryData, startIndex);
+                    const blockRoot = targetLink.closest('[data-mga-lightbox]');
+                    const localOverrides = parseLightboxConfig(blockRoot);
+                    const viewerOpened = openViewer(galleryData, startIndex, localOverrides);
                     if (viewerOpened) {
                         e.preventDefault();
                     } else {
@@ -1455,7 +1740,7 @@
             }
         });
 
-        function openViewer(images, startIndex) {
+        function openViewer(images, startIndex, overrides) {
             debug.log(mgaSprintf(mga__( 'openViewer appelé avec %1$d images, index %2$d.', 'lightbox-jlg' ), images.length, startIndex));
             if (debug && typeof debug.restartTimer === 'function') {
                 debug.restartTimer();
@@ -1463,13 +1748,85 @@
             const viewer = getViewer();
             if (!viewer) return false;
 
+            const overridesConfig = overrides && typeof overrides === 'object' ? overrides : null;
+            const effectiveSettings = Object.assign({}, settings);
+
+            if (overridesConfig) {
+                if (Object.prototype.hasOwnProperty.call(overridesConfig, 'transition_effect')) {
+                    effectiveSettings.transition_effect = overridesConfig.transition_effect;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(overridesConfig, 'transition_speed')) {
+                    effectiveSettings.transition_speed = overridesConfig.transition_speed;
+                }
+
+                if (Object.prototype.hasOwnProperty.call(overridesConfig, 'show_share')) {
+                    effectiveSettings.show_share = overridesConfig.show_share;
+                }
+            }
+
+            const showZoom = normalizeFlag(effectiveSettings.show_zoom, true);
+            const showDownload = normalizeFlag(effectiveSettings.show_download, true);
+            const showShare = normalizeFlag(effectiveSettings.show_share, true);
+            const showFullscreen = normalizeFlag(effectiveSettings.show_fullscreen, true);
+            const showThumbsMobile = normalizeFlag(effectiveSettings.show_thumbs_mobile, true);
+
+            const resolvedEffect = normalizeEffect(effectiveSettings.transition_effect, DEFAULT_EFFECT);
+            const speedPreset = normalizeSpeedPreset(effectiveSettings.transition_speed);
+            const resolvedTransitionSpeed = resolveTransitionSpeed(effectiveSettings.transition_speed, DEFAULT_TRANSITION_SPEED);
+
+            let delaySeconds = parseInt(effectiveSettings.delay, 10);
+            if (Number.isNaN(delaySeconds) || delaySeconds <= 0) {
+                const fallbackDelay = parseInt(settings.delay, 10);
+                delaySeconds = Number.isNaN(fallbackDelay) || fallbackDelay <= 0 ? 4 : fallbackDelay;
+            }
+
+            currentViewerSettings = {
+                options: effectiveSettings,
+                delayMs: delaySeconds * 1000,
+                effect: resolvedEffect,
+                transitionSpeed: resolvedTransitionSpeed,
+                speedPreset: speedPreset,
+                zoomEnabled: showZoom,
+                downloadEnabled: showDownload,
+                shareEnabled: showShare,
+                fullscreenEnabled: showFullscreen,
+            };
+
             viewer.className = 'mga-viewer';
             viewer.classList.toggle('mga-has-caption', false);
-            if (settings.background_style === 'blur') viewer.classList.add('mga-has-blur');
-            if (settings.background_style === 'texture') viewer.classList.add('mga-has-texture');
+            viewer.classList.add('mga-effect-' + resolvedEffect);
+            viewer.setAttribute('data-mga-effect', resolvedEffect);
+
+            if (speedPreset) {
+                viewer.classList.add('mga-speed-' + speedPreset);
+                viewer.setAttribute('data-mga-speed', speedPreset);
+            } else {
+                viewer.removeAttribute('data-mga-speed');
+            }
+
+            viewer.setAttribute('data-mga-speed-ms', String(resolvedTransitionSpeed));
+
+            if (effectiveSettings.background_style === 'blur') {
+                viewer.classList.add('mga-has-blur');
+            } else if (effectiveSettings.background_style === 'texture') {
+                viewer.classList.add('mga-has-texture');
+            }
+
             if (!showThumbsMobile) {
                 viewer.classList.add('mga-hide-thumbs-mobile');
             }
+
+            const toolbarFlags = {
+                showZoom,
+                showDownload,
+                showShare,
+                showFullscreen,
+            };
+
+            applyToolbarVisibility(viewer, toolbarFlags);
+            optionalToolbarHandlers = createOptionalToolbarHandlers(toolbarFlags);
+            updateOptionalToolbarMetadata(viewer, optionalToolbarHandlers.length);
 
             try {
                 if (mainSwiper) {
@@ -1587,7 +1944,7 @@
                 } else if (typeof mainSwiper.slideTo === 'function') {
                     mainSwiper.slideTo(startIndex, 0);
                 }
-                if (settings.background_style === 'echo' && images[startIndex] && images[startIndex].highResUrl) {
+                if (effectiveSettings.background_style === 'echo' && images[startIndex] && images[startIndex].highResUrl) {
                     updateEchoBackground(viewer, images[startIndex].highResUrl);
                 }
                 updateInfo(viewer, images, startIndex);
@@ -1737,8 +2094,12 @@
 
             // L'instance principale peut activer `loop` en fonction des réglages.
             // On passe par le wrapper pour atténuer l'avertissement Swiper localement.
+            const autoplayDelay = typeof currentViewerSettings.delayMs === 'number' && currentViewerSettings.delayMs > 0
+                ? currentViewerSettings.delayMs
+                : (parseInt(settings.delay, 10) || 4) * 1000;
+
             const autoplayConfig = {
-                delay: parseInt(settings.delay, 10) * 1000 || 4000,
+                delay: autoplayDelay,
                 disableOnInteraction: false,
                 pauseOnMouseEnter: false,
             };
@@ -1769,21 +2130,23 @@
             };
 
             const mainSwiperConfig = {
-                zoom: showZoom,
+                zoom: !!currentViewerSettings.zoomEnabled,
                 spaceBetween: 10,
-                loop: !!settings.loop,
+                loop: !!currentViewerSettings.options.loop,
                 navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
                 on: {
                     init: function(swiper) {
                         preloadNeighboringImages(images, swiper.realIndex);
                     },
-                    slideChange: function (swiper) { 
+                    slideChange: function (swiper) {
                         updateInfo(viewer, images, swiper.realIndex);
-                        if (settings.background_style === 'echo') updateEchoBackground(viewer, images[swiper.realIndex].highResUrl);
+                        if (currentViewerSettings.options.background_style === 'echo') {
+                            updateEchoBackground(viewer, images[swiper.realIndex].highResUrl);
+                        }
                     },
                     slideChangeTransitionEnd: function() {
                         if (thumbsSwiper && !thumbsSwiper.destroyed) {
-                           thumbsSwiper.update();
+                            thumbsSwiper.update();
                         }
                         preloadNeighboringImages(images, this.realIndex);
                     },
@@ -1813,6 +2176,15 @@
 
             if (!prefersReducedMotion) {
                 mainSwiperConfig.autoplay = Object.assign({}, autoplayConfig);
+            } else {
+                mainSwiperConfig.autoplay = false;
+            }
+
+            mainSwiperConfig.effect = currentViewerSettings.effect || 'slide';
+            mainSwiperConfig.speed = currentViewerSettings.transitionSpeed;
+
+            if ('fade' === currentViewerSettings.effect) {
+                mainSwiperConfig.fadeEffect = { crossFade: true };
             }
 
             if (thumbsSwiper) {
@@ -1867,15 +2239,20 @@
                     debug.log(mga__( 'L’extension autoplay de Swiper est indisponible.', 'lightbox-jlg' ), true);
                 }
             } else {
+                const autoplayShouldStart = normalizeFlag(currentViewerSettings.options.autoplay_start, false);
+
                 if (!prefersReducedMotion) {
                     applyAutoplayParams();
-                    if (settings.autoplay_start) {
+                    if (autoplayShouldStart) {
                         autoplayInstance.start();
+                        updateAutoplayButtonState(viewer, true);
                     } else {
                         autoplayInstance.stop();
+                        updateAutoplayButtonState(viewer, false);
                     }
                 } else {
                     autoplayInstance.stop();
+                    updateAutoplayButtonState(viewer, false);
                 }
 
                 if (prefersReducedMotionQuery) {
@@ -1895,13 +2272,15 @@
                             autoplayWasRunningBeforePreferenceChange = Boolean(instance.running);
                             instance.stop();
                         } else {
-                            const shouldResume = autoplayWasRunningBeforePreferenceChange || !!settings.autoplay_start;
+                            const shouldResume = autoplayWasRunningBeforePreferenceChange || autoplayShouldStart;
                             autoplayWasRunningBeforePreferenceChange = false;
                             applyAutoplayParams();
                             if (shouldResume) {
                                 instance.start();
+                                updateAutoplayButtonState(viewer, true);
                             } else if (instance.running) {
                                 instance.stop();
+                                updateAutoplayButtonState(viewer, false);
                             }
                         }
                     };
@@ -2031,6 +2410,7 @@
             module.exports.__testExports.triggerImageDownload = triggerImageDownload;
             module.exports.__testExports.openSharePanel = openSharePanel;
             module.exports.__testExports.getActiveImageData = getActiveImageData;
+            module.exports.__testExports.parseLightboxConfig = parseLightboxConfig;
         }
 
         function closeViewer(viewer) {
@@ -2081,6 +2461,7 @@
             debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
             debug.stopTimer();
             currentGalleryImages = [];
+            optionalToolbarHandlers = [];
             if (lastFocusedElementBeforeViewer && typeof lastFocusedElementBeforeViewer.focus === 'function') {
                 safeFocus(lastFocusedElementBeforeViewer);
             }

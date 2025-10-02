@@ -19,6 +19,25 @@
     var __ = typeof i18n.__ === 'function' ? i18n.__ : function( text ) {
         return text;
     };
+    var sprintf = typeof i18n.sprintf === 'function'
+        ? i18n.sprintf
+        : function( template ) {
+            var args = Array.prototype.slice.call( arguments, 1 );
+            var index = 0;
+
+            return String( template ).replace( /%s/g, function() {
+                var value = args[ index ];
+                index += 1;
+
+                return typeof value === 'undefined' ? '' : value;
+            } );
+        };
+
+    var hooks = wp.hooks || {};
+    var compose = wp.compose || {};
+    var createHigherOrderComponent = typeof compose.createHigherOrderComponent === 'function'
+        ? compose.createHigherOrderComponent
+        : null;
 
     var element = wp.element;
     var el = element.createElement;
@@ -67,6 +86,8 @@
     var defaultDownload = !! getDefault( 'showDownload', true );
     var defaultShare = !! getDefault( 'showShare', true );
     var defaultFullscreen = !! getDefault( 'showFullscreen', true );
+    var defaultTransitionEffect = getDefault( 'transitionEffect', 'slide' );
+    var defaultTransitionSpeed = getDefault( 'transitionSpeed', 'normal' );
     var noteText = getDefault( 'noteText', __( 'Lightbox active', 'lightbox-jlg' ) );
 
     var PLACEHOLDER_IMAGES = [
@@ -112,6 +133,415 @@
 
             return [];
         }, [] ) || [];
+    }
+
+    var previewGlobals = root.mgaBlockEditorPreview || {};
+    var previewBlockName = typeof previewGlobals.previewBlockName === 'string' && previewGlobals.previewBlockName
+        ? previewGlobals.previewBlockName
+        : 'ma-galerie-automatique/lightbox-preview';
+
+    var SUPPORTED_MEDIA_BLOCKS = ( function() {
+        var base = [ 'core/gallery', 'core/image', 'core/media-text', 'core/cover' ];
+        var candidateBlocks = Array.isArray( previewGlobals.supportedBlocks ) ? previewGlobals.supportedBlocks : [];
+        var list = [];
+        var seen = {};
+
+        function addUnique( blockName ) {
+            if ( 'string' !== typeof blockName ) {
+                return;
+            }
+
+            var normalized = blockName.trim();
+
+            if ( ! normalized || normalized === previewBlockName ) {
+                return;
+            }
+
+            if ( ! seen[ normalized ] ) {
+                seen[ normalized ] = true;
+                list.push( normalized );
+            }
+        }
+
+        for ( var i = 0; i < candidateBlocks.length; i++ ) {
+            addUnique( candidateBlocks[ i ] );
+        }
+
+        if ( ! list.length ) {
+            for ( var j = 0; j < base.length; j++ ) {
+                addUnique( base[ j ] );
+            }
+        }
+
+        return list;
+    } )();
+
+    var SUPPORTED_BLOCK_SET = ( function() {
+        var map = {};
+
+        for ( var i = 0; i < SUPPORTED_MEDIA_BLOCKS.length; i++ ) {
+            var name = SUPPORTED_MEDIA_BLOCKS[ i ];
+            if ( name ) {
+                map[ name ] = true;
+            }
+        }
+
+        return map;
+    } )();
+
+    var LIGHTBOX_ATTRIBUTE_KEY = 'mgaLightboxOptions';
+    var ALLOWED_EFFECTS = { slide: true, fade: true };
+    var ALLOWED_SPEEDS = { slow: true, normal: true, fast: true };
+    var ALLOWED_SHARE = { show: true, hide: true };
+
+    function sanitizeToken( value ) {
+        if ( typeof value === 'undefined' || null === value ) {
+            return '';
+        }
+
+        return String( value ).trim().toLowerCase().replace( /[^a-z0-9_-]/g, '' );
+    }
+
+    function blockSupportsLightboxOptions( blockName ) {
+        if ( ! blockName ) {
+            return false;
+        }
+
+        return !! SUPPORTED_BLOCK_SET[ blockName ];
+    }
+
+    function mergeClassNames( baseClassName, extraClasses ) {
+        var stack = [];
+
+        if ( typeof baseClassName === 'string' && baseClassName.trim() ) {
+            stack.push( baseClassName.trim() );
+        }
+
+        if ( Array.isArray( extraClasses ) ) {
+            for ( var i = 0; i < extraClasses.length; i++ ) {
+                var item = extraClasses[ i ];
+
+                if ( typeof item === 'string' && item.trim() ) {
+                    stack.push( item.trim() );
+                }
+            }
+        } else if ( typeof extraClasses === 'string' && extraClasses.trim() ) {
+            stack.push( extraClasses.trim() );
+        }
+
+        if ( ! stack.length ) {
+            return '';
+        }
+
+        var unique = {};
+        var classes = [];
+
+        for ( var j = 0; j < stack.length; j++ ) {
+            var candidate = stack[ j ];
+
+            if ( candidate && ! unique[ candidate ] ) {
+                unique[ candidate ] = true;
+                classes.push( candidate );
+            }
+        }
+
+        return classes.join( ' ' ).trim();
+    }
+
+    function sanitizeLightboxOptions( raw ) {
+        if ( ! raw || typeof raw !== 'object' ) {
+            return null;
+        }
+
+        var sanitized = {};
+        var hasValue = false;
+
+        if ( Object.prototype.hasOwnProperty.call( raw, 'effect' ) ) {
+            var effect = sanitizeToken( raw.effect );
+
+            if ( ALLOWED_EFFECTS[ effect ] ) {
+                sanitized.effect = effect;
+                hasValue = true;
+            }
+        }
+
+        if ( Object.prototype.hasOwnProperty.call( raw, 'speed' ) ) {
+            var speedValue = raw.speed;
+            var speed = '';
+
+            if ( typeof speedValue === 'number' && speedValue > 0 ) {
+                speed = String( Math.round( speedValue ) );
+            } else if ( typeof speedValue === 'string' ) {
+                speed = sanitizeToken( speedValue );
+            }
+
+            if ( ALLOWED_SPEEDS[ speed ] ) {
+                sanitized.speed = speed;
+                hasValue = true;
+            } else if ( speed && ! isNaN( parseInt( speed, 10 ) ) ) {
+                sanitized.speed = String( parseInt( speed, 10 ) );
+                hasValue = true;
+            }
+        }
+
+        if ( Object.prototype.hasOwnProperty.call( raw, 'share' ) ) {
+            var share = sanitizeToken( raw.share );
+
+            if ( ALLOWED_SHARE[ share ] ) {
+                sanitized.share = share;
+                hasValue = true;
+            }
+        }
+
+        return hasValue ? sanitized : null;
+    }
+
+    function getLightboxOptionClasses( options ) {
+        if ( ! options ) {
+            return [];
+        }
+
+        var classes = [ 'mga-has-lightbox-options' ];
+
+        if ( options.effect ) {
+            classes.push( 'mga-effect-' + sanitizeToken( options.effect ) );
+        }
+
+        if ( options.speed ) {
+            classes.push( 'mga-speed-' + sanitizeToken( options.speed ) );
+        }
+
+        if ( options.share ) {
+            if ( 'hide' === options.share ) {
+                classes.push( 'mga-share-hidden' );
+            } else if ( 'show' === options.share ) {
+                classes.push( 'mga-share-visible' );
+            }
+        }
+
+        return classes;
+    }
+
+    function encodeLightboxOptions( options ) {
+        if ( ! options ) {
+            return '';
+        }
+
+        try {
+            return JSON.stringify( options );
+        } catch ( error ) {
+            return '';
+        }
+    }
+
+    function extendSupportedBlockAttributes( settings, name ) {
+        if ( ! blockSupportsLightboxOptions( name ) ) {
+            return settings;
+        }
+
+        var updatedSettings = settings || {};
+        var attributes = updatedSettings.attributes || {};
+
+        if ( ! Object.prototype.hasOwnProperty.call( attributes, LIGHTBOX_ATTRIBUTE_KEY ) ) {
+            attributes[ LIGHTBOX_ATTRIBUTE_KEY ] = {
+                type: 'object',
+                default: {},
+            };
+        }
+
+        updatedSettings.attributes = attributes;
+
+        return updatedSettings;
+    }
+
+    var withLightboxOptionsInspector = createHigherOrderComponent ? createHigherOrderComponent( function( BlockEdit ) {
+        return function( props ) {
+            if ( ! props || ! blockSupportsLightboxOptions( props.name ) ) {
+                return el( BlockEdit, props );
+            }
+
+            if ( ! InspectorControls || ! PanelBody || ! SelectControl ) {
+                return el( BlockEdit, props );
+            }
+
+            var setAttributes = typeof props.setAttributes === 'function' ? props.setAttributes : function() {};
+            var attributes = props.attributes || {};
+            var currentConfig = attributes[ LIGHTBOX_ATTRIBUTE_KEY ] && typeof attributes[ LIGHTBOX_ATTRIBUTE_KEY ] === 'object'
+                ? attributes[ LIGHTBOX_ATTRIBUTE_KEY ]
+                : {};
+
+            var effectValue = typeof currentConfig.effect === 'string' ? currentConfig.effect : '';
+            var speedValue = typeof currentConfig.speed === 'string' ? currentConfig.speed : '';
+            var shareValue = typeof currentConfig.share === 'string' ? currentConfig.share : '';
+
+            function updateOption( key, value ) {
+                var existing = attributes[ LIGHTBOX_ATTRIBUTE_KEY ] && typeof attributes[ LIGHTBOX_ATTRIBUTE_KEY ] === 'object'
+                    ? attributes[ LIGHTBOX_ATTRIBUTE_KEY ]
+                    : {};
+                var next = {};
+
+                for ( var optionKey in existing ) {
+                    if ( Object.prototype.hasOwnProperty.call( existing, optionKey ) ) {
+                        next[ optionKey ] = existing[ optionKey ];
+                    }
+                }
+
+                if ( value ) {
+                    next[ key ] = value;
+                } else {
+                    delete next[ key ];
+                }
+
+                var update = {};
+                update[ LIGHTBOX_ATTRIBUTE_KEY ] = next;
+                setAttributes( update );
+            }
+
+            var globalEffectLabel = 'fade' === defaultTransitionEffect
+                ? __( 'Fondu', 'lightbox-jlg' )
+                : __( 'Glissement', 'lightbox-jlg' );
+            var globalSpeedLabel = 'fast' === defaultTransitionSpeed
+                ? __( 'Rapide', 'lightbox-jlg' )
+                : ( 'slow' === defaultTransitionSpeed
+                    ? __( 'Lente', 'lightbox-jlg' )
+                    : __( 'Normale', 'lightbox-jlg' ) );
+            var globalShareLabel = defaultShare
+                ? __( 'Affichée', 'lightbox-jlg' )
+                : __( 'Masquée', 'lightbox-jlg' );
+
+            return el(
+                Fragment,
+                null,
+                el( BlockEdit, props ),
+                el(
+                    InspectorControls,
+                    null,
+                    el(
+                        PanelBody,
+                        { title: __( 'Lightbox (bloc)', 'lightbox-jlg' ), initialOpen: false },
+                        el( SelectControl, {
+                            label: __( 'Effet de transition', 'lightbox-jlg' ),
+                            value: effectValue,
+                            options: [
+                                { label: sprintf( __( 'Valeur globale (%s)', 'lightbox-jlg' ), globalEffectLabel ), value: '' },
+                                { label: __( 'Glissement', 'lightbox-jlg' ), value: 'slide' },
+                                { label: __( 'Fondu', 'lightbox-jlg' ), value: 'fade' }
+                            ],
+                            onChange: function( value ) {
+                                var sanitized = sanitizeToken( value );
+
+                                if ( ! ALLOWED_EFFECTS[ sanitized ] ) {
+                                    sanitized = '';
+                                }
+
+                                updateOption( 'effect', sanitized );
+                            }
+                        } ),
+                        el( SelectControl, {
+                            label: __( 'Vitesse de transition', 'lightbox-jlg' ),
+                            value: speedValue,
+                            options: [
+                                { label: sprintf( __( 'Valeur globale (%s)', 'lightbox-jlg' ), globalSpeedLabel ), value: '' },
+                                { label: __( 'Rapide', 'lightbox-jlg' ), value: 'fast' },
+                                { label: __( 'Normale', 'lightbox-jlg' ), value: 'normal' },
+                                { label: __( 'Lente', 'lightbox-jlg' ), value: 'slow' }
+                            ],
+                            onChange: function( value ) {
+                                var sanitized = sanitizeToken( value );
+
+                                if ( ! ALLOWED_SPEEDS[ sanitized ] ) {
+                                    sanitized = '';
+                                }
+
+                                updateOption( 'speed', sanitized );
+                            }
+                        } ),
+                        el( SelectControl, {
+                            label: __( 'Bouton de partage', 'lightbox-jlg' ),
+                            value: shareValue,
+                            options: [
+                                { label: sprintf( __( 'Valeur globale (%s)', 'lightbox-jlg' ), globalShareLabel ), value: '' },
+                                { label: __( 'Toujours afficher', 'lightbox-jlg' ), value: 'show' },
+                                { label: __( 'Toujours masquer', 'lightbox-jlg' ), value: 'hide' }
+                            ],
+                            onChange: function( value ) {
+                                var sanitized = sanitizeToken( value );
+
+                                if ( ! ALLOWED_SHARE[ sanitized ] ) {
+                                    sanitized = '';
+                                }
+
+                                updateOption( 'share', sanitized );
+                            }
+                        } )
+                    )
+                )
+            );
+        };
+    }, 'withMgaLightboxOptions' ) : null;
+
+    function applyLightboxOptionsToSaveProps( extraProps, blockType, attributes ) {
+        if ( ! blockType || ! blockSupportsLightboxOptions( blockType.name ) ) {
+            return extraProps;
+        }
+
+        var sanitized = sanitizeLightboxOptions( attributes ? attributes[ LIGHTBOX_ATTRIBUTE_KEY ] : null );
+
+        if ( ! sanitized ) {
+            return extraProps;
+        }
+
+        var encoded = encodeLightboxOptions( sanitized );
+        var classList = getLightboxOptionClasses( sanitized );
+        var newProps = extraProps ? Object.assign( {}, extraProps ) : {};
+
+        if ( encoded ) {
+            newProps[ 'data-mga-lightbox' ] = encoded;
+        }
+
+        if ( sanitized.effect ) {
+            newProps[ 'data-mga-effect' ] = sanitized.effect;
+        }
+
+        if ( sanitized.speed ) {
+            newProps[ 'data-mga-speed' ] = sanitized.speed;
+        }
+
+        if ( Object.prototype.hasOwnProperty.call( sanitized, 'share' ) ) {
+            if ( 'hide' === sanitized.share ) {
+                newProps[ 'data-mga-share' ] = 'hide';
+            } else if ( 'show' === sanitized.share ) {
+                newProps[ 'data-mga-share' ] = 'show';
+            }
+        }
+
+        if ( classList.length ) {
+            newProps.className = mergeClassNames( newProps.className, classList );
+        }
+
+        return newProps;
+    }
+
+    if ( hooks && typeof hooks.addFilter === 'function' ) {
+        hooks.addFilter(
+            'blocks.registerBlockType',
+            'ma-galerie-automatique/lightbox-options',
+            extendSupportedBlockAttributes
+        );
+
+        if ( withLightboxOptionsInspector ) {
+            hooks.addFilter(
+                'editor.BlockEdit',
+                'ma-galerie-automatique/lightbox-options',
+                withLightboxOptionsInspector
+            );
+        }
+
+        hooks.addFilter(
+            'blocks.getSaveContent.extraProps',
+            'ma-galerie-automatique/lightbox-options',
+            applyLightboxOptionsToSaveProps
+        );
     }
 
     var ICON_DEFINITIONS = {
@@ -501,6 +931,9 @@
 
     root.mgaLightboxPreview = {
         Preview: Preview,
-        defaults: defaults
+        defaults: defaults,
+        sanitizeLightboxOptions: sanitizeLightboxOptions,
+        getLightboxOptionClasses: getLightboxOptionClasses,
+        lightboxAttributeKey: LIGHTBOX_ATTRIBUTE_KEY
     };
 } )();
