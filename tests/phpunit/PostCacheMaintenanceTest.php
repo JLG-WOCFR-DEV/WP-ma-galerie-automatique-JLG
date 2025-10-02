@@ -32,7 +32,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
             ]
         );
 
-        mga_refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
+        $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
 
         $this->assertSame(
             '1',
@@ -58,7 +58,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
             ]
         );
 
-        mga_refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
+        $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
 
         $this->assertSame(
             '0',
@@ -87,7 +87,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
 
         update_post_meta( $page_id, '_mga_has_linked_images', 'original' );
 
-        mga_refresh_post_linked_images_cache_on_save( $page_id, get_post( $page_id ) );
+        $this->detection()->refresh_post_linked_images_cache_on_save( $page_id, get_post( $page_id ) );
 
         $this->assertSame(
             'original',
@@ -122,7 +122,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
 
         update_post_meta( $post_id, '_mga_has_linked_images', '1' );
 
-        mga_refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
+        $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
 
         $this->assertSame(
             '',
@@ -157,7 +157,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
             ]
         );
 
-        mga_refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
+        $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
 
         $this->assertSame(
             '1',
@@ -192,7 +192,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
             }
         );
 
-        mga_refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
+        $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
 
         restore_error_handler();
 
@@ -238,11 +238,11 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
         $post = get_post( $post_id );
         $this->assertInstanceOf( WP_Post::class, $post );
         $this->assertTrue(
-            mga_detect_post_linked_images( $post ),
+            $this->detection()->detect_post_linked_images( $post ),
             'The initial reusable block should expose linked media to the detector.'
         );
 
-        mga_refresh_post_linked_images_cache_on_save( $post_id, $post );
+        $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, $post );
 
         $this->assertSame(
             '',
@@ -270,7 +270,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
         $this->go_to( get_permalink( $post_id ) );
 
         $this->assertFalse(
-            mga_should_enqueue_assets( $post_id ),
+            $this->detection()->should_enqueue_assets( $post_id ),
             'Removing linked media from the reusable block should disable the enqueue logic.'
         );
 
@@ -287,6 +287,13 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
             get_post_meta( $post_id, '_mga_has_linked_images', true ),
             'Posts referencing reusable blocks should continue to avoid caching after block updates.'
         );
+    }
+
+    private function detection(): \MaGalerieAutomatique\Content\Detection {
+        $plugin = mga_plugin();
+        $this->assertInstanceOf( \MaGalerieAutomatique\Plugin::class, $plugin, 'The plugin instance should be available.' );
+
+        return $plugin->detection();
     }
 
     private function reset_plugin_state() {

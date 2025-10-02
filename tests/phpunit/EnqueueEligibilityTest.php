@@ -60,13 +60,13 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
         );
 
         $this->go_to( get_permalink( $post_id ) );
-        $this->assertTrue( mga_should_enqueue_assets( $post_id ), 'Default posts should be tracked when configured.' );
+        $this->assertTrue( $this->detection()->should_enqueue_assets( $post_id ), 'Default posts should be tracked when configured.' );
 
         $this->go_to( get_permalink( $tracked_id ) );
-        $this->assertTrue( mga_should_enqueue_assets( $tracked_id ), 'Custom post types explicitly tracked should be enqueued.' );
+        $this->assertTrue( $this->detection()->should_enqueue_assets( $tracked_id ), 'Custom post types explicitly tracked should be enqueued.' );
 
         $this->go_to( get_permalink( $untracked_id ) );
-        $this->assertFalse( mga_should_enqueue_assets( $untracked_id ), 'Custom post types omitted from the tracked list should not enqueue assets.' );
+        $this->assertFalse( $this->detection()->should_enqueue_assets( $untracked_id ), 'Custom post types omitted from the tracked list should not enqueue assets.' );
     }
 
     /**
@@ -92,7 +92,7 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
         );
         $this->go_to( get_permalink( $uncached_id ) );
         $detection_runs = 0;
-        $this->assertTrue( mga_should_enqueue_assets( $uncached_id ) );
+        $this->assertTrue( $this->detection()->should_enqueue_assets( $uncached_id ) );
         $this->assertSame( 1, $detection_runs, 'Detection should run when the cache is empty.' );
 
         // Cached true values should short-circuit detection but still enqueue assets.
@@ -104,7 +104,7 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
         update_post_meta( $cached_true_id, '_mga_has_linked_images', 1 );
         $this->go_to( get_permalink( $cached_true_id ) );
         $detection_runs = 0;
-        $this->assertTrue( mga_should_enqueue_assets( $cached_true_id ) );
+        $this->assertTrue( $this->detection()->should_enqueue_assets( $cached_true_id ) );
         $this->assertSame( 0, $detection_runs, 'Detection should not run when cached meta indicates linked images.' );
 
         // Cached false values should also skip detection, even when reusable blocks are involved.
@@ -124,14 +124,14 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
         $this->go_to( get_permalink( $reusable_wrapper_id ) );
         $detection_runs = 0;
         delete_post_meta( $reusable_wrapper_id, '_mga_has_linked_images' );
-        $this->assertTrue( mga_should_enqueue_assets( $reusable_wrapper_id ) );
+        $this->assertTrue( $this->detection()->should_enqueue_assets( $reusable_wrapper_id ) );
         $this->assertSame( 1, $detection_runs, 'Reusable blocks should be inspected when the cache is empty.' );
 
         // Cached false values take precedence and should skip detection work.
         $this->go_to( get_permalink( $reusable_wrapper_id ) );
         update_post_meta( $reusable_wrapper_id, '_mga_has_linked_images', 0 );
         $detection_runs = 0;
-        $this->assertFalse( mga_should_enqueue_assets( $reusable_wrapper_id ) );
+        $this->assertFalse( $this->detection()->should_enqueue_assets( $reusable_wrapper_id ) );
         $this->assertSame( 0, $detection_runs, 'Reusable block detection should be skipped when the cache forbids it.' );
 
         remove_filter( 'mga_linked_image_blocks', $marker_filter );
@@ -149,14 +149,14 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
 
         // Singular context with empty content should not enqueue assets.
         $this->go_to( get_permalink( $post_id ) );
-        $this->assertFalse( mga_should_enqueue_assets( $post_id ), 'Empty content should never enqueue assets by default.' );
+        $this->assertFalse( $this->detection()->should_enqueue_assets( $post_id ), 'Empty content should never enqueue assets by default.' );
 
         // Non-singular requests should bail out unless forced.
         $this->go_to( home_url( '/' ) );
-        $this->assertFalse( mga_should_enqueue_assets( $post_id ), 'Non-singular requests should bail out.' );
+        $this->assertFalse( $this->detection()->should_enqueue_assets( $post_id ), 'Non-singular requests should bail out.' );
 
         add_filter( 'mga_force_enqueue', '__return_true' );
-        $this->assertTrue( mga_should_enqueue_assets( $post_id ), 'The force enqueue filter should override context and content checks.' );
+        $this->assertTrue( $this->detection()->should_enqueue_assets( $post_id ), 'The force enqueue filter should override context and content checks.' );
         remove_filter( 'mga_force_enqueue', '__return_true' );
     }
 
@@ -181,7 +181,7 @@ HTML;
         $this->go_to( get_permalink( $post_id ) );
 
         $this->assertFalse(
-            mga_should_enqueue_assets( $post_id ),
+            $this->detection()->should_enqueue_assets( $post_id ),
             'Galleries that do not link to files should be ignored by the fallback detection.'
         );
     }
@@ -207,7 +207,7 @@ HTML;
         $this->go_to( get_permalink( $post_id ) );
 
         $this->assertTrue(
-            mga_should_enqueue_assets( $post_id ),
+            $this->detection()->should_enqueue_assets( $post_id ),
             'Galleries linking to media files should still enqueue assets.'
         );
     }
@@ -224,7 +224,7 @@ HTML;
         add_filter( 'mga_force_enqueue', '__return_true' );
 
         try {
-            $this->assertTrue( mga_should_enqueue_assets( null ), 'Forced enqueues should succeed even when no global post is available.' );
+            $this->assertTrue( $this->detection()->should_enqueue_assets( null ), 'Forced enqueues should succeed even when no global post is available.' );
         } finally {
             remove_filter( 'mga_force_enqueue', '__return_true' );
             $GLOBALS['post'] = $previous_global_post;
@@ -248,7 +248,14 @@ HTML;
         unset( $_COOKIE[ $cookie_key ] );
 
         $this->assertTrue( post_password_required( $post_id ), 'Visiting a protected post without the access cookie should still require the password.' );
-        $this->assertFalse( mga_should_enqueue_assets( $post_id ), 'Assets should not enqueue for locked password protected posts.' );
+        $this->assertFalse( $this->detection()->should_enqueue_assets( $post_id ), 'Assets should not enqueue for locked password protected posts.' );
+    }
+
+    private function detection(): \MaGalerieAutomatique\Content\Detection {
+        $plugin = mga_plugin();
+        $this->assertInstanceOf( \MaGalerieAutomatique\Plugin::class, $plugin, 'The plugin instance should be available.' );
+
+        return $plugin->detection();
     }
 
     /**

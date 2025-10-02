@@ -8,31 +8,10 @@
  * Domain Path:       /languages
  */
 
-// Sécurité
-if ( ! defined( 'ABSPATH' ) ) exit;
+use MaGalerieAutomatique\Plugin;
 
-/**
- * Retourne le chemin absolu du dossier de traduction.
- *
- * @return string
- */
-function mga_get_languages_path() {
-    return plugin_dir_path( __FILE__ ) . 'languages';
-}
-
-/**
- * Indique si le dossier de traduction existe réellement.
- *
- * @return bool
- */
-function mga_languages_directory_exists() {
-    static $languages_exists = null;
-
-    if ( null === $languages_exists ) {
-        $languages_exists = is_dir( mga_get_languages_path() );
-    }
-
-    return $languages_exists;
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
 }
 
 if ( ! defined( 'MGA_VERSION' ) ) {
@@ -43,1217 +22,213 @@ if ( ! defined( 'MGA_ADMIN_TEMPLATE_PATH' ) ) {
     define( 'MGA_ADMIN_TEMPLATE_PATH', plugin_dir_path( __FILE__ ) . 'includes/admin-page-template.php' );
 }
 
-/**
- * SHA-384 integrity hash for the Swiper v11.1.4 CSS bundle.
- *
- * Update alongside Swiper version bumps.
- */
 if ( ! defined( 'MGA_SWIPER_CSS_SRI_HASH' ) ) {
     define( 'MGA_SWIPER_CSS_SRI_HASH', 'sha384-PVSiG5fugGA8MJ63B59UwXZo2CdlhrZb9vyPsW2ewxr0s5WHXWgEnS+8vtFkDr7O' );
 }
 
-/**
- * SHA-384 integrity hash for the Swiper v11.1.4 JavaScript bundle.
- *
- * Update alongside Swiper version bumps.
- */
 if ( ! defined( 'MGA_SWIPER_JS_SRI_HASH' ) ) {
     define( 'MGA_SWIPER_JS_SRI_HASH', 'sha384-ChaDfAcubhQlVCLEzy7y8vgjNLbZ4RlIjH2jjcUXjYpn0MwZieWBjpXFMjMx8Dax' );
 }
 
-/**
- * Initialise la traduction du plugin.
- */
-function mga_load_textdomain() {
-    $relative_path = mga_languages_directory_exists()
-        ? dirname( plugin_basename( __FILE__ ) ) . '/languages'
-        : false;
+require_once __DIR__ . '/includes/autoload.php';
 
-    load_plugin_textdomain( 'lightbox-jlg', false, $relative_path );
+global $ma_galerie_automatique_plugin;
+
+$ma_galerie_automatique_plugin = new Plugin( __FILE__ );
+$ma_galerie_automatique_plugin->register_hooks();
+
+register_activation_hook( __FILE__, [ $ma_galerie_automatique_plugin, 'activate' ] );
+
+function mga_plugin(): ?Plugin {
+    global $ma_galerie_automatique_plugin;
+
+    return $ma_galerie_automatique_plugin instanceof Plugin ? $ma_galerie_automatique_plugin : null;
 }
 
-add_action( 'plugins_loaded', 'mga_load_textdomain' );
+function mga_get_languages_path(): string {
+    $plugin = mga_plugin();
 
-/**
- * Initialise les réglages lors de l'activation du plugin.
- */
-function mga_activate() {
-    mga_refresh_swiper_asset_sources();
-
-    $defaults = mga_get_default_settings();
-    $existing_settings = get_option( 'mga_settings', false );
-
-    if ( false === $existing_settings ) {
-        add_option( 'mga_settings', $defaults );
-        return;
-    }
-
-    if ( is_array( $existing_settings ) ) {
-        $merged_settings = wp_parse_args( $existing_settings, $defaults );
-        update_option( 'mga_settings', mga_sanitize_settings( $merged_settings, $existing_settings ) );
-        return;
-    }
-
-    update_option( 'mga_settings', $defaults );
+    return $plugin ? $plugin->get_languages_path() : plugin_dir_path( __FILE__ ) . 'languages';
 }
 
-register_activation_hook( __FILE__, 'mga_activate' );
+function mga_languages_directory_exists(): bool {
+    $plugin = mga_plugin();
 
-/**
- * Détecte la disponibilité des assets Swiper locaux et mémorise le résultat.
- *
- * @return array{css:string,js:string,checked_at:int}
- */
-function mga_refresh_swiper_asset_sources() {
-    $local_swiper_css_path = plugin_dir_path( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.css';
-    $local_swiper_js_path  = plugin_dir_path( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.js';
-
-    $sources = [
-        'css' => file_exists( $local_swiper_css_path ) ? 'local' : 'cdn',
-        'js'  => file_exists( $local_swiper_js_path ) ? 'local' : 'cdn',
-        'checked_at' => time(),
-    ];
-
-    $existing_sources = get_option( 'mga_swiper_asset_sources', false );
-
-    if ( false === $existing_sources ) {
-        add_option( 'mga_swiper_asset_sources', $sources, '', 'no' );
-    } else {
-        update_option( 'mga_swiper_asset_sources', $sources );
-    }
-
-    return $sources;
+    return $plugin ? $plugin->languages_directory_exists() : is_dir( mga_get_languages_path() );
 }
 
-/**
- * Retourne la source mémorisée des assets Swiper.
- *
- * Le délai de rafraîchissement peut être ajusté via le filtre
- * `mga_swiper_sources_ttl`.
- *
- * @return array{css:string,js:string,checked_at:int}
- */
-function mga_get_swiper_asset_sources() {
-    $sources = get_option( 'mga_swiper_asset_sources' );
+function mga_load_textdomain(): void {
+    $plugin = mga_plugin();
 
-    if ( ! defined( 'MGA_SWIPER_SOURCES_TTL' ) ) {
-        define( 'MGA_SWIPER_SOURCES_TTL', HOUR_IN_SECONDS * 12 );
-    }
-
-    $ttl = apply_filters( 'mga_swiper_sources_ttl', MGA_SWIPER_SOURCES_TTL, $sources );
-
-    $needs_refresh = true;
-
-    if ( is_array( $sources ) && isset( $sources['css'], $sources['js'] ) ) {
-        $checked_at = isset( $sources['checked_at'] ) ? absint( $sources['checked_at'] ) : 0;
-        $is_fresh   = $checked_at && ( time() - $checked_at ) < absint( $ttl );
-
-        if ( $is_fresh ) {
-            $needs_refresh = false;
-        }
-    }
-
-    if ( $needs_refresh ) {
-        $sources = mga_refresh_swiper_asset_sources();
-    }
-
-    return $sources;
-}
-
-/**
- * Réévalue la présence des assets locaux après une mise à jour du plugin.
- */
-function mga_maybe_refresh_swiper_asset_sources( $upgrader, $options ) {
-    if ( empty( $options['type'] ) || 'plugin' !== $options['type'] ) {
-        return;
-    }
-
-    if ( empty( $options['plugins'] ) || ! is_array( $options['plugins'] ) ) {
-        return;
-    }
-
-    $plugin_basename = plugin_basename( __FILE__ );
-
-    if ( in_array( $plugin_basename, $options['plugins'], true ) ) {
-        mga_refresh_swiper_asset_sources();
+    if ( $plugin ) {
+        $plugin->load_textdomain();
     }
 }
 
-add_action( 'upgrader_process_complete', 'mga_maybe_refresh_swiper_asset_sources', 10, 2 );
+function mga_activate(): void {
+    $plugin = mga_plugin();
 
-// ===== FRONT-END =====
-
-/**
- * Charge les scripts et styles sur le site public.
- */
-function mga_enqueue_assets() {
-    $post = get_post();
-
-    if ( ! mga_should_enqueue_assets( $post ) ) {
-        return;
+    if ( $plugin ) {
+        $plugin->activate();
     }
-
-    // Récupérer les réglages sauvegardés
-    $defaults = mga_get_default_settings();
-    $saved_settings = get_option( 'mga_settings', [] );
-    // On s'assure que toutes les clés existent pour éviter les erreurs PHP
-    $settings = wp_parse_args( (array) $saved_settings, $defaults );
-
-    $settings['thumb_size'] = max( 50, min( 150, absint( $settings['thumb_size'] ) ) );
-    $settings['thumb_size_mobile'] = max( 40, min( 100, absint( $settings['thumb_size_mobile'] ) ) );
-    $settings['delay'] = max( 1, min( 30, absint( $settings['delay'] ) ) );
-    $settings['accent_color'] = sanitize_hex_color( $settings['accent_color'] ) ?: $defaults['accent_color'];
-    $settings['bg_opacity'] = max( 0, min( 1, floatval( $settings['bg_opacity'] ) ) );
-    $settings['z_index'] = max( 0, intval( $settings['z_index'] ) );
-    $settings['loop'] = ! empty( $settings['loop'] );
-    $settings['autoplay_start'] = ! empty( $settings['autoplay_start'] );
-    $settings['debug_mode'] = ! empty( $settings['debug_mode'] );
-    $settings['allowBodyFallback'] = ! empty( $settings['allowBodyFallback'] );
-    $settings['background_style'] = in_array( $settings['background_style'], [ 'echo', 'blur', 'texture' ], true )
-        ? $settings['background_style']
-        : $defaults['background_style'];
-    $settings['contentSelectors'] = array_values( array_unique( array_filter( array_map(
-        static function ( $selector ) {
-            return trim( (string) $selector );
-        },
-        (array) $settings['contentSelectors']
-    ), static function ( $selector ) {
-        return '' !== $selector;
-    } ) ) );
-    $settings['contentSelectors'] = apply_filters(
-        'mga_frontend_content_selectors',
-        (array) $settings['contentSelectors'],
-        $post
-    );
-    $settings['allowBodyFallback'] = (bool) apply_filters(
-        'mga_frontend_allow_body_fallback',
-        (bool) $settings['allowBodyFallback'],
-        $post
-    );
-
-    // Librairies (Mise à jour vers Swiper v11)
-    $swiper_version = '11.1.4';
-    $local_swiper_css_url  = plugin_dir_url( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.css';
-    $local_swiper_js_url   = plugin_dir_url( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.js';
-    $local_swiper_css_path = plugin_dir_path( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.css';
-    $local_swiper_js_path  = plugin_dir_path( __FILE__ ) . 'assets/vendor/swiper/swiper-bundle.min.js';
-
-    $cdn_swiper_css = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.css';
-    $cdn_swiper_js  = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.js';
-
-    $asset_sources = mga_get_swiper_asset_sources();
-
-    $should_refresh_sources = false;
-
-    if ( 'local' === $asset_sources['css'] && ! file_exists( $local_swiper_css_path ) ) {
-        $asset_sources['css'] = 'cdn';
-        $should_refresh_sources = true;
-    }
-
-    if ( 'local' === $asset_sources['js'] && ! file_exists( $local_swiper_js_path ) ) {
-        $asset_sources['js'] = 'cdn';
-        $should_refresh_sources = true;
-    }
-
-    if ( $should_refresh_sources ) {
-        $asset_sources = mga_refresh_swiper_asset_sources();
-    }
-
-    $swiper_css = 'local' === $asset_sources['css'] ? $local_swiper_css_url : $cdn_swiper_css;
-    $swiper_css = apply_filters( 'mga_swiper_css', $swiper_css, $swiper_version );
-
-    $swiper_js = 'local' === $asset_sources['js'] ? $local_swiper_js_url : $cdn_swiper_js;
-    $swiper_js = apply_filters( 'mga_swiper_js', $swiper_js, $swiper_version );
-
-    wp_enqueue_style( 'mga-swiper-css', $swiper_css, [], $swiper_version );
-
-    $css_sri_attributes = [];
-
-    if ( 'cdn' === $asset_sources['css'] && $swiper_css === $cdn_swiper_css ) {
-        $css_sri_attributes = [
-            'integrity'  => MGA_SWIPER_CSS_SRI_HASH,
-            'crossorigin' => 'anonymous',
-        ];
-    }
-
-    /**
-     * Filters the SRI related attributes applied to the Swiper stylesheet handle.
-     *
-     * @param array<string, string>                     $css_sri_attributes Associative array of attribute => value pairs.
-     * @param string                                     $swiper_css         Final URL used to enqueue the Swiper stylesheet.
-     * @param array{css:string,js:string,checked_at:int} $asset_sources      Cached asset source metadata.
-     */
-    $css_sri_attributes = apply_filters(
-        'mga_swiper_css_sri_attributes',
-        $css_sri_attributes,
-        $swiper_css,
-        $asset_sources
-    );
-
-    foreach ( $css_sri_attributes as $attribute => $value ) {
-        if ( '' === $attribute || null === $attribute ) {
-            continue;
-        }
-
-        if ( null === $value || '' === $value ) {
-            continue;
-        }
-
-        wp_style_add_data( 'mga-swiper-css', $attribute, $value );
-    }
-
-    wp_enqueue_script( 'mga-swiper-js', $swiper_js, [], $swiper_version, true );
-
-    $js_sri_attributes = [];
-
-    if ( 'cdn' === $asset_sources['js'] && $swiper_js === $cdn_swiper_js ) {
-        $js_sri_attributes = [
-            'integrity'  => MGA_SWIPER_JS_SRI_HASH,
-            'crossorigin' => 'anonymous',
-        ];
-    }
-
-    /**
-     * Filters the SRI related attributes applied to the Swiper script handle.
-     *
-     * @param array<string, string>                     $js_sri_attributes Associative array of attribute => value pairs.
-     * @param string                                     $swiper_js         Final URL used to enqueue the Swiper script.
-     * @param array{css:string,js:string,checked_at:int} $asset_sources     Cached asset source metadata.
-     */
-    $js_sri_attributes = apply_filters(
-        'mga_swiper_js_sri_attributes',
-        $js_sri_attributes,
-        $swiper_js,
-        $asset_sources
-    );
-
-    foreach ( $js_sri_attributes as $attribute => $value ) {
-        if ( '' === $attribute || null === $attribute ) {
-            continue;
-        }
-
-        if ( null === $value || '' === $value ) {
-            continue;
-        }
-
-        wp_script_add_data( 'mga-swiper-js', $attribute, $value );
-    }
-
-    // Fichiers du plugin
-    wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
-    $script_dependencies = [ 'mga-swiper-js', 'wp-i18n' ];
-    $languages_path = mga_get_languages_path();
-    $has_languages = mga_languages_directory_exists();
-    if ( ! empty( $settings['debug_mode'] ) ) {
-        $can_view_debug = apply_filters(
-            'mga_user_can_view_debug',
-            is_user_logged_in() && current_user_can( 'manage_options' )
-        );
-
-        if ( $can_view_debug ) {
-            wp_register_script(
-                'mga-debug-script',
-                plugin_dir_url( __FILE__ ) . 'assets/js/debug.js',
-                [ 'wp-i18n' ],
-                MGA_VERSION,
-                true
-            );
-            wp_enqueue_script( 'mga-debug-script' );
-
-            if ( $has_languages ) {
-                wp_set_script_translations( 'mga-debug-script', 'lightbox-jlg', $languages_path );
-            }
-            $script_dependencies[] = 'mga-debug-script';
-        }
-    }
-    wp_enqueue_script('mga-gallery-script', plugin_dir_url( __FILE__ ) . 'assets/js/gallery-slideshow.js', $script_dependencies, MGA_VERSION, true);
-    if ( $has_languages ) {
-        wp_set_script_translations( 'mga-gallery-script', 'lightbox-jlg', $languages_path );
-    }
-
-    // Passer les réglages au JavaScript
-    $settings_json = wp_json_encode( $settings );
-
-    if ( false !== $settings_json ) {
-        wp_add_inline_script(
-            'mga-gallery-script',
-            'window.mga_settings = ' . $settings_json . ";\nwindow.mgaSettings = window.mga_settings;",
-            'before'
-        );
-    }
-
-    // Générer les styles dynamiques
-    $accent_color = sanitize_hex_color($settings['accent_color']);
-    if ( ! $accent_color ) {
-        $accent_color = $defaults['accent_color'];
-    }
-
-    $dynamic_styles = sprintf(
-        ':root {--mga-thumb-size-desktop:%1$spx;--mga-thumb-size-mobile:%2$spx;--mga-accent-color:%3$s;--mga-bg-opacity:%4$s;--mga-z-index:%5$s;}',
-        absint( $settings['thumb_size'] ),
-        absint( $settings['thumb_size_mobile'] ),
-        esc_html( $accent_color ),
-        esc_html( (string) floatval( $settings['bg_opacity'] ) ),
-        esc_html( (string) intval( $settings['z_index'] ) )
-    );
-    wp_add_inline_style('mga-gallery-style', $dynamic_styles);
 }
 
-add_action( 'wp_enqueue_scripts', 'mga_enqueue_assets' );
+function mga_refresh_swiper_asset_sources(): array {
+    $plugin = mga_plugin();
 
-/**
- * Détermine si les assets front doivent être chargés pour un contenu.
- *
- * La détection se fait par étapes : la fonction vérifie d'abord si un forçage
- * est demandé via le filtre `mga_force_enqueue` et si le contexte est bien une
- * vue singulière. Elle inspecte ensuite la présence de blocs supportant des
- * images (galerie, image, etc.), recherche des liens vers des médias au moyen
- * d'une expression régulière qui accepte les balises <picture>, puis s'appuie
- * sur `mga_post_has_eligible_images()` comme dernier filet. Le résultat final
- * peut être filtré par `mga_post_has_linked_images`.
- *
- * @param WP_Post|int|null $post Objet post, identifiant ou null pour le post courant.
- *
- * @return bool
- */
-function mga_should_enqueue_assets( $post ) {
-    $post = get_post( $post );
-
-    $force_enqueue = apply_filters( 'mga_force_enqueue', false, $post );
-
-    if ( ! $post instanceof WP_Post ) {
-        return (bool) $force_enqueue;
-    }
-
-    if ( post_password_required( $post ) ) {
-        return false;
-    }
-
-    $defaults = mga_get_default_settings();
-    $saved_settings = get_option( 'mga_settings', [] );
-    $settings = wp_parse_args( (array) $saved_settings, $defaults );
-
-    $tracked_post_types = [];
-
-    if (
-        isset( $settings['tracked_post_types'] )
-        && is_array( $settings['tracked_post_types'] )
-    ) {
-        $tracked_post_types = array_map( 'sanitize_key', $settings['tracked_post_types'] );
-    }
-
-    if ( empty( $tracked_post_types ) ) {
-        $tracked_post_types = (array) $defaults['tracked_post_types'];
-    }
-
-    $all_registered_post_types = get_post_types( [], 'names' );
-    $tracked_post_types = array_values(
-        array_intersect( $tracked_post_types, $all_registered_post_types )
-    );
-
-    $tracked_post_types = apply_filters( 'mga_tracked_post_types', $tracked_post_types, $post );
-    $tracked_post_types = array_values( array_filter( (array) $tracked_post_types ) );
-
-    if ( ! is_singular() && ! $force_enqueue ) {
-        return false;
-    }
-
-    if ( $force_enqueue ) {
-        return true;
-    }
-
-    if (
-        ! empty( $tracked_post_types )
-        && ! in_array( $post->post_type, $tracked_post_types, true )
-    ) {
-        return false;
-    }
-
-    $content = (string) $post->post_content;
-
-    if ( '' === trim( $content ) ) {
-        return false;
-    }
-
-    static $request_detection_cache = [];
-
-    if ( isset( $request_detection_cache[ $post->ID ] ) ) {
-        return $request_detection_cache[ $post->ID ];
-    }
-
-    $has_linked_images = mga_get_cached_post_linked_images( $post );
-
-    if ( null === $has_linked_images ) {
-        $has_linked_images = mga_detect_post_linked_images( $post );
-        mga_update_post_linked_images_cache( $post->ID, $has_linked_images );
-    }
-
-    $has_linked_images = apply_filters( 'mga_post_has_linked_images', $has_linked_images, $post );
-    $has_linked_images = (bool) $has_linked_images;
-
-    $request_detection_cache[ $post->ID ] = $has_linked_images;
-
-    return $has_linked_images;
+    return $plugin ? $plugin->frontend_assets()->refresh_swiper_asset_sources() : [];
 }
 
-/**
- * Récupère le cache de détection d'images liées pour un post.
- *
- * @param WP_Post $post Objet WP_Post.
- *
- * @return bool|null
- */
-function mga_get_cached_post_linked_images( WP_Post $post ) {
-    $cached_value = get_post_meta( $post->ID, '_mga_has_linked_images', true );
+function mga_get_swiper_asset_sources(): array {
+    $plugin = mga_plugin();
 
-    if ( '' === $cached_value ) {
-        return null;
-    }
-
-    return in_array( $cached_value, [ 1, '1' ], true );
+    return $plugin ? $plugin->frontend_assets()->get_swiper_asset_sources() : [];
 }
 
-/**
- * Met à jour la valeur de cache pour un post donné.
- *
- * Lorsque le contenu dépend d'un bloc réutilisable, la méta `_mga_has_linked_images`
- * est supprimée afin que la détection soit recalculée à chaque requête et prenne
- * en compte les éventuelles modifications du bloc.
- *
- * @param int  $post_id           Identifiant du post.
- * @param bool $has_linked_images Présence d'images liées détectée.
- */
-function mga_update_post_linked_images_cache( $post_id, $has_linked_images ) {
-    $post = get_post( $post_id );
-
-    if ( $post instanceof WP_Post && mga_post_contains_reusable_block( $post ) ) {
-        delete_post_meta( $post_id, '_mga_has_linked_images' );
-
-        return;
-    }
-
-    update_post_meta( $post_id, '_mga_has_linked_images', $has_linked_images ? 1 : 0 );
-}
-
-/**
- * Parse un contenu de post en blocs en assurant la compatibilité avec les anciennes versions.
- *
- * @param string $content Contenu du post.
- *
- * @return array
- */
-function mga_parse_blocks_from_content( $content ) {
-    if ( function_exists( 'parse_blocks' ) ) {
-        return parse_blocks( $content );
-    }
-
-    if ( class_exists( 'WP_Block_Parser' ) ) {
-        $parser = new WP_Block_Parser();
-
-        return $parser->parse( $content );
-    }
-
-    return [];
-}
-
-/**
- * Indique si un post contient un bloc réutilisable.
- *
- * @param WP_Post $post Objet WP_Post.
- *
- * @return bool
- */
-function mga_post_contains_reusable_block( WP_Post $post ) {
-    $content = (string) $post->post_content;
-
-    if ( '' === trim( $content ) || false === strpos( $content, '<!-- wp:' ) ) {
-        return false;
-    }
-
-    $parsed_blocks = mga_parse_blocks_from_content( $content );
-
-    if ( ! empty( $parsed_blocks ) ) {
-        return mga_blocks_include_reusable_block( $parsed_blocks );
-    }
-
-    if ( function_exists( 'has_block' ) ) {
-        return has_block( 'core/block', $post );
-    }
-
-    return false;
-}
-
-/**
- * Recherche récursivement un bloc réutilisable dans une liste de blocs parsés.
- *
- * @param array $blocks Liste de blocs issus de parse_blocks().
- *
- * @return bool
- */
-function mga_blocks_include_reusable_block( array $blocks ) {
-    foreach ( $blocks as $block ) {
-        if ( ! is_array( $block ) ) {
-            continue;
-        }
-
-        $block_name = isset( $block['blockName'] ) ? $block['blockName'] : null;
-
-        if ( 'core/block' === $block_name ) {
-            return true;
-        }
-
-        if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
-            if ( mga_blocks_include_reusable_block( $block['innerBlocks'] ) ) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-/**
- * Exécute la détection coûteuse des images liées.
- *
- * @param WP_Post $post Objet WP_Post.
- *
- * @return bool
- */
-function mga_detect_post_linked_images( WP_Post $post ) {
-    $content = (string) $post->post_content;
-
-    if ( '' === trim( $content ) ) {
-        return false;
-    }
-
-    $has_linked_images = false;
-
-    $block_names = apply_filters(
-        'mga_linked_image_blocks',
-        [ 'core/gallery', 'core/image' ]
-    );
-
-    $block_names = array_values( array_filter( (array) $block_names ) );
-
-    if ( ! empty( $block_names ) && false !== strpos( $content, '<!-- wp:' ) ) {
-        $parsed_blocks = mga_parse_blocks_from_content( $content );
-
-        if ( ! empty( $parsed_blocks ) ) {
-            $has_linked_images = mga_blocks_contain_linked_media( $parsed_blocks, $block_names );
-        } elseif ( ! function_exists( 'has_block' ) ) {
-            $has_linked_images = true;
-        }
-    }
-
-    if ( ! $has_linked_images ) {
-        $linked_image_pattern = '#<a\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?(?:\#[^"\']*)?["\'][^>]*>\s*(?:<picture\b[^>]*>.*?<img\b[^>]*>|<img\b[^>]*>)#is';
-
-        $has_anchor = false !== stripos( $content, '<a' );
-        $has_media_tag = false !== stripos( $content, '<img' ) || false !== stripos( $content, '<picture' );
-
-        if ( $has_anchor && $has_media_tag && preg_match( $linked_image_pattern, $content ) ) {
-            $has_linked_images = true;
-        }
-    }
-
-    if ( ! $has_linked_images && mga_post_has_eligible_images( $post ) ) {
-        $has_linked_images = true;
-    }
-
-    return (bool) $has_linked_images;
-}
-
-/**
- * Met à jour le cache lorsqu'un contenu est sauvegardé.
- *
- * Les types de contenu pris en compte peuvent être filtrés via
- * `mga_tracked_post_types`. Les articles et les pages sont suivis par défaut.
- *
- * @param int     $post_id Identifiant du post.
- * @param WP_Post $post    Objet WP_Post.
- */
-function mga_refresh_post_linked_images_cache_on_save( $post_id, $post ) {
-    if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
-        return;
-    }
-
-    if ( ! $post instanceof WP_Post ) {
-        return;
-    }
-
-    $defaults = mga_get_default_settings();
-    $settings = get_option( 'mga_settings', $defaults );
-
-    if ( ! is_array( $settings ) ) {
-        $settings = [];
-    }
-
-    $settings = wp_parse_args( $settings, $defaults );
-
-    $tracked_post_types = [];
-
-    if (
-        isset( $settings['tracked_post_types'] )
-        && is_array( $settings['tracked_post_types'] )
-    ) {
-        $tracked_post_types = array_map( 'sanitize_key', $settings['tracked_post_types'] );
-    }
-
-    if ( empty( $tracked_post_types ) ) {
-        $tracked_post_types = (array) $defaults['tracked_post_types'];
-    }
-
-    $all_registered_post_types = get_post_types( [], 'names' );
-    $tracked_post_types = array_values(
-        array_intersect( $tracked_post_types, $all_registered_post_types )
-    );
-
-    $tracked_post_types = apply_filters( 'mga_tracked_post_types', $tracked_post_types, $post );
-    $tracked_post_types = array_values( array_filter( (array) $tracked_post_types ) );
-
-    if (
-        ! empty( $tracked_post_types )
-        && ! in_array( $post->post_type, (array) $tracked_post_types, true )
-    ) {
-        return;
-    }
-
-    $has_linked_images = mga_detect_post_linked_images( $post );
-    mga_update_post_linked_images_cache( $post_id, $has_linked_images );
-}
-
-add_action( 'save_post', 'mga_refresh_post_linked_images_cache_on_save', 10, 2 );
-
-/**
- * Parcourt les blocs parsés pour trouver une image liée à un média.
- *
- * @param array $blocks              Liste de blocs issus de parse_blocks().
- * @param array $allowed_block_names Noms de blocs à inspecter.
- *
- * @return bool
- */
-function mga_blocks_contain_linked_media( array $blocks, array $allowed_block_names, &$visited_block_ids = null ) {
-    if ( ! is_array( $visited_block_ids ) ) {
-        $visited_block_ids = [];
-    }
-
-    static $reusable_block_cache = [];
-
-    foreach ( $blocks as $block ) {
-        if ( ! is_array( $block ) ) {
-            continue;
-        }
-
-        $block_name = isset( $block['blockName'] ) ? $block['blockName'] : null;
-
-        if ( 'core/block' === $block_name ) {
-            $attrs = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [];
-            $ref   = isset( $attrs['ref'] ) ? absint( $attrs['ref'] ) : 0;
-
-            if ( $ref && ! in_array( $ref, $visited_block_ids, true ) ) {
-                $visited_block_ids[] = $ref;
-
-                if ( array_key_exists( $ref, $reusable_block_cache ) ) {
-                    $parsed_reusable_blocks = $reusable_block_cache[ $ref ];
-                } else {
-                    $reusable_block_cache[ $ref ] = [];
-                    $reusable_block = get_post( $ref );
-
-                    if (
-                        $reusable_block instanceof WP_Post
-                        && 'wp_block' === $reusable_block->post_type
-                        && ! empty( $reusable_block->post_content )
-                    ) {
-                        $reusable_block_cache[ $ref ] = mga_parse_blocks_from_content( $reusable_block->post_content );
-                    }
-
-                    $parsed_reusable_blocks = $reusable_block_cache[ $ref ];
-                }
-
-                if (
-                    ! empty( $parsed_reusable_blocks )
-                    && mga_blocks_contain_linked_media( $parsed_reusable_blocks, $allowed_block_names, $visited_block_ids )
-                ) {
-                    return true;
-                }
-            }
-
-            continue;
-        }
-
-        if ( $block_name && in_array( $block_name, $allowed_block_names, true ) ) {
-            $attrs = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [];
-
-            if ( mga_block_attributes_link_to_media( $attrs ) ) {
-                return true;
-            }
-        }
-
-        if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
-            if ( mga_blocks_contain_linked_media( $block['innerBlocks'], $allowed_block_names, $visited_block_ids ) ) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-/**
- * Vérifie si les attributs d'un bloc contiennent un lien vers un média.
- *
- * @param array $attrs Attributs du bloc.
- *
- * @return bool
- */
-function mga_block_attributes_link_to_media( array $attrs ) {
-    $media_destination_keys = [ 'linkDestination', 'linkTo' ];
-    $link_url_keys          = [ 'href', 'linkUrl', 'linkHref', 'imageLink', 'link' ];
-
-    foreach ( $media_destination_keys as $destination_key ) {
-        if ( isset( $attrs[ $destination_key ] ) && is_string( $attrs[ $destination_key ] ) ) {
-            if ( 'media' === $attrs[ $destination_key ] ) {
-                return true;
-            }
-        }
-    }
-
-    foreach ( $link_url_keys as $link_key ) {
-        if ( ! isset( $attrs[ $link_key ] ) ) {
-            continue;
-        }
-
-        $link_value = $attrs[ $link_key ];
-
-        if ( is_string( $link_value ) && mga_is_image_url( $link_value ) ) {
-            return true;
-        }
-
-        if ( is_array( $link_value ) ) {
-            if ( isset( $link_value['url'] ) && is_string( $link_value['url'] ) && mga_is_image_url( $link_value['url'] ) ) {
-                return true;
-            }
-
-            if ( mga_block_attributes_link_to_media( $link_value ) ) {
-                return true;
-            }
-        }
-    }
-
-    foreach ( $attrs as $value ) {
-        if ( is_array( $value ) && mga_block_attributes_link_to_media( $value ) ) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/**
- * Détermine si une URL pointe vers une image en se basant sur son extension.
- *
- * @param string $url URL à vérifier.
- *
- * @return bool
- */
-function mga_is_image_url( $url ) {
-    if ( ! is_string( $url ) || '' === $url ) {
-        return false;
-    }
-
-    $parsed_url = wp_parse_url( $url );
-
-    if ( empty( $parsed_url['path'] ) ) {
-        return false;
-    }
-
-    $extension = strtolower( pathinfo( $parsed_url['path'], PATHINFO_EXTENSION ) );
-
-    if ( '' === $extension ) {
-        return false;
-    }
-
-    $allowed_extensions = [ 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'avif', 'svg' ];
-
-    return in_array( $extension, $allowed_extensions, true );
-}
-
-/**
- * Vérifie si les attributs d'une galerie indiquent que les images sont liées à un média.
- *
- * @param array $attributes Attributs de la galerie.
- *
- * @return bool
- */
-function mga_gallery_attributes_link_to_media( array $attributes ) {
-    if ( empty( $attributes ) ) {
-        return false;
-    }
-
-    $attributes = array_change_key_case( $attributes, CASE_LOWER );
-
-    if ( isset( $attributes['link'] ) && is_string( $attributes['link'] ) ) {
-        if ( in_array( $attributes['link'], [ 'file', 'attachment', 'media' ], true ) ) {
-            return true;
-        }
-    }
-
-    if ( isset( $attributes['linkdestination'] ) && is_string( $attributes['linkdestination'] ) ) {
-        if ( in_array( $attributes['linkdestination'], [ 'media', 'attachment' ], true ) ) {
-            return true;
-        }
-    }
-
-    if ( isset( $attributes['linkto'] ) && is_string( $attributes['linkto'] ) ) {
-        if ( in_array( $attributes['linkto'], [ 'file', 'attachment', 'media' ], true ) ) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/**
- * Analyse le HTML d'une galerie pour déterminer si des images sont liées à un média.
- *
- * @param string $html HTML généré par une galerie.
- *
- * @return bool
- */
-function mga_gallery_html_has_linked_media( $html ) {
-    if ( ! is_string( $html ) || '' === trim( $html ) ) {
-        return false;
-    }
-
-    $pattern = '#<a\\b[^>]*href=["\']([^"\']+)["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
-
-    if ( preg_match_all( $pattern, $html, $matches ) ) {
-        foreach ( $matches[1] as $href ) {
-            if ( mga_is_image_url( $href ) ) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-/**
- * Détermine si le contenu du post courant contient des images utilisables.
- *
- * @param WP_Post|int|null $post Objet post, identifiant, ou null pour utiliser le post courant.
- *
- * @return bool
- */
-function mga_post_has_eligible_images( $post = null ) {
-    $post = get_post( $post );
-
-    if ( ! $post instanceof WP_Post ) {
-        return false;
-    }
-
-    if ( function_exists( 'get_post_galleries_images' ) ) {
-        $galleries = get_post_galleries_images( $post );
-
-        if ( ! empty( $galleries ) ) {
-            $gallery_attributes = [];
-            $gallery_html       = [];
-
-            if ( function_exists( 'get_post_galleries' ) ) {
-                $gallery_attributes = get_post_galleries( $post, false );
-                $gallery_html       = get_post_galleries( $post, true );
-            }
-
-            foreach ( $galleries as $index => $images ) {
-                if ( empty( $images ) ) {
-                    continue;
-                }
-
-                $has_linked_media = false;
-
-                if ( isset( $gallery_attributes[ $index ] ) && is_array( $gallery_attributes[ $index ] ) ) {
-                    $has_linked_media = mga_gallery_attributes_link_to_media( $gallery_attributes[ $index ] );
-                }
-
-                if ( ! $has_linked_media && isset( $gallery_html[ $index ] ) ) {
-                    $has_linked_media = mga_gallery_html_has_linked_media( $gallery_html[ $index ] );
-                }
-
-                if ( $has_linked_media ) {
-                    return true;
-                }
-            }
-        }
-    }
-
-    $content = $post->post_content;
-
-    if ( empty( $content ) ) {
-        return false;
-    }
-
-    $pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?(?:\\#[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
-
-    if ( preg_match( $pattern, $content ) ) {
-        return true;
-    }
-
-    return false;
-}
-
-
-// ===== ADMIN =====
-
-/**
- * Ajoute la page de réglages au menu principal de l'administration.
- */
-function mga_add_admin_menu() {
-    add_menu_page(
-        __( 'Lightbox - JLG', 'lightbox-jlg' ),
-        __( 'Lightbox - JLG', 'lightbox-jlg' ),
-        'manage_options',
-        'ma-galerie-automatique',
-        'mga_options_page_html',
-        'dashicons-format-gallery',
-        26
-    );
-}
-add_action( 'admin_menu', 'mga_add_admin_menu' );
-
-/**
- * Enregistre les réglages.
- */
-function mga_settings_init() {
-    register_setting( 'mga_settings_group', 'mga_settings', 'mga_sanitize_settings' );
-}
-add_action( 'admin_init', 'mga_settings_init' );
-
-/**
- * Retourne les réglages par défaut.
- */
-function mga_get_default_settings() {
-    return [
-        'delay' => 4,
-        'thumb_size' => 90,
-        'thumb_size_mobile' => 70,
-        'accent_color' => '#ffffff',
-        'bg_opacity' => 0.95,
-        'loop' => true,
-        'autoplay_start' => false,
-        'background_style' => 'echo',
-        'z_index' => 99999,
-        'debug_mode' => false,
-        'groupAttribute' => 'data-mga-gallery',
-        'contentSelectors' => [],
-        'allowBodyFallback' => false,
-        'tracked_post_types' => [ 'post', 'page' ],
-    ];
-}
-
-/**
- * Nettoie les données envoyées.
- */
-function mga_sanitize_settings( $input, $existing_settings = null ) {
-    if ( ! is_array( $input ) ) {
-        $input = [];
-    }
-
-    $defaults = mga_get_default_settings();
-    $output = [];
-    if ( null === $existing_settings ) {
-        $existing_settings = get_option( 'mga_settings', [] );
-    }
-
-    if ( ! is_array( $existing_settings ) ) {
-        $existing_settings = [];
-    }
-
-    if ( isset( $input['delay'] ) ) {
-        $delay = intval( $input['delay'] );
-        $bounded_delay = max( 1, min( 30, $delay ) );
-        $output['delay'] = $bounded_delay;
-    } else {
-        $output['delay'] = $defaults['delay'];
-    }
-
-    if ( isset( $input['thumb_size'] ) ) {
-        $thumb_size = intval( $input['thumb_size'] );
-        $bounded_thumb_size = max( 50, min( 150, $thumb_size ) );
-        $output['thumb_size'] = $bounded_thumb_size;
-    } else {
-        $output['thumb_size'] = $defaults['thumb_size'];
-    }
-
-    if ( isset( $input['thumb_size_mobile'] ) ) {
-        $thumb_size_mobile = intval( $input['thumb_size_mobile'] );
-        $bounded_thumb_mobile = max( 40, min( 100, $thumb_size_mobile ) );
-        $output['thumb_size_mobile'] = $bounded_thumb_mobile;
-    } else {
-        $output['thumb_size_mobile'] = $defaults['thumb_size_mobile'];
-    }
-    if ( isset( $input['accent_color'] ) ) {
-        $sanitized_accent = sanitize_hex_color( $input['accent_color'] );
-        $output['accent_color'] = $sanitized_accent ? $sanitized_accent : $defaults['accent_color'];
-    } else {
-        $output['accent_color'] = $defaults['accent_color'];
-    }
-    $output['bg_opacity'] = isset($input['bg_opacity']) ? max(min(floatval($input['bg_opacity']), 1), 0) : $defaults['bg_opacity'];
-    $output['loop'] = ! empty( $input['loop'] );
-    $output['autoplay_start'] = ! empty( $input['autoplay_start'] );
-    
-    $sanitize_group_attribute = static function( $value ) use ( $defaults ) {
-        if ( ! is_string( $value ) ) {
-            return $defaults['groupAttribute'];
-        }
-
-        $trimmed = trim( $value );
-        if ( '' === $trimmed ) {
-            return '';
-        }
-
-        $sanitized = strtolower( preg_replace( '/[^a-z0-9_:\-]/i', '', $trimmed ) );
-
-        return '' === $sanitized ? $defaults['groupAttribute'] : $sanitized;
-    };
-
-    if ( array_key_exists( 'groupAttribute', $input ) ) {
-        $output['groupAttribute'] = $sanitize_group_attribute( $input['groupAttribute'] );
-    } elseif ( isset( $existing_settings['groupAttribute'] ) ) {
-        $output['groupAttribute'] = $sanitize_group_attribute( $existing_settings['groupAttribute'] );
-    } else {
-        $output['groupAttribute'] = $defaults['groupAttribute'];
-    }
-
-    $allowed_bg_styles = ['echo', 'blur', 'texture'];
-    $output['background_style'] = isset($input['background_style']) && in_array($input['background_style'], $allowed_bg_styles, true) ? $input['background_style'] : $defaults['background_style'];
-    
-    if ( isset( $input['z_index'] ) ) {
-        $raw_z_index = intval( $input['z_index'] );
-        $sanitized_z_index = max( 0, $raw_z_index );
-        $output['z_index'] = $sanitized_z_index;
-    } else {
-        $output['z_index'] = $defaults['z_index'];
-    }
-    $output['debug_mode'] = ! empty( $input['debug_mode'] );
-
-    $sanitize_selectors = static function ( $selectors ) {
-        $sanitized = [];
-
-        foreach ( (array) $selectors as $selector ) {
-            $clean_selector = (string) $selector;
-            $clean_selector = wp_strip_all_tags( $clean_selector );
-            $clean_selector = preg_replace( '/[\x00-\x1F\x7F]+/u', '', $clean_selector );
-            $clean_selector = preg_replace( '/\s+/u', ' ', $clean_selector );
-            $clean_selector = trim( $clean_selector );
-
-            if ( '' !== $clean_selector ) {
-                $sanitized[] = $clean_selector;
-            }
-        }
-
-        return array_values( array_unique( $sanitized ) );
-    };
-
-    $existing_selectors = $sanitize_selectors( $defaults['contentSelectors'] );
-
-    if ( isset( $existing_settings['contentSelectors'] ) && is_array( $existing_settings['contentSelectors'] ) ) {
-        $existing_selectors = $sanitize_selectors( $existing_settings['contentSelectors'] );
-    }
-
-    if ( array_key_exists( 'contentSelectors', $input ) ) {
-        if ( is_array( $input['contentSelectors'] ) ) {
-            $output['contentSelectors'] = $sanitize_selectors( $input['contentSelectors'] );
-        } else {
-            $output['contentSelectors'] = $existing_selectors;
-        }
-    } else {
-        $output['contentSelectors'] = $existing_selectors;
-    }
-    $output['allowBodyFallback'] = isset( $input['allowBodyFallback'] )
-        ? (bool) $input['allowBodyFallback']
-        : (bool) $defaults['allowBodyFallback'];
-
-    $all_post_types = get_post_types( [], 'names' );
-    $default_tracked_post_types = array_values(
-        array_intersect( (array) $defaults['tracked_post_types'], $all_post_types )
-    );
-
-    $existing_tracked_post_types = $default_tracked_post_types;
-
-    if (
-        isset( $existing_settings['tracked_post_types'] )
-        && is_array( $existing_settings['tracked_post_types'] )
-    ) {
-        $existing_tracked_post_types = array_values(
-            array_intersect(
-                array_map( 'sanitize_key', $existing_settings['tracked_post_types'] ),
-                $all_post_types
-            )
-        );
-    }
-
-    if ( array_key_exists( 'tracked_post_types', $input ) ) {
-        $sanitized_tracked_post_types = [];
-
-        foreach ( (array) $input['tracked_post_types'] as $post_type ) {
-            $post_type = sanitize_key( $post_type );
-
-            if ( in_array( $post_type, $all_post_types, true ) ) {
-                $sanitized_tracked_post_types[] = $post_type;
-            }
-        }
-
-        $output['tracked_post_types'] = array_values( array_unique( $sanitized_tracked_post_types ) );
-
-        if ( empty( $output['tracked_post_types'] ) ) {
-            $output['tracked_post_types'] = $default_tracked_post_types;
-        }
-    } else {
-        $output['tracked_post_types'] = $existing_tracked_post_types;
-    }
-
-    return $output;
-}
-
-/**
- * Charge les fichiers pour la page d'admin.
- */
-function mga_admin_enqueue_assets($hook) {
-    if ( ! current_user_can( 'manage_options' ) ) return;
-    if ($hook !== 'toplevel_page_ma-galerie-automatique') return;
-    wp_enqueue_style('mga-admin-style', plugin_dir_url(__FILE__) . 'assets/css/admin-style.css', [], MGA_VERSION);
-    wp_register_script(
-        'mga-focus-utils',
-        plugin_dir_url(__FILE__) . 'assets/js/utils/focus-utils.js',
-        [],
-        MGA_VERSION,
-        true
-    );
-    wp_register_script(
-        'mga-admin-script',
-        plugin_dir_url(__FILE__) . 'assets/js/admin-script.js',
-        [ 'wp-i18n', 'mga-focus-utils' ],
-        MGA_VERSION,
-        true
-    );
-    wp_enqueue_script('mga-focus-utils');
-    wp_enqueue_script('mga-admin-script');
-    if ( mga_languages_directory_exists() ) {
-        wp_set_script_translations( 'mga-admin-script', 'lightbox-jlg', mga_get_languages_path() );
+function mga_maybe_refresh_swiper_asset_sources( $upgrader, $options ): void {
+    $plugin = mga_plugin();
+
+    if ( $plugin ) {
+        $plugin->frontend_assets()->maybe_refresh_swiper_asset_sources( $upgrader, $options );
     }
 }
-add_action('admin_enqueue_scripts', 'mga_admin_enqueue_assets');
 
+function mga_enqueue_assets(): void {
+    $plugin = mga_plugin();
 
-/**
- * Affiche le HTML de la page de réglages.
- */
-function mga_options_page_html() {
-    if ( ! current_user_can( 'manage_options' ) ) return;
-    
-    $settings = get_option( 'mga_settings', mga_get_default_settings() );
-    
-    if ( is_readable( MGA_ADMIN_TEMPLATE_PATH ) ) {
-        include MGA_ADMIN_TEMPLATE_PATH;
+    if ( $plugin ) {
+        $plugin->frontend_assets()->enqueue_assets();
+    }
+}
+
+function mga_should_enqueue_assets( $post ): bool {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->should_enqueue_assets( $post ) : false;
+}
+
+function mga_get_cached_post_linked_images( \WP_Post $post ): ?bool {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->get_cached_post_linked_images( $post ) : null;
+}
+
+function mga_update_post_linked_images_cache( $post_id, $has_linked_images ): void {
+    $plugin = mga_plugin();
+
+    if ( $plugin ) {
+        $plugin->detection()->update_post_linked_images_cache( (int) $post_id, (bool) $has_linked_images );
+    }
+}
+
+function mga_parse_blocks_from_content( $content ): array {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->parse_blocks_from_content( (string) $content ) : [];
+}
+
+function mga_post_contains_reusable_block( \WP_Post $post ): bool {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->post_contains_reusable_block( $post ) : false;
+}
+
+function mga_blocks_include_reusable_block( array $blocks ): bool {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->blocks_include_reusable_block( $blocks ) : false;
+}
+
+function mga_detect_post_linked_images( \WP_Post $post ): bool {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->detect_post_linked_images( $post ) : false;
+}
+
+function mga_refresh_post_linked_images_cache_on_save( $post_id, $post ): void {
+    $plugin = mga_plugin();
+
+    if ( $plugin ) {
+        $plugin->detection()->refresh_post_linked_images_cache_on_save( $post_id, $post );
+    }
+}
+
+function mga_blocks_contain_linked_media( array $blocks, array $allowed_block_names, &$visited_block_ids = null ): bool {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->blocks_contain_linked_media( $blocks, $allowed_block_names, $visited_block_ids ) : false;
+}
+
+function mga_block_attributes_link_to_media( array $attrs ): bool {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->block_attributes_link_to_media( $attrs ) : false;
+}
+
+function mga_is_image_url( $url ): bool {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->is_image_url( $url ) : false;
+}
+
+function mga_gallery_attributes_link_to_media( array $attributes ): bool {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->gallery_attributes_link_to_media( $attributes ) : false;
+}
+
+function mga_gallery_html_has_linked_media( $html ): bool {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->gallery_html_has_linked_media( $html ) : false;
+}
+
+function mga_post_has_eligible_images( $post = null ): bool {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->detection()->post_has_eligible_images( $post ) : false;
+}
+
+function mga_add_admin_menu(): void {
+    $plugin = mga_plugin();
+
+    if ( $plugin ) {
+        $plugin->settings()->add_admin_menu();
+    }
+}
+
+function mga_settings_init(): void {
+    $plugin = mga_plugin();
+
+    if ( $plugin ) {
+        $plugin->settings()->register_settings();
+    }
+}
+
+function mga_get_default_settings(): array {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->settings()->get_default_settings() : [];
+}
+
+function mga_sanitize_settings( $input, $existing_settings = null ): array {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->settings()->sanitize_settings( $input, $existing_settings ) : [];
+}
+
+function mga_admin_enqueue_assets( $hook ): void {
+    $plugin = mga_plugin();
+
+    if ( $plugin ) {
+        $plugin->settings()->enqueue_assets( $hook );
+    }
+}
+
+function mga_options_page_html(): void {
+    $plugin = mga_plugin();
+
+    if ( $plugin ) {
+        $plugin->settings()->render_options_page();
     }
 }
