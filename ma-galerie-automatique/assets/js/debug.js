@@ -3,14 +3,21 @@
 
     const mgaI18n = global.wp && global.wp.i18n ? global.wp.i18n : null;
     const mga__ = mgaI18n && typeof mgaI18n.__ === 'function' ? mgaI18n.__ : ( text ) => text;
+    const TOKEN_REGEX = /%(\d+\$)?([sd])/g;
     const fallbackSprintf = ( format, ...args ) => {
         let autoIndex = 0;
 
-        return format.replace(/%(\d+\$)?([sd])/g, (match, position, type) => {
+        return String(format).replace(TOKEN_REGEX, (match, position, type) => {
             let argIndex;
 
             if (position) {
-                argIndex = parseInt(position, 10) - 1;
+                const numericIndex = parseInt(position.slice(0, -1), 10);
+
+                if (Number.isNaN(numericIndex) || numericIndex <= 0) {
+                    return '';
+                }
+
+                argIndex = numericIndex - 1;
             } else {
                 argIndex = autoIndex;
                 autoIndex += 1;
