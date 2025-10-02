@@ -161,8 +161,55 @@ class Settings {
             ? max( min( (float) $input['bg_opacity'], 1 ), 0 )
             : $defaults['bg_opacity'];
 
-        $output['loop']           = ! empty( $input['loop'] );
-        $output['autoplay_start'] = ! empty( $input['autoplay_start'] );
+        $normalize_checkbox = static function ( $value, $default = false ) {
+            if ( null === $value ) {
+                return (bool) $default;
+            }
+
+            if ( is_bool( $value ) ) {
+                return $value;
+            }
+
+            if ( is_string( $value ) ) {
+                $normalized = strtolower( trim( $value ) );
+
+                if ( '' === $normalized ) {
+                    return false;
+                }
+
+                if ( in_array( $normalized, [ '1', 'true', 'yes', 'on' ], true ) ) {
+                    return true;
+                }
+
+                if ( in_array( $normalized, [ '0', 'false', 'no', 'off' ], true ) ) {
+                    return false;
+                }
+            }
+
+            if ( is_numeric( $value ) ) {
+                return (int) $value !== 0;
+            }
+
+            return (bool) $value;
+        };
+
+        $resolve_checkbox_value = static function ( string $key ) use ( $input, $existing_settings, $defaults, $normalize_checkbox ) {
+            if ( is_array( $input ) && array_key_exists( $key, $input ) ) {
+                return $normalize_checkbox( $input[ $key ], $defaults[ $key ] ?? false );
+            }
+
+            if ( is_array( $existing_settings ) && array_key_exists( $key, $existing_settings ) ) {
+                return $normalize_checkbox( $existing_settings[ $key ], $defaults[ $key ] ?? false );
+            }
+
+            return array_key_exists( $key, $defaults )
+                ? $normalize_checkbox( $defaults[ $key ], $defaults[ $key ] )
+                : false;
+        };
+
+        foreach ( [ 'loop', 'autoplay_start', 'debug_mode', 'allowBodyFallback' ] as $checkbox_key ) {
+            $output[ $checkbox_key ] = $resolve_checkbox_value( $checkbox_key );
+        }
 
         $sanitize_group_attribute = static function ( $value ) use ( $defaults ) {
             if ( ! is_string( $value ) ) {
@@ -199,8 +246,6 @@ class Settings {
         } else {
             $output['z_index'] = $defaults['z_index'];
         }
-
-        $output['debug_mode'] = ! empty( $input['debug_mode'] );
 
         $sanitize_selectors = static function ( $selectors ) {
             $sanitized = [];
@@ -245,24 +290,8 @@ class Settings {
             $output['contentSelectors'] = $existing_selectors;
         }
 
-        $output['allowBodyFallback'] = isset( $input['allowBodyFallback'] )
-            ? (bool) $input['allowBodyFallback']
-            : (bool) $defaults['allowBodyFallback'];
-
-        $resolve_toolbar_toggle = static function ( string $key ) use ( $input, $existing_settings, $defaults ) {
-            if ( is_array( $input ) && array_key_exists( $key, $input ) ) {
-                return (bool) $input[ $key ];
-            }
-
-            if ( is_array( $existing_settings ) && array_key_exists( $key, $existing_settings ) ) {
-                return (bool) $existing_settings[ $key ];
-            }
-
-            return (bool) $defaults[ $key ];
-        };
-
         foreach ( [ 'show_zoom', 'show_download', 'show_share', 'show_fullscreen', 'show_thumbs_mobile' ] as $toolbar_toggle ) {
-            $output[ $toolbar_toggle ] = $resolve_toolbar_toggle( $toolbar_toggle );
+            $output[ $toolbar_toggle ] = $resolve_checkbox_value( $toolbar_toggle );
         }
 
         $all_post_types               = get_post_types( [], 'names' );

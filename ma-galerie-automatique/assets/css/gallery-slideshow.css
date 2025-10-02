@@ -64,7 +64,12 @@
     white-space: normal;
     overflow-wrap: anywhere;
 }
-.mga-toolbar { display: flex; align-items: center; gap: 10px; }
+.mga-toolbar {
+    --mga-toolbar-gap: 10px;
+    display: flex;
+    align-items: center;
+    gap: var(--mga-toolbar-gap);
+}
 
 .mga-toolbar-button { position: relative; background: transparent; border: none; color: var(--mga-accent-color, #fff); cursor: pointer; padding: 10px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.2s ease, box-shadow 0.2s ease; line-height: 0; }
 .mga-toolbar-button[hidden],
@@ -187,7 +192,8 @@
         display: flex;
         flex-wrap: wrap;
         justify-content: flex-end;
-        gap: 6px;
+        --mga-toolbar-gap: clamp(6px, 1.5vw, 9px);
+        gap: var(--mga-toolbar-gap);
         width: 100%;
     }
     .mga-toolbar-button { flex: 0 1 44px; }
@@ -257,13 +263,22 @@
 @media (max-width: 480px) {
     .mga-toolbar {
         justify-content: center;
-        gap: 8px;
+        --mga-toolbar-gap: clamp(6px, 4vw, 8px);
+        gap: var(--mga-toolbar-gap);
     }
     .mga-toolbar-button {
         min-width: 40px;
         min-height: 40px;
         padding: 8px;
     }
+}
+
+.mga-toolbar[data-mga-optional-buttons='0'] {
+    --mga-toolbar-gap: 6px;
+}
+
+.mga-toolbar[data-mga-optional-buttons='1'] {
+    --mga-toolbar-gap: 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {
