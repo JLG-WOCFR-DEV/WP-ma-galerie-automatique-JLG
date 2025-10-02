@@ -3,12 +3,13 @@
 
     const mgaI18n = global.wp && global.wp.i18n ? global.wp.i18n : null;
     const mga__ = mgaI18n && typeof mgaI18n.__ === 'function' ? mgaI18n.__ : ( text ) => text;
-    const TOKEN_REGEX = /%(\d+\$)?([sd])/g;
+    const TOKEN_REGEX = /%(\d+\$)?[sd]/g;
     const fallbackSprintf = ( format, ...args ) => {
         let autoIndex = 0;
 
-        return String(format).replace(TOKEN_REGEX, (match, position, type) => {
+        return String(format).replace(TOKEN_REGEX, (match, position) => {
             let argIndex;
+            const type = match.charAt(match.length - 1);
 
             if (position) {
                 const numericIndex = parseInt(position.slice(0, -1), 10);
@@ -23,19 +24,15 @@
                 autoIndex += 1;
             }
 
-            if (argIndex < 0 || argIndex >= args.length) {
-                return '';
-            }
-
-            const value = args[argIndex];
-
-            if (typeof value === 'undefined') {
-                return '';
-            }
+            const value = argIndex >= 0 && argIndex < args.length ? args[argIndex] : undefined;
 
             if (type === 'd') {
                 const coerced = parseInt(value, 10);
                 return Number.isNaN(coerced) ? '' : String(coerced);
+            }
+
+            if (typeof value === 'undefined') {
+                return '';
             }
 
             return String(value);
