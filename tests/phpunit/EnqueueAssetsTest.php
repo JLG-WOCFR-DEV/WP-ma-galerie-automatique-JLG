@@ -41,7 +41,7 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
             ]
         );
 
-        mga_enqueue_assets();
+        $this->assets()->enqueue_assets();
 
         $this->assertSame(
             MGA_SWIPER_CSS_SRI_HASH,
@@ -93,7 +93,7 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
         add_filter( 'mga_swiper_js', $js_callback );
 
         try {
-            mga_enqueue_assets();
+            $this->assets()->enqueue_assets();
         } finally {
             remove_filter( 'mga_swiper_css', $css_callback );
             remove_filter( 'mga_swiper_js', $js_callback );
@@ -147,7 +147,7 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
             ]
         );
 
-        mga_enqueue_assets();
+        $this->assets()->enqueue_assets();
 
         $dynamic_styles = wp_styles()->get_data( 'mga-gallery-style', 'after' );
         $this->assertIsArray( $dynamic_styles, 'Inline style data should be stored under the "after" key.' );
@@ -202,7 +202,7 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
         add_filter( 'mga_frontend_allow_body_fallback', $filter, 10, 2 );
 
         try {
-            mga_enqueue_assets();
+            $this->assets()->enqueue_assets();
         } finally {
             remove_filter( 'mga_frontend_allow_body_fallback', $filter, 10 );
         }
@@ -256,5 +256,12 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
         $this->assertIsArray( $decoded, 'The JSON payload assigned to window.mga_settings should decode to an array.' );
 
         return $decoded;
+    }
+
+    private function assets(): \MaGalerieAutomatique\Frontend\Assets {
+        $plugin = mga_plugin();
+        $this->assertInstanceOf( \MaGalerieAutomatique\Plugin::class, $plugin, 'The plugin instance should be available.' );
+
+        return $plugin->frontend_assets();
     }
 }

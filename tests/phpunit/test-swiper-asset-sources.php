@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for mga_refresh_swiper_asset_sources().
+ * Tests for Frontend\Assets::refresh_swiper_asset_sources().
  */
 
 if ( ! function_exists( 'mga_refresh_swiper_asset_sources' ) ) {
@@ -29,7 +29,7 @@ class MGA_Swiper_Asset_Sources_Test extends WP_UnitTestCase {
             'js'  => 'cdn',
         ], '', 'no' );
 
-        mga_refresh_swiper_asset_sources();
+        $this->assets()->refresh_swiper_asset_sources();
 
         $autoload = $wpdb->get_var(
             $wpdb->prepare(
@@ -115,7 +115,7 @@ class MGA_Swiper_Asset_Sources_Test extends WP_UnitTestCase {
         delete_option( 'mga_swiper_asset_sources' );
         add_option( 'mga_swiper_asset_sources', $sentinel, '', 'no' );
 
-        $sources = mga_get_swiper_asset_sources();
+        $sources = $this->assets()->get_swiper_asset_sources();
 
         $this->assertIsArray( $sources );
         $this->assertArrayHasKey( 'checked_at', $sources );
@@ -124,5 +124,12 @@ class MGA_Swiper_Asset_Sources_Test extends WP_UnitTestCase {
         $persisted_sources = get_option( 'mga_swiper_asset_sources' );
 
         $this->assertSame( $sources, $persisted_sources, 'Refreshed sources should be persisted in the option.' );
+    }
+
+    private function assets(): \MaGalerieAutomatique\Frontend\Assets {
+        $plugin = mga_plugin();
+        $this->assertInstanceOf( \MaGalerieAutomatique\Plugin::class, $plugin, 'The plugin instance should be available.' );
+
+        return $plugin->frontend_assets();
     }
 }

@@ -11,7 +11,7 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
      * @param array $expected_subset
      */
     public function test_sanitize_settings( $input, $existing, $expected_subset ) {
-        $result = mga_sanitize_settings( $input, $existing );
+        $result = $this->settings()->sanitize_settings( $input, $existing );
 
         foreach ( $expected_subset as $key => $expected_value ) {
             $this->assertArrayHasKey( $key, $result, sprintf( 'The %s key should exist in the sanitized settings.', $key ) );
@@ -20,12 +20,12 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
     }
 
     /**
-     * Provides scenarios that exercise the mga_sanitize_settings() bounds and merge logic.
+     * Provides scenarios that exercise the sanitize_settings() bounds and merge logic.
      *
      * @return array[]
      */
     public function sanitize_settings_provider() {
-        $defaults          = mga_get_default_settings();
+        $defaults          = $this->settings()->get_default_settings();
         $all_post_types    = get_post_types( [], 'names' );
         $default_tracked   = array_values( array_intersect( (array) $defaults['tracked_post_types'], $all_post_types ) );
 
@@ -107,6 +107,13 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 ],
             ],
         ];
+    }
+
+    private function settings(): \MaGalerieAutomatique\Admin\Settings {
+        $plugin = mga_plugin();
+        $this->assertInstanceOf( \MaGalerieAutomatique\Plugin::class, $plugin, 'The plugin instance should be available.' );
+
+        return $plugin->settings();
     }
 }
 
