@@ -104,7 +104,15 @@ $settings = wp_parse_args( $settings, $defaults );
                 <tr>
                     <th scope="row"><label for="mga_accent_color"><?php echo esc_html__( "Couleur d'accentuation", 'lightbox-jlg' ); ?></label></th>
                     <td>
-                        <input name="mga_settings[accent_color]" type="color" id="mga_accent_color" value="<?php echo esc_attr( $settings['accent_color'] ); ?>" />
+                        <input
+                            name="mga_settings[accent_color]"
+                            type="text"
+                            id="mga_accent_color"
+                            value="<?php echo esc_attr( $settings['accent_color'] ); ?>"
+                            class="regular-text wp-color-picker"
+                            data-default-color="<?php echo esc_attr( $defaults['accent_color'] ); ?>"
+                        />
+                        <span id="mga_accent_color_preview" class="mga-color-preview" aria-hidden="true"></span>
                         <p class="description"><?php echo esc_html__( 'Couleur des boutons, flèches et de la bordure de la miniature active.', 'lightbox-jlg' ); ?></p>
                     </td>
                 </tr>
