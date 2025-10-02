@@ -68,7 +68,7 @@
     opacity: 0.85;
 }
 
-.mga-block-preview__viewer .mga-toolbar-button .mga-icon {
+.mga-block-preview__viewer .mga-toolbar-button .mga-icon:not(svg) {
     display: inline-flex;
     align-items: center;
     justify-content: center;

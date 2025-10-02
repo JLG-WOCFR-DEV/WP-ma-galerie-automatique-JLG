@@ -117,14 +117,17 @@
     var ICON_DEFINITIONS = {
         play: {
             viewBox: '0 0 24 24',
+            svgProps: { className: 'mga-icon mga-play-icon' },
             paths: [ { d: 'M8 5v14l11-7z' } ]
         },
         pause: {
             viewBox: '0 0 24 24',
+            svgProps: { className: 'mga-icon mga-pause-icon' },
             paths: [ { d: 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' } ]
         },
         zoom: {
             viewBox: '0 0 24 24',
+            svgProps: { className: 'mga-icon' },
             paths: [
                 { d: 'M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z' },
                 { d: 'M10 9h-1v-1H8v1H7v1h1v1h1v-1h1V9z' }
@@ -132,18 +135,22 @@
         },
         download: {
             viewBox: '0 0 24 24',
+            svgProps: { className: 'mga-icon mga-download-icon' },
             paths: [ { d: 'M5 20h14v-2H5v2zm7-16l-5 5h3v4h4v-4h3l-5-5z' } ]
         },
         share: {
             viewBox: '0 0 24 24',
+            svgProps: { className: 'mga-icon mga-share-icon' },
             paths: [ { d: 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.02-4.11A2.99 2.99 0 0 0 18 7.91c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.03.47.09.7L8.07 9.7A2.99 2.99 0 0 0 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.03-.82l7.05 4.12c-.06.23-.08.46-.08.7 0 1.65 1.34 2.99 3 2.99s3-1.34 3-2.99-1.34-3-3-3z' } ]
         },
         fullscreen: {
             viewBox: '0 0 24 24',
+            svgProps: { className: 'mga-icon' },
             paths: [ { d: 'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5V14h-2v3zM14 5v2h3v3h2V5h-5z' } ]
         },
         close: {
             viewBox: '0 0 24 24',
+            svgProps: { className: 'mga-icon' },
             paths: [ { d: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' } ]
         }
     };
@@ -161,15 +168,24 @@
         }
 
         var svgElement = iconDefinition
-            ? el.apply( null, [
-                'svg',
-                {
+            ? ( function() {
+                var svgProps = {
                     xmlns: 'http://www.w3.org/2000/svg',
                     viewBox: iconDefinition.viewBox,
                     fill: 'currentColor',
                     focusable: 'false'
+                };
+
+                if ( iconDefinition.svgProps ) {
+                    for ( var prop in iconDefinition.svgProps ) {
+                        if ( Object.prototype.hasOwnProperty.call( iconDefinition.svgProps, prop ) ) {
+                            svgProps[ prop ] = iconDefinition.svgProps[ prop ];
+                        }
+                    }
                 }
-            ].concat( svgChildren ) )
+
+                return el.apply( null, [ 'svg', svgProps ].concat( svgChildren ) );
+            } )()
             : iconName;
 
         return el(
