@@ -282,6 +282,81 @@ $settings = wp_parse_args( $settings, $defaults );
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php echo esc_html__( 'Canaux de partage', 'lightbox-jlg' ); ?></th>
+                    <td>
+                        <?php
+                        $share_channels_labels = [
+                            'facebook'  => esc_html__( 'Facebook', 'lightbox-jlg' ),
+                            'twitter'   => esc_html__( 'Twitter', 'lightbox-jlg' ),
+                            'linkedin'  => esc_html__( 'LinkedIn', 'lightbox-jlg' ),
+                            'pinterest' => esc_html__( 'Pinterest', 'lightbox-jlg' ),
+                        ];
+                        $share_channels        = isset( $settings['share_channels'] ) && is_array( $settings['share_channels'] )
+                            ? $settings['share_channels']
+                            : [];
+                        ?>
+                        <p class="description"><?php echo esc_html__( 'Activez les réseaux à proposer dans la modale de partage et ajustez leurs URL gabarits. Utilisez %url% pour l’URL finale, %text% pour la légende et %title% pour le titre du document.', 'lightbox-jlg' ); ?></p>
+                        <div class="mga-share-channels">
+                            <?php foreach ( $share_channels_labels as $channel_key => $channel_label ) :
+                                $channel_settings = $share_channels[ $channel_key ] ?? [];
+                                $channel_enabled  = ! empty( $channel_settings['enabled'] );
+                                $channel_template = $channel_settings['template'] ?? '';
+                                $template_id      = sprintf( 'mga-share-template-%s', esc_attr( $channel_key ) );
+                                $checkbox_id      = sprintf( 'mga-share-enabled-%s', esc_attr( $channel_key ) );
+                                ?>
+                                <div class="mga-share-channels__item">
+                                    <input type="hidden" name="mga_settings[share_channels][<?php echo esc_attr( $channel_key ); ?>][enabled]" value="0" />
+                                    <label class="mga-share-channels__toggle" for="<?php echo esc_attr( $checkbox_id ); ?>">
+                                        <input
+                                            type="checkbox"
+                                            id="<?php echo esc_attr( $checkbox_id ); ?>"
+                                            name="mga_settings[share_channels][<?php echo esc_attr( $channel_key ); ?>][enabled]"
+                                            value="1"
+                                            <?php checked( $channel_enabled, true ); ?>
+                                        />
+                                        <span><?php echo esc_html( $channel_label ); ?></span>
+                                    </label>
+                                    <label class="screen-reader-text" for="<?php echo esc_attr( $template_id ); ?>">
+                                        <?php
+                                        echo esc_html(
+                                            sprintf(
+                                                /* translators: %s: Social network name. */
+                                                __( 'Modèle d’URL pour %s', 'lightbox-jlg' ),
+                                                $channel_label
+                                            )
+                                        );
+                                        ?>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        class="regular-text mga-share-channels__template"
+                                        id="<?php echo esc_attr( $template_id ); ?>"
+                                        name="mga_settings[share_channels][<?php echo esc_attr( $channel_key ); ?>][template]"
+                                        value="<?php echo esc_attr( $channel_template ); ?>"
+                                        placeholder="<?php echo esc_attr__( 'https://exemple.com/?u=%url%', 'lightbox-jlg' ); ?>"
+                                    />
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="mga-share-actions">
+                            <div class="mga-share-actions__item">
+                                <input type="hidden" name="mga_settings[share_copy]" value="0" />
+                                <label for="mga_share_copy">
+                                    <input type="checkbox" id="mga_share_copy" name="mga_settings[share_copy]" value="1" <?php checked( ! empty( $settings['share_copy'] ), 1 ); ?> />
+                                    <span><?php echo esc_html__( 'Afficher l’option « Copier le lien »', 'lightbox-jlg' ); ?></span>
+                                </label>
+                            </div>
+                            <div class="mga-share-actions__item">
+                                <input type="hidden" name="mga_settings[share_download]" value="0" />
+                                <label for="mga_share_download">
+                                    <input type="checkbox" id="mga_share_download" name="mga_settings[share_download]" value="1" <?php checked( ! empty( $settings['share_download'] ), 1 ); ?> />
+                                    <span><?php echo esc_html__( 'Afficher l’option « Téléchargement rapide »', 'lightbox-jlg' ); ?></span>
+                                </label>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row">
                         <label for="mga-content-selectors-textarea">
                             <?php echo esc_html__( 'Sélecteurs CSS personnalisés', 'lightbox-jlg' ); ?>

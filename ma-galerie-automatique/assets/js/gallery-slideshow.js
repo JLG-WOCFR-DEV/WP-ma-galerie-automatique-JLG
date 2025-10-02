@@ -175,12 +175,29 @@
             stopTimer: noop,
             restartTimer: noop,
             table: noop,
+            shareAction: noop,
         };
         const showZoom = normalizeFlag(settings.show_zoom, true);
         const showDownload = normalizeFlag(settings.show_download, true);
         const showShare = normalizeFlag(settings.show_share, true);
         const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
         const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
+        const shareCopyEnabled = normalizeFlag(settings.share_copy, true);
+        const shareDownloadEnabled = normalizeFlag(settings.share_download, true);
+        const shareChannels = settings.share_channels && typeof settings.share_channels === 'object'
+            ? settings.share_channels
+            : {};
+        const shareTargetLabels = {
+            facebook: mga__( 'Facebook', 'lightbox-jlg' ),
+            twitter: mga__( 'Twitter', 'lightbox-jlg' ),
+            linkedin: mga__( 'LinkedIn', 'lightbox-jlg' ),
+            pinterest: mga__( 'Pinterest', 'lightbox-jlg' ),
+        };
+        const shareActionLabels = {
+            copy: mga__( 'Copier le lien', 'lightbox-jlg' ),
+            download: mga__( 'Téléchargement rapide', 'lightbox-jlg' ),
+            native: mga__( "Partager via l'appareil", 'lightbox-jlg' ),
+        };
         const optionalToolbarHandlers = [];
         const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
         let mainSwiper = null;
@@ -198,6 +215,10 @@
         let lastFocusedElementBeforeViewer = null;
         let viewerFocusTrapHandler = null;
         let currentGalleryImages = [];
+        let shareModal = null;
+        let shareModalIsOpen = false;
+        let shareModalInvoker = null;
+        let shareModalKeydownHandler = null;
 
         debug.init();
 
@@ -391,16 +412,548 @@
             }
         }
 
+        function hasNativeShareSupport() {
+            return typeof navigator !== 'undefined' && navigator && typeof navigator.share === 'function';
+        }
+
+        function ensureShareModal(viewer) {
+            if (!showShare) {
+                return null;
+            }
+
+            if (shareModal && shareModal.container && shareModal.container.parentElement === viewer) {
+                return shareModal;
+            }
+
+            const modalContainer = document.createElement('div');
+            modalContainer.id = 'mga-share-modal';
+            modalContainer.className = 'mga-share-modal';
+            modalContainer.setAttribute('role', 'dialog');
+            modalContainer.setAttribute('aria-modal', 'true');
+            modalContainer.setAttribute('aria-hidden', 'true');
+            modalContainer.setAttribute('hidden', 'hidden');
+
+            const overlay = document.createElement('div');
+            overlay.className = 'mga-share-modal__overlay';
+            overlay.setAttribute('aria-hidden', 'true');
+            modalContainer.appendChild(overlay);
+
+            const dialog = document.createElement('div');
+            dialog.className = 'mga-share-modal__dialog';
+            dialog.setAttribute('role', 'document');
+            dialog.setAttribute('tabindex', '-1');
+            modalContainer.appendChild(dialog);
+
+            const header = document.createElement('div');
+            header.className = 'mga-share-modal__header';
+            dialog.appendChild(header);
+
+            const title = document.createElement('h2');
+            title.id = 'mga-share-title';
+            title.className = 'mga-share-modal__title';
+            title.textContent = mga__( 'Partager cette image', 'lightbox-jlg' );
+            header.appendChild(title);
+
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.className = 'mga-share-modal__close';
+            closeButton.setAttribute('aria-label', mga__( 'Fermer la fenêtre de partage', 'lightbox-jlg' ));
+            closeButton.innerHTML = '&times;';
+            header.appendChild(closeButton);
+
+            const body = document.createElement('div');
+            body.className = 'mga-share-modal__body';
+            dialog.appendChild(body);
+
+            const description = document.createElement('p');
+            description.id = 'mga-share-description';
+            description.className = 'mga-share-modal__description';
+            description.textContent = mga__( 'Choisissez une option de partage :', 'lightbox-jlg' );
+            body.appendChild(description);
+
+            const list = document.createElement('ul');
+            list.className = 'mga-share-modal__list';
+            list.setAttribute('data-mga-share-list', 'true');
+            body.appendChild(list);
+
+            const feedback = document.createElement('p');
+            feedback.className = 'mga-share-modal__feedback';
+            feedback.setAttribute('role', 'status');
+            feedback.setAttribute('aria-live', 'polite');
+            body.appendChild(feedback);
+
+            dialog.setAttribute('aria-describedby', description.id);
+            viewer.appendChild(modalContainer);
+
+            const onOverlayClick = () => closeShareModal({ reason: 'overlay' });
+            const onCloseClick = () => closeShareModal({ reason: 'close-button' });
+
+            overlay.addEventListener('click', onOverlayClick);
+            closeButton.addEventListener('click', onCloseClick);
+            list.addEventListener('click', onShareModalListClick);
+
+            shareModal = {
+                container: modalContainer,
+                dialog,
+                list,
+                closeButton,
+                overlay,
+                feedback,
+                description,
+                payload: null,
+                options: [],
+            };
+
+            return shareModal;
+        }
+
+        function resetShareModalFeedback() {
+            if (!shareModal || !shareModal.feedback) {
+                return;
+            }
+
+            shareModal.feedback.textContent = '';
+            shareModal.feedback.removeAttribute('data-mga-state');
+        }
+
+        function setShareModalFeedback(message, isError = false) {
+            if (!shareModal || !shareModal.feedback) {
+                return;
+            }
+
+            shareModal.feedback.textContent = message || '';
+
+            if (isError) {
+                shareModal.feedback.setAttribute('data-mga-state', 'error');
+            } else if (message) {
+                shareModal.feedback.setAttribute('data-mga-state', 'success');
+            } else {
+                shareModal.feedback.removeAttribute('data-mga-state');
+            }
+        }
+
+        function populateShareModal(modalInstance, options, sharePayload) {
+            if (!modalInstance || !modalInstance.list) {
+                return;
+            }
+
+            resetShareModalFeedback();
+
+            while (modalInstance.list.firstChild) {
+                modalInstance.list.removeChild(modalInstance.list.firstChild);
+            }
+
+            modalInstance.options = Array.isArray(options) ? options : [];
+            modalInstance.payload = sharePayload || {};
+
+            modalInstance.list.setAttribute('data-mga-share-count', String(modalInstance.options.length));
+
+            modalInstance.options.forEach((option) => {
+                const item = document.createElement('li');
+                item.className = 'mga-share-modal__item';
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'mga-share-option';
+                button.setAttribute('data-share-type', option.type);
+                button.setAttribute('data-share-key', option.key);
+                button.setAttribute('data-share-label', option.label);
+
+                if (option.template) {
+                    button.setAttribute('data-share-template', option.template);
+                }
+
+                button.textContent = option.label;
+                item.appendChild(button);
+                modalInstance.list.appendChild(item);
+            });
+        }
+
+        function buildShareOptions(sharePayload) {
+            const options = [];
+
+            Object.keys(shareChannels).forEach((channelKey) => {
+                const config = shareChannels[channelKey];
+
+                if (!config || typeof config !== 'object') {
+                    return;
+                }
+
+                const enabled = typeof config.enabled === 'boolean' ? config.enabled : Boolean(config.enabled);
+                const template = typeof config.template === 'string' ? config.template.trim() : '';
+
+                if (!enabled || !template) {
+                    return;
+                }
+
+                const label = shareTargetLabels[channelKey] || channelKey;
+
+                options.push({
+                    type: 'social',
+                    key: channelKey,
+                    label,
+                    template,
+                });
+            });
+
+            if (shareCopyEnabled) {
+                options.push({
+                    type: 'copy',
+                    key: 'copy',
+                    label: shareActionLabels.copy,
+                });
+            }
+
+            if (shareDownloadEnabled) {
+                options.push({
+                    type: 'download',
+                    key: 'download',
+                    label: shareActionLabels.download,
+                });
+            }
+
+            if (hasNativeShareSupport()) {
+                options.push({
+                    type: 'native',
+                    key: 'native',
+                    label: shareActionLabels.native,
+                });
+            }
+
+            return options;
+        }
+
+        function getShareModalFocusableElements(modalInstance) {
+            if (!modalInstance || !modalInstance.dialog) {
+                return [];
+            }
+
+            const focusableSelectors = [
+                'a[href]',
+                'button:not([disabled])',
+                'textarea:not([disabled])',
+                'input:not([disabled])',
+                'select:not([disabled])',
+                '[tabindex]:not([tabindex="-1"])',
+            ];
+
+            return Array.from(
+                modalInstance.dialog.querySelectorAll(focusableSelectors.join(','))
+            ).filter((element) => !element.hasAttribute('disabled'));
+        }
+
+        function onShareModalKeydown(event) {
+            if (!shareModalIsOpen || !shareModal) {
+                return;
+            }
+
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeShareModal({ reason: 'escape' });
+                return;
+            }
+
+            if (event.key !== 'Tab') {
+                return;
+            }
+
+            const focusable = getShareModalFocusableElements(shareModal);
+
+            if (!focusable.length) {
+                return;
+            }
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            const activeElement = document.activeElement;
+
+            if (event.shiftKey) {
+                if (activeElement === first || !shareModal.dialog.contains(activeElement)) {
+                    event.preventDefault();
+                    last.focus();
+                }
+            } else if (activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
+
+        function openShareModal(modalInstance, invokerButton) {
+            if (!modalInstance || !modalInstance.container) {
+                return false;
+            }
+
+            modalInstance.container.removeAttribute('hidden');
+            modalInstance.container.setAttribute('aria-hidden', 'false');
+            modalInstance.container.classList.add('is-visible');
+
+            shareModalIsOpen = true;
+            shareModalInvoker = invokerButton || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+            shareModalKeydownHandler = onShareModalKeydown;
+
+            document.addEventListener('keydown', shareModalKeydownHandler, true);
+
+            if (invokerButton) {
+                invokerButton.setAttribute('aria-expanded', 'true');
+            }
+
+            const focusable = getShareModalFocusableElements(modalInstance);
+
+            if (focusable.length) {
+                focusable[0].focus();
+            } else if (modalInstance.closeButton) {
+                modalInstance.closeButton.focus();
+            }
+
+            debug.shareAction('open', {
+                options: modalInstance.options.map((option) => option.key),
+            });
+
+            return true;
+        }
+
+        function closeShareModal({ restoreFocus = true, reason = 'manual' } = {}) {
+            if (!shareModal || !shareModal.container || !shareModalIsOpen) {
+                return;
+            }
+
+            shareModal.container.classList.remove('is-visible');
+            shareModal.container.setAttribute('aria-hidden', 'true');
+            shareModal.container.setAttribute('hidden', 'hidden');
+
+            if (shareModalKeydownHandler) {
+                document.removeEventListener('keydown', shareModalKeydownHandler, true);
+                shareModalKeydownHandler = null;
+            }
+
+            const shareButtonElement = document.getElementById('mga-share');
+
+            if (shareButtonElement) {
+                shareButtonElement.setAttribute('aria-expanded', 'false');
+            }
+
+            shareModalIsOpen = false;
+
+            if (restoreFocus && shareModalInvoker && typeof shareModalInvoker.focus === 'function') {
+                shareModalInvoker.focus();
+            }
+
+            shareModalInvoker = null;
+
+            debug.shareAction('close', { reason });
+        }
+
+        function buildShareUrl(template, sharePayload) {
+            if (typeof template !== 'string' || !template) {
+                return '';
+            }
+
+            const payload = sharePayload || {};
+            const replacements = {
+                url: payload.url || '',
+                text: payload.text || payload.title || '',
+                title: payload.title || payload.text || '',
+            };
+
+            return template.replace(/%([a-z]+)%/gi, (match, key) => {
+                const normalized = key.toLowerCase();
+
+                if (!Object.prototype.hasOwnProperty.call(replacements, normalized)) {
+                    return '';
+                }
+
+                return encodeURIComponent(replacements[normalized]);
+            });
+        }
+
+        function copyToClipboard(text) {
+            if (typeof text !== 'string') {
+                return Promise.reject(new Error('invalid-text'));
+            }
+
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                return navigator.clipboard.writeText(text);
+            }
+
+            return new Promise((resolve, reject) => {
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.setAttribute('readonly', '');
+                    textarea.style.position = 'absolute';
+                    textarea.style.left = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+
+                    if (successful) {
+                        resolve();
+                    } else {
+                        reject(new Error('execCommand-failed'));
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        function onShareModalListClick(event) {
+            if (!shareModal || !shareModal.list || !shareModalIsOpen) {
+                return;
+            }
+
+            const trigger = event.target instanceof Element
+                ? event.target.closest('button[data-share-type]')
+                : null;
+
+            if (!trigger) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const shareType = trigger.getAttribute('data-share-type');
+            const shareKey = trigger.getAttribute('data-share-key') || '';
+            const shareLabel = trigger.getAttribute('data-share-label') || shareKey;
+            const payload = shareModal.payload || {};
+
+            if ('social' === shareType) {
+                const template = trigger.getAttribute('data-share-template') || '';
+                const shareUrl = buildShareUrl(template, payload);
+
+                if (!shareUrl) {
+                    setShareModalFeedback(mga__( 'Impossible de générer le lien de partage.', 'lightbox-jlg' ), true);
+                    debug.shareAction('social', { target: shareKey, success: false, reason: 'invalid-url' });
+                    return;
+                }
+
+                let popup = null;
+
+                if (typeof window !== 'undefined' && window && typeof window.open === 'function') {
+                    popup = window.open(shareUrl, '_blank', 'noopener');
+                }
+
+                if (popup) {
+                    setShareModalFeedback(
+                        mgaSprintf(
+                            mga__( 'Ouverture de %s dans un nouvel onglet.', 'lightbox-jlg' ),
+                            shareLabel
+                        )
+                    );
+                    debug.shareAction('social', { target: shareKey, success: true, url: shareUrl });
+                } else {
+                    setShareModalFeedback(
+                        mgaSprintf(
+                            mga__( 'Impossible d’ouvrir %s. Vérifiez votre bloqueur de fenêtres.', 'lightbox-jlg' ),
+                            shareLabel
+                        ),
+                        true
+                    );
+                    debug.shareAction('social', { target: shareKey, success: false, url: shareUrl });
+                }
+
+                return;
+            }
+
+            if ('copy' === shareType) {
+                if (!payload.url) {
+                    setShareModalFeedback(mga__( 'Aucun lien à copier pour cette image.', 'lightbox-jlg' ), true);
+                    debug.shareAction('copy', { success: false, reason: 'missing-url' });
+                    return;
+                }
+
+                copyToClipboard(payload.url)
+                    .then(() => {
+                        setShareModalFeedback(mga__( 'Lien copié dans le presse-papiers.', 'lightbox-jlg' ));
+                        debug.shareAction('copy', { success: true });
+                    })
+                    .catch((error) => {
+                        setShareModalFeedback(mga__( 'Impossible de copier le lien. Essayez le raccourci clavier.', 'lightbox-jlg' ), true);
+                        debug.shareAction('copy', { success: false, reason: error && error.message ? error.message : 'copy-error' });
+                    });
+
+                return;
+            }
+
+            if ('download' === shareType) {
+                if (!payload.url) {
+                    setShareModalFeedback(mga__( 'Aucun fichier à télécharger pour cette image.', 'lightbox-jlg' ), true);
+                    debug.shareAction('download', { success: false, reason: 'missing-url' });
+                    return;
+                }
+
+                const didDownload = triggerImageDownload(payload.url);
+
+                if (didDownload) {
+                    setShareModalFeedback(mga__( 'Téléchargement de l’image lancé.', 'lightbox-jlg' ));
+                    debug.shareAction('download', { success: true });
+                } else {
+                    setShareModalFeedback(mga__( 'Impossible de lancer le téléchargement.', 'lightbox-jlg' ), true);
+                    debug.shareAction('download', { success: false });
+                }
+
+                return;
+            }
+
+            if ('native' === shareType) {
+                if (!hasNativeShareSupport()) {
+                    setShareModalFeedback(mga__( 'Le partage natif n’est pas pris en charge sur ce navigateur.', 'lightbox-jlg' ), true);
+                    debug.shareAction('native', { success: false, reason: 'unsupported' });
+                    return;
+                }
+
+                try {
+                    const shareResult = navigator.share(payload);
+                    debug.shareAction('native', { success: true });
+                    closeShareModal({ restoreFocus: false, reason: 'native-share' });
+
+                    if (shareResult && typeof shareResult.catch === 'function') {
+                        shareResult.catch((error) => {
+                            const message = error && error.message
+                                ? error.message
+                                : mga__( 'Partage annulé.', 'lightbox-jlg' );
+                            debug.shareAction('native', { success: false, reason: message });
+                        });
+                    }
+                } catch (error) {
+                    setShareModalFeedback(
+                        mgaSprintf(
+                            mga__( 'Partage natif impossible : %s', 'lightbox-jlg' ),
+                            error && error.message ? error.message : 'unknown'
+                        ),
+                        true
+                    );
+                    debug.shareAction('native', { success: false, reason: error && error.message ? error.message : 'error' });
+                }
+
+                return;
+            }
+
+            debug.shareAction('unknown', { type: shareType });
+        }
+
         function openSharePanel(imageData) {
             if (!imageData || typeof imageData.highResUrl !== 'string' || !imageData.highResUrl) {
                 return false;
             }
 
-            const sharePayload = { url: imageData.highResUrl };
+            const viewer = document.getElementById('mga-viewer');
+            if (!viewer) {
+                return false;
+            }
+
+            const modalInstance = ensureShareModal(viewer);
+            if (!modalInstance) {
+                return false;
+            }
+
             const caption = typeof imageData.caption === 'string' ? imageData.caption.trim() : '';
             const documentTitle = typeof document !== 'undefined' && document && typeof document.title === 'string'
                 ? document.title
                 : '';
+
+            const sharePayload = { url: imageData.highResUrl };
 
             if (caption) {
                 sharePayload.text = caption;
@@ -410,28 +963,24 @@
                 sharePayload.title = caption || documentTitle;
             }
 
-            if (typeof navigator !== 'undefined' && navigator && typeof navigator.share === 'function') {
-                try {
-                    const shareResult = navigator.share(sharePayload);
-                    if (shareResult && typeof shareResult.catch === 'function') {
-                        shareResult.catch(error => {
-                            const message = error && error.message ? error.message : mga__( 'Partage annulé.', 'lightbox-jlg' );
-                            debug.log(mgaSprintf(mga__( 'Partage non abouti : %s', 'lightbox-jlg' ), message), true);
-                        });
-                    }
-                    return true;
-                } catch (error) {
-                    debug.log(mgaSprintf(mga__( 'Erreur lors du partage : %s', 'lightbox-jlg' ), error.message), true);
-                    return false;
-                }
+            const options = buildShareOptions(sharePayload);
+
+            if (!options.length) {
+                debug.shareAction('no-options', { url: imageData.highResUrl });
+                return false;
             }
 
-            if (typeof window !== 'undefined' && window && typeof window.open === 'function') {
-                window.open(imageData.highResUrl, '_blank', 'noopener');
-                return true;
+            populateShareModal(modalInstance, options, sharePayload);
+
+            const shareButton = viewer.querySelector('#mga-share');
+
+            const opened = openShareModal(modalInstance, shareButton || null);
+
+            if (!opened) {
+                return false;
             }
 
-            return false;
+            return true;
         }
 
         /**
@@ -1059,6 +1608,8 @@
                     shareButton.id = 'mga-share';
                     shareButton.className = 'mga-toolbar-button';
                     shareButton.setAttribute('aria-label', mga__( 'Partager l’image', 'lightbox-jlg' ));
+                    shareButton.setAttribute('aria-haspopup', 'dialog');
+                    shareButton.setAttribute('aria-expanded', 'false');
                     toolbar.appendChild(shareButton);
 
                     const shareIcon = createSvgElement('svg', {
@@ -1142,6 +1693,16 @@
                 thumbsWrapper.className = 'swiper-wrapper';
                 thumbsWrapper.id = 'mga-thumbs-wrapper';
                 thumbsSwiper.appendChild(thumbsWrapper);
+
+                if (showShare) {
+                    const createdShareModal = ensureShareModal(viewer);
+                    if (createdShareModal) {
+                        const shareButtonElement = viewer.querySelector('#mga-share');
+                        if (shareButtonElement) {
+                            shareButtonElement.setAttribute('aria-controls', 'mga-share-modal');
+                        }
+                    }
+                }
 
                 if (document.body && typeof document.body.appendChild === 'function') {
                     document.body.appendChild(viewer);
@@ -2174,6 +2735,8 @@
             module.exports.__testExports.triggerImageDownload = triggerImageDownload;
             module.exports.__testExports.openSharePanel = openSharePanel;
             module.exports.__testExports.getActiveImageData = getActiveImageData;
+            module.exports.__testExports.getShareChannels = () => shareChannels;
+            module.exports.__testExports.getShareOptions = () => (shareModal && Array.isArray(shareModal.options)) ? shareModal.options : [];
         }
 
         function closeViewer(viewer) {
@@ -2195,6 +2758,8 @@
             if(mainSwiper && mainSwiper.autoplay) {
                 mainSwiper.autoplay.stop();
             }
+            closeShareModal({ restoreFocus: false, reason: 'viewer-close' });
+            resetShareModalFeedback();
             if (typeof cleanupAutoplayPreferenceListener === 'function') {
                 cleanupAutoplayPreferenceListener();
                 cleanupAutoplayPreferenceListener = null;

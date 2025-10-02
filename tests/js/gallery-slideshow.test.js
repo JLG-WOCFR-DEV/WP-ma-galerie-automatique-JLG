@@ -217,6 +217,18 @@ describe('autoplay accessibility handlers', () => {
             background_style: 'echo',
             autoplay_start: false,
             delay: 4,
+            share_channels: {
+                facebook: {
+                    enabled: true,
+                    template: 'https://www.facebook.com/sharer/sharer.php?u=%url%',
+                },
+                twitter: {
+                    enabled: true,
+                    template: 'https://twitter.com/intent/tweet?url=%url%&text=%text%',
+                },
+            },
+            share_copy: true,
+            share_download: true,
         };
 
         const { SwiperMock } = createSwiperMockFactory();
@@ -314,6 +326,18 @@ describe('thumbnail accessibility controls', () => {
             background_style: 'echo',
             autoplay_start: false,
             delay: 4,
+            share_channels: {
+                facebook: {
+                    enabled: true,
+                    template: 'https://www.facebook.com/sharer/sharer.php?u=%url%',
+                },
+                twitter: {
+                    enabled: true,
+                    template: 'https://twitter.com/intent/tweet?url=%url%&text=%text%',
+                },
+            },
+            share_copy: true,
+            share_download: true,
         };
 
         const { SwiperMock, instances } = createSwiperMockFactory();
@@ -420,6 +444,18 @@ describe('download button integration', () => {
             background_style: 'echo',
             autoplay_start: false,
             delay: 4,
+            share_channels: {
+                facebook: {
+                    enabled: true,
+                    template: 'https://www.facebook.com/sharer/sharer.php?u=%url%',
+                },
+                twitter: {
+                    enabled: true,
+                    template: 'https://twitter.com/intent/tweet?url=%url%&text=%text%',
+                },
+            },
+            share_copy: true,
+            share_download: true,
         };
 
         const { SwiperMock } = createSwiperMockFactory();
@@ -509,18 +545,26 @@ describe('download button integration', () => {
         }
     });
 
-    it('renders share control and uses Web Share API with the active image', () => {
+    it('renders share control and opens the custom share modal with options', () => {
         expect(shareButton).not.toBeNull();
-        expect(testExports.getActiveHighResUrl()).toBe('https://example.com/high-1.jpg');
+        const shareModal = document.getElementById('mga-share-modal');
 
-        shareMock.mockReturnValue(Promise.resolve());
+        expect(shareModal).not.toBeNull();
+        expect(shareModal?.getAttribute('aria-hidden')).toBe('true');
 
         shareButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-        expect(shareMock.mock.calls.length).toBeGreaterThanOrEqual(1);
-        const [sharePayload] = shareMock.mock.calls[0];
-        expect(sharePayload.url).toBe('https://example.com/high-1.jpg');
-        expect(sharePayload.title).toBe('Image 1');
-        expect(sharePayload.text).toBe('Image 1');
+        expect(shareMock).not.toHaveBeenCalled();
+        expect(shareModal?.classList.contains('is-visible')).toBe(true);
+        expect(shareButton.getAttribute('aria-expanded')).toBe('true');
+
+        const shareOptions = shareModal?.querySelectorAll('.mga-share-option') || [];
+        expect(shareOptions.length).toBeGreaterThan(0);
+
+        const socialOption = Array.from(shareOptions).find((button) => button.getAttribute('data-share-type') === 'social');
+        const copyOption = Array.from(shareOptions).find((button) => button.getAttribute('data-share-type') === 'copy');
+
+        expect(socialOption).toBeTruthy();
+        expect(copyOption).toBeTruthy();
     });
 });
