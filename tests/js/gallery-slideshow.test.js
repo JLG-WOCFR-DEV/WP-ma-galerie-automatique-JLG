@@ -18,7 +18,7 @@ describe('updateEchoBackground', () => {
 
         global.Swiper = function() {};
 
-        ({ updateEchoBackground } = require('../../ma-galerie-automatique/assets/js/gallery-slideshow'));
+        ({ updateEchoBackground } = require('../../src/frontend/background'));
     });
 
     afterEach(() => {
@@ -89,7 +89,12 @@ describe('resolveLinkGroupId rel token filtering', () => {
             removeEventListener: jest.fn(),
         });
 
-        ({ helpers } = require('../../ma-galerie-automatique/assets/js/gallery-slideshow'));
+        const module = require('../../src/frontend/viewer.ts');
+        const init = module.initGalleryViewer || module.default;
+        if (typeof init === 'function') {
+            init();
+        }
+        ({ helpers } = module);
     });
 
     afterEach(() => {
@@ -222,7 +227,11 @@ describe('autoplay accessibility handlers', () => {
         const { SwiperMock } = createSwiperMockFactory();
         global.Swiper = SwiperMock;
 
-        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        const module = require('../../src/frontend/viewer.ts');
+        const init = module.initGalleryViewer || module.default;
+        if (typeof init === 'function') {
+            init();
+        }
         testExports = module.__testExports;
 
         const viewer = testExports.getViewer();
@@ -327,7 +336,11 @@ describe('thumbnail accessibility controls', () => {
             return createdInstance;
         };
 
-        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        const module = require('../../src/frontend/viewer.ts');
+        const init = module.initGalleryViewer || module.default;
+        if (typeof init === 'function') {
+            init();
+        }
         testExports = module.__testExports;
 
         viewer = testExports.getViewer();
@@ -431,7 +444,11 @@ describe('download button integration', () => {
             return createdInstance;
         };
 
-        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        const module = require('../../src/frontend/viewer.ts');
+        const init = module.initGalleryViewer || module.default;
+        if (typeof init === 'function') {
+            init();
+        }
         testExports = module.__testExports;
 
         viewer = testExports.getViewer();

@@ -1,18 +1,7 @@
-(function(global) {
-    "use strict";
+import { createI18nHelpers } from '../common/i18n';
 
-    const mgaI18n = global.wp && global.wp.i18n ? global.wp.i18n : null;
-    const mga__ = mgaI18n && typeof mgaI18n.__ === 'function' ? mgaI18n.__ : ( text ) => text;
-    const mgaSprintf = mgaI18n && typeof mgaI18n.sprintf === 'function'
-        ? mgaI18n.sprintf
-        : ( format, ...args ) => {
-            let index = 0;
-            return format.replace(/%s/g, () => {
-                const replacement = typeof args[index] !== 'undefined' ? args[index] : '';
-                index += 1;
-                return replacement;
-            });
-        };
+const globalObject: typeof window | undefined = typeof window !== 'undefined' ? window : undefined;
+const { __: mga__, sprintf: mgaSprintf } = createI18nHelpers( globalObject );
 
     const state = {
         panel: null,
@@ -259,14 +248,19 @@
         }
     }
 
-    global.mgaDebug = {
-        enabled: true,
-        init,
-        log,
-        updateInfo,
-        onForceOpen,
-        stopTimer,
-        restartTimer,
-        table,
-    };
-})(window);
+export const mgaDebug = {
+    enabled: true,
+    init,
+    log,
+    updateInfo,
+    onForceOpen,
+    stopTimer,
+    restartTimer,
+    table,
+};
+
+if ( globalObject ) {
+    globalObject.mgaDebug = mgaDebug;
+}
+
+export default mgaDebug;

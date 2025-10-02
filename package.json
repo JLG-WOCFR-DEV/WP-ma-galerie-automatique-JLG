@@ -2,10 +2,13 @@
   "name": "ma-galerie-automatique-jlg",
   "private": true,
   "scripts": {
+    "build": "wp-scripts build frontend=./src/frontend/index.ts admin=./src/admin/index.ts debug=./src/frontend/debug.ts",
+    "start": "wp-scripts start frontend=./src/frontend/index.ts admin=./src/admin/index.ts debug=./src/frontend/debug.ts",
     "test": "npm run test:js",
     "test:js": "wp-scripts test-unit-js"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^26.16.0"
+    "@wordpress/scripts": "^26.16.0",
+    "typescript": "^5.4.5"
   }
 }

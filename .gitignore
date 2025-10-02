@@ -1,3 +1,4 @@
 node_modules/
+build/
 tests/e2e/assets/*
 !tests/e2e/assets/.gitkeep

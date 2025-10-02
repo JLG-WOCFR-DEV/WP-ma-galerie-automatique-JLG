@@ -35,7 +35,12 @@ describe('gallery shared helpers', () => {
             autoplay: { start: jest.fn(), stop: jest.fn() },
         });
 
-        const module = require('../../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        const module = require('../../../src/frontend/viewer.ts');
+
+        const init = module.initGalleryViewer || module.default;
+        if (typeof init === 'function') {
+            init();
+        }
 
         delete document.readyState;
 

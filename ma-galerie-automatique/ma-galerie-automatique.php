@@ -181,6 +181,34 @@ function mga_maybe_refresh_swiper_asset_sources( $upgrader, $options ) {
 
 add_action( 'upgrader_process_complete', 'mga_maybe_refresh_swiper_asset_sources', 10, 2 );
 
+/**
+ * Récupère les métadonnées générées par @wordpress/scripts pour un bundle.
+ *
+ * @param string $relative_asset_path Chemin relatif vers le fichier `.asset.php`.
+ * @param array  $fallback_dependencies Dépendances à utiliser en cas d'absence du fichier.
+ *
+ * @return array{dependencies:array,version:string}
+ */
+function mga_get_script_asset_metadata( $relative_asset_path, array $fallback_dependencies = [] ) {
+    $asset_path = plugin_dir_path( __FILE__ ) . $relative_asset_path;
+
+    if ( file_exists( $asset_path ) ) {
+        $asset = include $asset_path;
+
+        if ( is_array( $asset ) ) {
+            return [
+                'dependencies' => isset( $asset['dependencies'] ) ? $asset['dependencies'] : $fallback_dependencies,
+                'version'      => isset( $asset['version'] ) ? $asset['version'] : MGA_VERSION,
+            ];
+        }
+    }
+
+    return [
+        'dependencies' => $fallback_dependencies,
+        'version'      => MGA_VERSION,
+    ];
+}
+
 // ===== FRONT-END =====
 
 /**
@@ -341,7 +369,8 @@ function mga_enqueue_assets() {
 
     // Fichiers du plugin
     wp_enqueue_style('mga-gallery-style', plugin_dir_url( __FILE__ ) . 'assets/css/gallery-slideshow.css', [], MGA_VERSION);
-    $script_dependencies = [ 'mga-swiper-js', 'wp-i18n' ];
+    $frontend_asset = mga_get_script_asset_metadata( 'build/frontend.asset.php', [ 'wp-i18n' ] );
+    $script_dependencies = array_unique( array_merge( [ 'mga-swiper-js' ], $frontend_asset['dependencies'] ) );
     $languages_path = mga_get_languages_path();
     $has_languages = mga_languages_directory_exists();
     if ( ! empty( $settings['debug_mode'] ) ) {
@@ -351,11 +380,12 @@ function mga_enqueue_assets() {
         );
 
         if ( $can_view_debug ) {
+            $debug_asset = mga_get_script_asset_metadata( 'build/debug.asset.php', [ 'wp-i18n' ] );
             wp_register_script(
                 'mga-debug-script',
-                plugin_dir_url( __FILE__ ) . 'assets/js/debug.js',
-                [ 'wp-i18n' ],
-                MGA_VERSION,
+                plugin_dir_url( __FILE__ ) . 'build/debug.js',
+                $debug_asset['dependencies'],
+                $debug_asset['version'],
                 true
             );
             wp_enqueue_script( 'mga-debug-script' );
@@ -366,7 +396,13 @@ function mga_enqueue_assets() {
             $script_dependencies[] = 'mga-debug-script';
         }
     }
-    wp_enqueue_script('mga-gallery-script', plugin_dir_url( __FILE__ ) . 'assets/js/gallery-slideshow.js', $script_dependencies, MGA_VERSION, true);
+    wp_enqueue_script(
+        'mga-gallery-script',
+        plugin_dir_url( __FILE__ ) . 'build/frontend.js',
+        $script_dependencies,
+        $frontend_asset['version'],
+        true
+    );
     if ( $has_languages ) {
         wp_set_script_translations( 'mga-gallery-script', 'lightbox-jlg', $languages_path );
     }
@@ -1222,21 +1258,14 @@ function mga_admin_enqueue_assets($hook) {
     if ( ! current_user_can( 'manage_options' ) ) return;
     if ($hook !== 'toplevel_page_ma-galerie-automatique') return;
     wp_enqueue_style('mga-admin-style', plugin_dir_url(__FILE__) . 'assets/css/admin-style.css', [], MGA_VERSION);
-    wp_register_script(
-        'mga-focus-utils',
-        plugin_dir_url(__FILE__) . 'assets/js/utils/focus-utils.js',
-        [],
-        MGA_VERSION,
-        true
-    );
+    $admin_asset = mga_get_script_asset_metadata( 'build/admin.asset.php', [ 'wp-i18n' ] );
     wp_register_script(
         'mga-admin-script',
-        plugin_dir_url(__FILE__) . 'assets/js/admin-script.js',
-        [ 'wp-i18n', 'mga-focus-utils' ],
-        MGA_VERSION,
+        plugin_dir_url(__FILE__) . 'build/admin.js',
+        $admin_asset['dependencies'],
+        $admin_asset['version'],
         true
     );
-    wp_enqueue_script('mga-focus-utils');
     wp_enqueue_script('mga-admin-script');
     if ( mga_languages_directory_exists() ) {
         wp_set_script_translations( 'mga-admin-script', 'lightbox-jlg', mga_get_languages_path() );

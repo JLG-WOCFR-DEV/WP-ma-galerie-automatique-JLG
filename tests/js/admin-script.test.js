@@ -7,7 +7,7 @@ describe('focus utils safeFocus helper', () => {
 
     beforeEach(() => {
         jest.resetModules();
-        ({ safeFocus } = require('../../ma-galerie-automatique/assets/js/utils/focus-utils'));
+        ({ safeFocus } = require('../../src/utils/focus'));
     });
 
     afterEach(() => {

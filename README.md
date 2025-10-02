@@ -23,7 +23,7 @@ Lightbox - JLG est un plugin WordPress qui transforme les galeries d'images en d
 - **Z‑index** de la galerie et **mode débogage**.
 
 ## Fonctionnalités
-La visionneuse plein écran pilotée par `assets/js/gallery-slideshow.js` et mise en forme par `assets/css/gallery-slideshow.css` offre les contrôles suivants :
+La visionneuse plein écran pilotée par `src/frontend/viewer.ts` (transpilé via `@wordpress/scripts`) et mise en forme par `assets/css/gallery-slideshow.css` offre les contrôles suivants :
 - **Compteur et légendes dynamiques** : chaque image affiche automatiquement sa légende ou, à défaut, son texte alternatif, accompagné du compteur « image actuelle / total ».
 - **Lecture/Pause avec minuterie circulaire** : le bouton principal fusionne icônes lecture/pause et minuterie SVG pour visualiser en temps réel le délai avant la prochaine diapositive.
 - **Zoom réactif** : le bouton loupe active le zoom Swiper pour inspecter les détails, tout en autorisant le glisser tactile pour se déplacer dans l’image.
@@ -36,7 +36,7 @@ La visionneuse plein écran pilotée par `assets/js/gallery-slideshow.js` et mis
 
 ### Mode débogage
 - **Activation** : cochez **Activer le mode débogage** dans les réglages du plugin (onglet **Réglages → Ma Galerie Automatique**), case ajoutée par `includes/admin-page-template.php`.
-- **Panneau d’analyse** : `assets/js/debug.js` affiche un panneau flottant regroupant un chronomètre temps réel, le timer d’autoplay synchronisé au cercle de progression et un journal d’événements détaillé.
+- **Panneau d’analyse** : `src/frontend/debug.ts` affiche un panneau flottant regroupant un chronomètre temps réel, le timer d’autoplay synchronisé au cercle de progression et un journal d’événements détaillé.
 - **Bouton de test** : le bouton **Forcer l’ouverture (Test)** insère instantanément une galerie de démonstration pour vérifier les comportements sans modifier vos contenus.
 
 ## Exemples d’utilisation
@@ -51,6 +51,16 @@ Après l’activation :
 
 ## Développement
 Le modèle de la page d'administration se trouve dans `includes/admin-page-template.php`. Il est automatiquement chargé lors de l'affichage des réglages du plugin.
+
+### Compilation des assets JavaScript
+
+Le code source côté navigateur est désormais réparti dans `src/` et transpilé par `@wordpress/scripts`.
+
+1. Installez les dépendances : `npm install`.
+2. Pendant le développement, lancez `npm run start` pour bénéficier d’un rebuild automatique des bundles `build/frontend.js`, `build/admin.js` et `build/debug.js`.
+3. Pour une compilation prête à l’empaquetage, exécutez `npm run build` (les fichiers `.asset.php` sont générés au même endroit et exposent les dépendances/versions à PHP).
+
+Les artefacts générés dans `build/` sont ignorés par Git afin de ne versionner que la source. Pensez à lancer `npm run build` avant de livrer le plugin ou de générer une archive.
 
 ### Tests E2E
 Les scénarios Playwright du dépôt (par exemple `tests/e2e/gallery-viewer.spec.ts`) génèrent désormais leurs propres images PNG de test afin d'éviter de versionner des médias binaires. Si vous souhaitez vérifier visuellement la lightbox avec des visuels plus représentatifs, déposez simplement vos fichiers dans `tests/e2e/assets/` (non suivi par Git). Les fichiers `png`, `jpg`, `jpeg`, `gif`, `webp` ou `avif` y sont automatiquement détectés — conservez au moins deux images pour couvrir la galerie complète.

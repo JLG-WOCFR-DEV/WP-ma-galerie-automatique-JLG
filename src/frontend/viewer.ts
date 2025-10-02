@@ -1,73 +1,27 @@
-(function() {
-    "use strict";
+import { createI18nHelpers } from '../common/i18n';
+import updateEchoBackground from './background';
+import updateAutoplayButtonState from './autoplay';
+import focusUtils from '../utils/focus';
 
-    const mgaI18n = window.wp && window.wp.i18n ? window.wp.i18n : null;
-    const mga__ = mgaI18n && typeof mgaI18n.__ === 'function' ? mgaI18n.__ : ( text ) => text;
-    const mgaSprintf = mgaI18n && typeof mgaI18n.sprintf === 'function'
-        ? mgaI18n.sprintf
-        : ( format, ...args ) => {
-            let index = 0;
-            return format.replace(/%s/g, () => {
-                const replacement = typeof args[index] !== 'undefined' ? args[index] : '';
-                index += 1;
-                return replacement;
-            });
-        };
+const globalObject: typeof window | undefined = typeof window !== 'undefined' ? window : undefined;
+const { __: mga__, sprintf: mgaSprintf } = createI18nHelpers( globalObject );
 
-    function updateEchoBackground(viewer, imageUrl) {
-        if (!viewer) {
+export type GallerySharedHelpers = {
+    resolveLinkGroupId: ( link: HTMLAnchorElement | null ) => string;
+    isExplicitFallbackAllowed: ( link: HTMLAnchorElement | null ) => boolean;
+    sanitizeHighResUrl: ( candidate: string | null | undefined ) => string;
+    sanitizeThumbnailUrl: ( candidate: string | null | undefined ) => string;
+    resolveThumbnailUrl: ( img: HTMLImageElement | null ) => string;
+    getImageDataAttributes: ( img: HTMLImageElement | null, options?: { excludeLarge?: boolean } ) => string | null;
+};
+
+export let helpers: GallerySharedHelpers | null = null;
+
+export function initGalleryViewer() {
+        if ( ! globalObject ) {
             return;
         }
 
-        const bgContainer = viewer.querySelector('.mga-echo-bg');
-        if (!bgContainer) return;
-
-        const newImg = document.createElement('img');
-        newImg.className = 'mga-echo-bg__image';
-        let hasLoaded = false;
-
-        const handleLoad = () => {
-            if (hasLoaded) {
-                return;
-            }
-            hasLoaded = true;
-            const oldImg = bgContainer.querySelector('.mga-visible');
-            if (oldImg) {
-                oldImg.classList.remove('mga-visible');
-                setTimeout(() => { if(oldImg.parentElement) oldImg.parentElement.removeChild(oldImg); }, 400);
-            }
-            bgContainer.appendChild(newImg);
-            setTimeout(() => newImg.classList.add('mga-visible'), 10);
-        };
-
-        newImg.onload = handleLoad;
-        newImg.src = imageUrl;
-
-        if (newImg.complete) {
-            setTimeout(() => handleLoad());
-        }
-    }
-
-    function updateAutoplayButtonState(viewer, isRunning) {
-        if (!viewer) {
-            return;
-        }
-
-        const playPauseButton = viewer.querySelector('#mga-play-pause');
-        if (!playPauseButton) {
-            return;
-        }
-
-        playPauseButton.setAttribute('aria-pressed', isRunning ? 'true' : 'false');
-        playPauseButton.setAttribute(
-            'aria-label',
-            isRunning
-                ? mga__( 'Mettre le diaporama en pause', 'lightbox-jlg' )
-                : mga__( 'Lancer le diaporama', 'lightbox-jlg' )
-        );
-    }
-
-    function initGalleryViewer() {
         const settings = window.mga_settings || {};
         const IMAGE_FILE_PATTERN = /\.(jpe?g|png|gif|bmp|webp|avif|svg)(?:\?.*)?(?:#.*)?$/i;
         const noop = () => {};
@@ -324,71 +278,6 @@
         }
 
         // --- FONCTIONS UTILITAIRES ---
-        let focusSupportsOptionsCache = null;
-
-        function detectFocusOptionsSupport() {
-            if (focusSupportsOptionsCache !== null) {
-                return focusSupportsOptionsCache;
-            }
-
-            focusSupportsOptionsCache = false;
-
-            if (
-                typeof window === 'undefined' ||
-                typeof document === 'undefined' ||
-                typeof document.createElement !== 'function' ||
-                typeof HTMLElement === 'undefined' ||
-                !HTMLElement.prototype ||
-                typeof HTMLElement.prototype.focus !== 'function'
-            ) {
-                return focusSupportsOptionsCache;
-            }
-
-            const testElement = document.createElement('button');
-            const root = document.body || document.documentElement;
-
-            try {
-                testElement.type = 'button';
-
-                if (root && typeof root.appendChild === 'function') {
-                    root.appendChild(testElement);
-                }
-
-                HTMLElement.prototype.focus.call(testElement, {
-                    get preventScroll() {
-                        focusSupportsOptionsCache = true;
-                        return true;
-                    },
-                });
-            } catch (error) {
-                focusSupportsOptionsCache = false;
-            } finally {
-                if (testElement.parentNode && typeof testElement.parentNode.removeChild === 'function') {
-                    testElement.parentNode.removeChild(testElement);
-                }
-            }
-
-            return focusSupportsOptionsCache;
-        }
-
-        function safeFocus(element, options = { preventScroll: true }) {
-            if (!element || typeof element.focus !== 'function') {
-                return;
-            }
-
-            const canUseOptions = options && detectFocusOptionsSupport();
-
-            if (canUseOptions) {
-                try {
-                    element.focus(options);
-                    return;
-                } catch (error) {
-                    // Fallback to focusing without options if an error occurs.
-                }
-            }
-
-            element.focus();
-        }
 
         function resolveFullscreenApi(target) {
             const doc = document;
@@ -809,7 +698,7 @@
                 pauseIcon.appendChild(pausePath);
                 playPauseButton.appendChild(pauseIcon);
 
-                updateAutoplayButtonState(viewer, false);
+                updateAutoplayButtonState(viewer, false, mga__);
 
                 const zoomButton = document.createElement('button');
                 zoomButton.type = 'button';
@@ -1136,6 +1025,8 @@
             resolveThumbnailUrl,
             getImageDataAttributes,
         };
+
+        helpers = sharedHelpers;
 
         if (typeof module !== 'undefined' && module.exports) {
             module.exports.helpers = sharedHelpers;
@@ -1505,7 +1396,7 @@
 
                 if (!focusable.length) {
                     e.preventDefault();
-                    safeFocus(viewer);
+                    focusUtils.safeFocus(viewer);
                     return;
                 }
 
@@ -1527,7 +1418,7 @@
                 }
 
                 e.preventDefault();
-                safeFocus(focusable[nextIndex]);
+                focusUtils.safeFocus(focusable[nextIndex]);
             };
 
             viewer.addEventListener('keydown', viewerFocusTrapHandler, true);
@@ -1535,7 +1426,7 @@
             const closeButton = viewer.querySelector('#mga-close');
             const target = closeButton && closeButton.offsetParent !== null ? closeButton : viewer;
             if (target && typeof target.focus === 'function') {
-                safeFocus(target);
+                focusUtils.safeFocus(target);
             }
         }
 
@@ -1584,7 +1475,7 @@
                 debug.log(mga__( 'Autoplay DÉMARRÉ.', 'lightbox-jlg' ));
                 viewer.querySelector('.mga-play-icon').style.display = 'none';
                 viewer.querySelector('.mga-pause-icon').style.display = 'inline-block';
-                updateAutoplayButtonState(viewer, true);
+                updateAutoplayButtonState(viewer, true, mga__);
             };
 
             const handleAutoplayStop = () => {
@@ -1596,7 +1487,7 @@
                     progressCircle.style.strokeDashoffset = 100;
                 }
                 debug.updateInfo('mga-debug-autoplay-time', mga__( 'Stoppé', 'lightbox-jlg' ));
-                updateAutoplayButtonState(viewer, false);
+                updateAutoplayButtonState(viewer, false, mga__);
             };
 
             const mainSwiperConfig = {
@@ -1826,7 +1717,7 @@
                     } else {
                         autoplayInstance.stop();
                     }
-                    updateAutoplayButtonState(viewer, willRun);
+                    updateAutoplayButtonState(viewer, willRun, mga__);
                 }
             }
             if (eventTarget.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
@@ -1955,7 +1846,7 @@
             debug.stopTimer();
             currentGalleryImages = [];
             if (lastFocusedElementBeforeViewer && typeof lastFocusedElementBeforeViewer.focus === 'function') {
-                safeFocus(lastFocusedElementBeforeViewer);
+                focusUtils.safeFocus(lastFocusedElementBeforeViewer);
             }
             lastFocusedElementBeforeViewer = null;
         }
@@ -1978,14 +1869,4 @@
         }
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initGalleryViewer);
-    } else {
-        initGalleryViewer();
-    }
-
-    if (typeof module !== 'undefined' && module.exports) {
-        module.exports.updateEchoBackground = updateEchoBackground;
-        module.exports.updateAutoplayButtonState = updateAutoplayButtonState;
-    }
-})();
+export default initGalleryViewer;
