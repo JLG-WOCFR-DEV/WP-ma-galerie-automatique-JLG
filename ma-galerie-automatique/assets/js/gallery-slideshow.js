@@ -71,6 +71,29 @@
         const settings = window.mga_settings || {};
         const IMAGE_FILE_PATTERN = /\.(jpe?g|png|gif|bmp|webp|avif|svg)(?:\?.*)?(?:#.*)?$/i;
         const noop = () => {};
+        const normalizeFlag = (value, defaultValue = true) => {
+            if (typeof value === 'undefined') {
+                return defaultValue;
+            }
+
+            if (typeof value === 'string') {
+                const normalized = value.trim().toLowerCase();
+
+                if (['false', '0', 'no', 'off'].includes(normalized)) {
+                    return false;
+                }
+
+                if (['true', '1', 'yes', 'on'].includes(normalized)) {
+                    return true;
+                }
+            }
+
+            if (typeof value === 'number') {
+                return value !== 0;
+            }
+
+            return Boolean(value);
+        };
         const debug = window.mgaDebug || {
             enabled: false,
             init: noop,
@@ -81,6 +104,10 @@
             restartTimer: noop,
             table: noop,
         };
+        const showZoom = normalizeFlag(settings.show_zoom, true);
+        const showDownload = normalizeFlag(settings.show_download, true);
+        const showShare = normalizeFlag(settings.show_share, true);
+        const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
         const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
         let mainSwiper = null;
         let thumbsSwiper = null;
@@ -811,81 +838,89 @@
 
                 updateAutoplayButtonState(viewer, false);
 
-                const zoomButton = document.createElement('button');
-                zoomButton.type = 'button';
-                zoomButton.id = 'mga-zoom';
-                zoomButton.className = 'mga-toolbar-button';
-                zoomButton.setAttribute('aria-label', mga__( 'Zoom', 'lightbox-jlg' ));
-                toolbar.appendChild(zoomButton);
+                if (showZoom) {
+                    const zoomButton = document.createElement('button');
+                    zoomButton.type = 'button';
+                    zoomButton.id = 'mga-zoom';
+                    zoomButton.className = 'mga-toolbar-button';
+                    zoomButton.setAttribute('aria-label', mga__( 'Zoom', 'lightbox-jlg' ));
+                    toolbar.appendChild(zoomButton);
 
-                const zoomIcon = createSvgElement('svg', {
-                    class: 'mga-icon',
-                    viewBox: '0 0 24 24',
-                    fill: 'currentColor',
-                });
-                const zoomPrimaryPath = createSvgElement('path', {
-                    d: 'M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
-                });
-                const zoomSecondaryPath = createSvgElement('path', {
-                    d: 'M10 9h-1v-1H8v1H7v1h1v1h1v-1h1V9z',
-                });
-                zoomIcon.appendChild(zoomPrimaryPath);
-                zoomIcon.appendChild(zoomSecondaryPath);
-                zoomButton.appendChild(zoomIcon);
+                    const zoomIcon = createSvgElement('svg', {
+                        class: 'mga-icon',
+                        viewBox: '0 0 24 24',
+                        fill: 'currentColor',
+                    });
+                    const zoomPrimaryPath = createSvgElement('path', {
+                        d: 'M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+                    });
+                    const zoomSecondaryPath = createSvgElement('path', {
+                        d: 'M10 9h-1v-1H8v1H7v1h1v1h1v-1h1V9z',
+                    });
+                    zoomIcon.appendChild(zoomPrimaryPath);
+                    zoomIcon.appendChild(zoomSecondaryPath);
+                    zoomButton.appendChild(zoomIcon);
+                }
 
-                const downloadButton = document.createElement('button');
-                downloadButton.type = 'button';
-                downloadButton.id = 'mga-download';
-                downloadButton.className = 'mga-toolbar-button';
-                downloadButton.setAttribute('aria-label', mga__( 'Télécharger l’image', 'lightbox-jlg' ));
-                toolbar.appendChild(downloadButton);
+                if (showDownload) {
+                    const downloadButton = document.createElement('button');
+                    downloadButton.type = 'button';
+                    downloadButton.id = 'mga-download';
+                    downloadButton.className = 'mga-toolbar-button';
+                    downloadButton.setAttribute('aria-label', mga__( 'Télécharger l’image', 'lightbox-jlg' ));
+                    toolbar.appendChild(downloadButton);
 
-                const downloadIcon = createSvgElement('svg', {
-                    class: 'mga-icon mga-download-icon',
-                    viewBox: '0 0 24 24',
-                    fill: 'currentColor',
-                });
-                const downloadArrow = createSvgElement('path', {
-                    d: 'M5 20h14v-2H5v2zm7-16l-5 5h3v4h4v-4h3l-5-5z',
-                });
-                downloadIcon.appendChild(downloadArrow);
-                downloadButton.appendChild(downloadIcon);
+                    const downloadIcon = createSvgElement('svg', {
+                        class: 'mga-icon mga-download-icon',
+                        viewBox: '0 0 24 24',
+                        fill: 'currentColor',
+                    });
+                    const downloadArrow = createSvgElement('path', {
+                        d: 'M5 20h14v-2H5v2zm7-16l-5 5h3v4h4v-4h3l-5-5z',
+                    });
+                    downloadIcon.appendChild(downloadArrow);
+                    downloadButton.appendChild(downloadIcon);
+                }
 
-                const shareButton = document.createElement('button');
-                shareButton.type = 'button';
-                shareButton.id = 'mga-share';
-                shareButton.className = 'mga-toolbar-button';
-                shareButton.setAttribute('aria-label', mga__( 'Partager l’image', 'lightbox-jlg' ));
-                toolbar.appendChild(shareButton);
+                if (showShare) {
+                    const shareButton = document.createElement('button');
+                    shareButton.type = 'button';
+                    shareButton.id = 'mga-share';
+                    shareButton.className = 'mga-toolbar-button';
+                    shareButton.setAttribute('aria-label', mga__( 'Partager l’image', 'lightbox-jlg' ));
+                    toolbar.appendChild(shareButton);
 
-                const shareIcon = createSvgElement('svg', {
-                    class: 'mga-icon mga-share-icon',
-                    viewBox: '0 0 24 24',
-                    fill: 'currentColor',
-                });
-                const sharePath = createSvgElement('path', {
-                    d: 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.02-4.11A2.99 2.99 0 0 0 18 7.91c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.03.47.09.7L8.07 9.7A2.99 2.99 0 0 0 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.03-.82l7.05 4.12c-.06.23-.08.46-.08.7 0 1.65 1.34 2.99 3 2.99s3-1.34 3-2.99-1.34-3-3-3z',
-                });
-                shareIcon.appendChild(sharePath);
-                shareButton.appendChild(shareIcon);
+                    const shareIcon = createSvgElement('svg', {
+                        class: 'mga-icon mga-share-icon',
+                        viewBox: '0 0 24 24',
+                        fill: 'currentColor',
+                    });
+                    const sharePath = createSvgElement('path', {
+                        d: 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.02-4.11A2.99 2.99 0 0 0 18 7.91c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.03.47.09.7L8.07 9.7A2.99 2.99 0 0 0 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.03-.82l7.05 4.12c-.06.23-.08.46-.08.7 0 1.65 1.34 2.99 3 2.99s3-1.34 3-2.99-1.34-3-3-3z',
+                    });
+                    shareIcon.appendChild(sharePath);
+                    shareButton.appendChild(shareIcon);
+                }
 
-                const fullscreenButton = document.createElement('button');
-                fullscreenButton.type = 'button';
-                fullscreenButton.id = 'mga-fullscreen';
-                fullscreenButton.className = 'mga-toolbar-button';
-                fullscreenButton.setAttribute('aria-label', mga__( 'Plein écran', 'lightbox-jlg' ));
-                toolbar.appendChild(fullscreenButton);
+                if (showFullscreen) {
+                    const fullscreenButton = document.createElement('button');
+                    fullscreenButton.type = 'button';
+                    fullscreenButton.id = 'mga-fullscreen';
+                    fullscreenButton.className = 'mga-toolbar-button';
+                    fullscreenButton.setAttribute('aria-label', mga__( 'Plein écran', 'lightbox-jlg' ));
+                    toolbar.appendChild(fullscreenButton);
 
-                const fullscreenIcon = createSvgElement('svg', {
-                    class: 'mga-icon',
-                    viewBox: '0 0 24 24',
-                    fill: 'currentColor',
-                });
-                const fullscreenPath = createSvgElement('path', {
-                    d: 'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5V14h-2v3zM14 5v2h3v3h2V5h-5z',
-                });
-                fullscreenIcon.appendChild(fullscreenPath);
-                fullscreenButton.appendChild(fullscreenIcon);
+                    const fullscreenIcon = createSvgElement('svg', {
+                        class: 'mga-icon',
+                        viewBox: '0 0 24 24',
+                        fill: 'currentColor',
+                    });
+                    const fullscreenPath = createSvgElement('path', {
+                        d: 'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5V14h-2v3zM14 5v2h3v3h2V5h-5z',
+                    });
+                    fullscreenIcon.appendChild(fullscreenPath);
+                    fullscreenButton.appendChild(fullscreenIcon);
+                }
 
                 const closeButton = document.createElement('button');
                 closeButton.type = 'button';
@@ -1829,8 +1864,8 @@
                     updateAutoplayButtonState(viewer, willRun);
                 }
             }
-            if (eventTarget.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
-            if (eventTarget.closest('#mga-download')) {
+            if (showZoom && eventTarget.closest('#mga-zoom')) { if (mainSwiper && mainSwiper.zoom) mainSwiper.zoom.toggle(); }
+            if (showDownload && eventTarget.closest('#mga-download')) {
                 e.preventDefault();
                 const highResUrl = getActiveHighResUrl();
                 if (highResUrl) {
@@ -1842,7 +1877,7 @@
                     debug.log(mga__( "URL haute résolution introuvable pour l’image active.", 'lightbox-jlg' ), true);
                 }
             }
-            if (eventTarget.closest('#mga-share')) {
+            if (showShare && eventTarget.closest('#mga-share')) {
                 e.preventDefault();
                 const activeData = getActiveImageData();
                 if (!activeData || !activeData.image) {
@@ -1855,7 +1890,7 @@
                     debug.log(mga__( "Aucune option de partage disponible pour l’image active.", 'lightbox-jlg' ), true);
                 }
             }
-            if (eventTarget.closest('#mga-fullscreen')) {
+            if (showFullscreen && eventTarget.closest('#mga-fullscreen')) {
                 const { request: requestFullscreen, exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
 
                 if (!fullscreenElement) {
