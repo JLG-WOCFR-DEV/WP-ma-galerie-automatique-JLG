@@ -211,7 +211,7 @@ class Assets {
 
         wp_add_inline_style( $style_handle, $inline_styles );
 
-        $default_block_names = [ 'core/gallery', 'core/image', 'core/media-text' ];
+        $default_block_names = [ 'core/gallery', 'core/image', 'core/media-text', 'core/cover' ];
         $linked_block_names  = apply_filters( 'mga_linked_image_blocks', $default_block_names );
 
         if ( ! is_array( $linked_block_names ) ) {
