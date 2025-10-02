@@ -13,3 +13,27 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
     vertical-align: middle;
 }
+
+.mga-toggle-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.mga-toggle-list__item {
+    margin: 0;
+}
+
+.mga-toggle-list__item > label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.mga-toggle-list__item .description {
+    margin: 4px 0 0 28px;
+}
