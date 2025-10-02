@@ -21,6 +21,7 @@ Lightbox - JLG est un plugin WordPress qui transforme les galeries d'images en d
 - **Effets d’arrière-plan** : flou d’écho, texture ou flou en temps réel.
 - **Lecture en boucle** et **lancement automatique** du diaporama.
 - **Z‑index** de la galerie et **mode débogage**.
+- **Sélecteurs CSS personnalisés** : complétez la liste par défaut lorsque votre thème encapsule le contenu dans des conteneurs non standards (ex. `.site-main > .article-body`).
 
 ## Fonctionnalités
 La visionneuse plein écran pilotée par `assets/js/gallery-slideshow.js` et mise en forme par `assets/css/gallery-slideshow.css` offre les contrôles suivants :
@@ -58,6 +59,10 @@ Les scénarios Playwright du dépôt (par exemple `tests/e2e/gallery-viewer.spec
 ## Hooks et personnalisation
 
 Ces filtres permettent d'adapter le comportement du plugin selon vos besoins.
+
+### Quand ajuster les sélecteurs CSS ?
+
+Si votre thème n’utilise pas les classes habituelles comme `.entry-content`, `.page-content` ou `.post-content`, la détection automatique peut ignorer certaines images liées. Dans ce cas, ouvrez **Réglages → Ma Galerie Automatique** puis ajoutez vos propres sélecteurs CSS dans le champ **Sélecteurs CSS personnalisés** (un sélecteur par ligne). Le plugin combinera ces sélecteurs avec ceux fournis par défaut pour localiser les images prêtes à ouvrir la lightbox.
 
 ### `mga_swiper_css`
 - **Rôle** : modifier l'URL de la feuille de style utilisée par Swiper (locale par défaut).

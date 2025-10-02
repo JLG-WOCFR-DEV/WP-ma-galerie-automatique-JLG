@@ -217,6 +217,79 @@ $settings = wp_parse_args( $settings, $defaults );
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row">
+                        <label for="mga-content-selector-0">
+                            <?php echo esc_html__( 'Sélecteurs CSS personnalisés', 'lightbox-jlg' ); ?>
+                        </label>
+                    </th>
+                    <td>
+                        <?php
+                        $configured_selectors = (array) $settings['contentSelectors'];
+
+                        if ( empty( $configured_selectors ) ) {
+                            $configured_selectors = [ '' ];
+                        }
+                        ?>
+                        <div class="mga-content-selectors" data-mga-content-selectors>
+                            <div class="mga-content-selectors__list" data-mga-content-selectors-list>
+                                <?php foreach ( $configured_selectors as $index => $selector ) : ?>
+                                    <?php
+                                    $input_id = sprintf( 'mga-content-selector-%d', (int) $index );
+                                    ?>
+                                    <div class="mga-content-selectors__row" data-mga-content-selector-row>
+                                        <input
+                                            type="text"
+                                            id="<?php echo esc_attr( $input_id ); ?>"
+                                            class="regular-text"
+                                            name="mga_settings[contentSelectors][]"
+                                            value="<?php echo esc_attr( $selector ); ?>"
+                                            placeholder="<?php echo esc_attr__( '.entry-content a[href$=".jpg"]', 'lightbox-jlg' ); ?>"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="button-link mga-content-selectors__remove"
+                                            data-mga-remove-selector
+                                            aria-label="<?php echo esc_attr__( 'Supprimer ce sélecteur CSS', 'lightbox-jlg' ); ?>"
+                                        >
+                                            <?php echo esc_html__( 'Retirer', 'lightbox-jlg' ); ?>
+                                        </button>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <p>
+                                <button
+                                    type="button"
+                                    class="button button-secondary"
+                                    data-mga-add-selector
+                                >
+                                    <?php echo esc_html__( 'Ajouter un sélecteur', 'lightbox-jlg' ); ?>
+                                </button>
+                            </p>
+                            <p class="description">
+                                <?php echo wp_kses_post( __( 'Ajoutez ici vos propres sélecteurs lorsque le contenu principal de votre thème n’utilise pas les classes par défaut (par exemple <code>.entry-content</code>). Chaque ligne ou champ correspond à un sélecteur complet utilisé pour détecter les images liées.', 'lightbox-jlg' ) ); ?>
+                            </p>
+                        </div>
+                        <template id="mga-content-selector-template">
+                            <div class="mga-content-selectors__row" data-mga-content-selector-row>
+                                <input
+                                    type="text"
+                                    class="regular-text"
+                                    name="mga_settings[contentSelectors][]"
+                                    placeholder="<?php echo esc_attr__( '.entry-content a[href$=".jpg"]', 'lightbox-jlg' ); ?>"
+                                />
+                                <button
+                                    type="button"
+                                    class="button-link mga-content-selectors__remove"
+                                    data-mga-remove-selector
+                                    aria-label="<?php echo esc_attr__( 'Supprimer ce sélecteur CSS', 'lightbox-jlg' ); ?>"
+                                >
+                                    <?php echo esc_html__( 'Retirer', 'lightbox-jlg' ); ?>
+                                </button>
+                            </div>
+                        </template>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php echo esc_html__( 'Mode de débogage', 'lightbox-jlg' ); ?></th>
                     <td>
                         <fieldset>

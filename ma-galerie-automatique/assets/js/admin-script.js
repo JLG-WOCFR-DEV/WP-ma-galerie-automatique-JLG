@@ -202,5 +202,160 @@
             (value) => value,
             (value) => mgaAdminSprintf(mgaAdmin__('%s opacity', 'lightbox-jlg'), value)
         );
+
+        const selectorsWrapper = doc.querySelector('[data-mga-content-selectors]');
+
+        if (selectorsWrapper) {
+            const selectorsList = selectorsWrapper.querySelector('[data-mga-content-selectors-list]');
+            const template = doc.getElementById('mga-content-selector-template');
+
+            if (selectorsList) {
+                const updateRemoveState = () => {
+                    const rows = selectorsList.querySelectorAll('[data-mga-content-selector-row]');
+                    const disable = rows.length <= 1;
+
+                    rows.forEach((row) => {
+                        const removeButton = row.querySelector('[data-mga-remove-selector]');
+
+                        if (removeButton) {
+                            removeButton.disabled = disable;
+                            removeButton.setAttribute('aria-disabled', disable ? 'true' : 'false');
+                        }
+                    });
+                };
+
+                const refreshRowIds = () => {
+                    const rows = selectorsList.querySelectorAll('[data-mga-content-selector-row]');
+
+                    rows.forEach((row, index) => {
+                        const input = row.querySelector('input[name="mga_settings[contentSelectors][]"]');
+
+                        if (input) {
+                            input.id = `mga-content-selector-${index}`;
+                        }
+                    });
+                };
+
+                const syncRowsState = () => {
+                    refreshRowIds();
+                    updateRemoveState();
+                };
+
+                const removeRow = (row) => {
+                    if (!row) {
+                        return;
+                    }
+
+                    const rows = selectorsList.querySelectorAll('[data-mga-content-selector-row]');
+
+                    if (rows.length <= 1) {
+                        const input = row.querySelector('input[name="mga_settings[contentSelectors][]"]');
+
+                        if (input) {
+                            input.value = '';
+                        }
+
+                        return;
+                    }
+
+                    row.remove();
+                    syncRowsState();
+                };
+
+                const bindRow = (row) => {
+                    if (!row || row.getAttribute('data-mga-selector-bound') === 'true') {
+                        return;
+                    }
+
+                    const removeButton = row.querySelector('[data-mga-remove-selector]');
+
+                    if (removeButton) {
+                        removeButton.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            removeRow(row);
+                        });
+                    }
+
+                    row.setAttribute('data-mga-selector-bound', 'true');
+                };
+
+                const createRow = (value = '') => {
+                    let row = null;
+
+                    if (template && template.content) {
+                        const fragment = doc.importNode(template.content, true);
+
+                        row = fragment.firstElementChild;
+                        if (row) {
+                            bindRow(row);
+                            const input = row.querySelector('input[name="mga_settings[contentSelectors][]"]');
+
+                            if (input) {
+                                input.value = value;
+                            }
+
+                            return row;
+                        }
+                    }
+
+                    row = doc.createElement('div');
+                    row.className = 'mga-content-selectors__row';
+                    row.setAttribute('data-mga-content-selector-row', '');
+
+                    const input = doc.createElement('input');
+                    input.type = 'text';
+                    input.className = 'regular-text';
+                    input.name = 'mga_settings[contentSelectors][]';
+                    input.value = value;
+                    row.appendChild(input);
+
+                    const removeButton = doc.createElement('button');
+                    removeButton.type = 'button';
+                    removeButton.className = 'button-link mga-content-selectors__remove';
+                    removeButton.setAttribute('data-mga-remove-selector', '');
+                    removeButton.textContent = mgaAdmin__('Retirer', 'lightbox-jlg');
+                    row.appendChild(removeButton);
+
+                    bindRow(row);
+
+                    return row;
+                };
+
+                const addRow = (value = '') => {
+                    const row = createRow(value);
+
+                    if (row) {
+                        selectorsList.appendChild(row);
+
+                        const input = row.querySelector('input[name="mga_settings[contentSelectors][]"]');
+
+                        if (input) {
+                            safeFocus(input);
+                        }
+                    }
+
+                    syncRowsState();
+                };
+
+                Array.from(selectorsList.querySelectorAll('[data-mga-content-selector-row]')).forEach((row) => {
+                    bindRow(row);
+                });
+
+                if (!selectorsList.querySelector('[data-mga-content-selector-row]')) {
+                    addRow();
+                } else {
+                    syncRowsState();
+                }
+
+                const addButton = selectorsWrapper.querySelector('[data-mga-add-selector]');
+
+                if (addButton) {
+                    addButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        addRow();
+                    });
+                }
+            }
+        }
     });
 })(typeof window !== 'undefined' ? window : globalThis);
