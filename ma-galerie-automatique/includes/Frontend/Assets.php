@@ -231,7 +231,7 @@ class Assets {
         wp_register_script(
             $script_handle,
             $this->plugin->get_plugin_dir_url() . 'assets/js/block-editor-preview.js',
-            [ 'wp-dom-ready', 'wp-data', 'wp-i18n' ],
+            [ 'wp-element', 'wp-data', 'wp-i18n', 'wp-hooks', 'wp-compose', 'wp-block-editor' ],
             MGA_VERSION,
             true
         );
@@ -239,6 +239,7 @@ class Assets {
         $localization = [
             'noteText'        => \__( 'Lightbox active', 'lightbox-jlg' ),
             'supportedBlocks' => $allowed_block_names,
+            'previewBlockName' => 'ma-galerie-automatique/lightbox-preview',
         ];
 
         wp_localize_script( $script_handle, 'mgaBlockEditorPreview', $localization );

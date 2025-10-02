@@ -424,6 +424,14 @@ $settings = wp_parse_args( $settings, $defaults );
             <h3><?php echo esc_html__( "C'est tout !", 'lightbox-jlg' ); ?></h3>
             <p><?php echo esc_html__( "Désormais, sur votre site, lorsque qu'un visiteur cliquera sur l'une de ces images, la visionneuse (lightbox) s'ouvrira et affichera toutes les autres images de l'article qui ont également été liées à leur &quot;Fichier média&quot;.", 'lightbox-jlg' ); ?></p>
 
+            <h3><?php echo esc_html__( 'Bloc de prévisualisation Gutenberg', 'lightbox-jlg' ); ?></h3>
+            <p><?php echo wp_kses_post( __( 'Besoin de vérifier vos réglages sans quitter l’éditeur&nbsp;? Ajoutez le bloc <strong>«&nbsp;Lightbox – Aperçu&nbsp;»</strong> depuis l’onglet <em>Médias</em>. Il simule la visionneuse avec vos paramètres (lecture automatique, contrôles, style d’arrière-plan, etc.) directement dans Gutenberg.', 'lightbox-jlg' ) ); ?></p>
+            <p><?php echo wp_kses_post( __( 'Chaque option clé est disponible dans la colonne latérale du bloc. Ajustez l’autoplay, choisissez les boutons à afficher, modifiez la couleur d’accent ou l’opacité du fond&nbsp;: l’aperçu se met à jour immédiatement pour refléter le rendu réel.', 'lightbox-jlg' ) ); ?></p>
+            <p><?php echo wp_kses_post( __( 'Le bloc est purement éditorial&nbsp;: il n’ajoute aucun contenu supplémentaire sur le site publié. Il vous aide simplement à présenter la lightbox à vos clients ou collaborateurs depuis l’éditeur.', 'lightbox-jlg' ) ); ?></p>
+
+            <h4><?php echo esc_html__( 'Compatibilité avec les blocs natifs', 'lightbox-jlg' ); ?></h4>
+            <p><?php echo wp_kses_post( __( 'La détection automatique reste active sur les blocs <code>core/gallery</code>, <code>core/image</code>, <code>core/media-text</code> ou <code>core/cover</code> lorsque les images renvoient vers leur fichier média. Les blocs mis en évidence dans Gutenberg portent une pastille «&nbsp;Lightbox active&nbsp;», confirmant que la visionneuse se déclenchera à la publication.', 'lightbox-jlg' ) ); ?></p>
+
             <h4><?php echo esc_html__( 'Astuce pour les légendes', 'lightbox-jlg' ); ?></h4>
             <p><?php echo wp_kses_post( __( 'La légende affichée dans la galerie est récupérée automatiquement depuis le champ <strong>&quot;Légende&quot;</strong> de votre image dans l’éditeur, ou, si celui-ci est vide, depuis le champ <strong>&quot;Texte alternatif&quot;</strong>. Pensez à les remplir !', 'lightbox-jlg' ) ); ?></p>
         </div>
