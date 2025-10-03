@@ -252,11 +252,12 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                                         type="checkbox"
                                         id="mga_close_on_backdrop"
                                         value="1"
+                                        aria-describedby="mga_close_on_backdrop_help"
                                         <?php checked( ! empty( $settings['close_on_backdrop'] ), 1 ); ?>
                                     />
                                     <span><?php echo esc_html__( 'Fermer sur clic arrière-plan', 'lightbox-jlg' ); ?></span>
                                 </label>
-                                <p class="description"><?php echo esc_html__( "Décochez pour empêcher la fermeture de la visionneuse lorsque l'arrière-plan est cliqué.", 'lightbox-jlg' ); ?></p>
+                                <p class="description" id="mga_close_on_backdrop_help"><?php echo esc_html__( "Décochez pour empêcher la fermeture de la visionneuse lorsque l'arrière-plan est cliqué.", 'lightbox-jlg' ); ?></p>
                             </div>
 
                             <div class="mga-toggle-list__item">

@@ -3022,10 +3022,11 @@
                 return;
             }
 
-            if (
+            const clickedBackdropArea =
                 eventTarget === viewer ||
-                (clickedInsideViewer && !clickedInsideMainSwiper && !clickedInsideHeader && !clickedInsideThumbs)
-            ) {
+                (clickedInsideViewer && !clickedInsideMainSwiper && !clickedInsideHeader && !clickedInsideThumbs);
+
+            if (clickedBackdropArea) {
                 if (closeOnBackdropClick) {
                     closeViewer(viewer);
                 }

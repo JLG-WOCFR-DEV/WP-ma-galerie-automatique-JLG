@@ -359,7 +359,15 @@ class Settings {
                 : false;
         };
 
-        foreach ( [ 'loop', 'autoplay_start', 'debug_mode', 'allowBodyFallback', 'close_on_backdrop' ] as $checkbox_key ) {
+        $general_toggle_keys = [
+            'loop',
+            'autoplay_start',
+            'debug_mode',
+            'allowBodyFallback',
+            'close_on_backdrop',
+        ];
+
+        foreach ( $general_toggle_keys as $checkbox_key ) {
             $output[ $checkbox_key ] = $resolve_checkbox_value( $checkbox_key );
         }
 
