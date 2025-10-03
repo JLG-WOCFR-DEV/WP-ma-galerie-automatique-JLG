@@ -396,7 +396,10 @@
         blockProps[ 'data-mga-lightbox-note' ] = noteText;
 
         if ( hiddenNoteId ) {
-            blockProps[ 'aria-describedby' ] = hiddenNoteId;
+            var existingDescription = blockProps[ 'aria-describedby' ];
+            blockProps[ 'aria-describedby' ] = existingDescription
+                ? ( existingDescription + ' ' + hiddenNoteId ).trim()
+                : hiddenNoteId;
         } else if ( ! blockProps[ 'aria-label' ] ) {
             blockProps[ 'aria-label' ] = noteText;
         }
