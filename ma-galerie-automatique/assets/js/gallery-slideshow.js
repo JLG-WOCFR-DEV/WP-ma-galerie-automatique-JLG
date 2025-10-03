@@ -1673,16 +1673,20 @@
                 mainWrapper.id = 'mga-main-wrapper';
                 mainSwiper.appendChild(mainWrapper);
 
-                const nextButton = document.createElement('div');
-                nextButton.className = 'swiper-button-next';
+                const nextButton = document.createElement('button');
+                nextButton.type = 'button';
+                nextButton.className = 'swiper-button-next mga-nav-button';
                 nextButton.id = 'mga-next';
                 nextButton.setAttribute('aria-label', mga__( 'Image suivante', 'lightbox-jlg' ));
+                nextButton.setAttribute('title', mga__( 'Image suivante', 'lightbox-jlg' ));
                 mainSwiper.appendChild(nextButton);
 
-                const prevButton = document.createElement('div');
-                prevButton.className = 'swiper-button-prev';
+                const prevButton = document.createElement('button');
+                prevButton.type = 'button';
+                prevButton.className = 'swiper-button-prev mga-nav-button';
                 prevButton.id = 'mga-prev';
                 prevButton.setAttribute('aria-label', mga__( 'Image précédente', 'lightbox-jlg' ));
+                prevButton.setAttribute('title', mga__( 'Image précédente', 'lightbox-jlg' ));
                 mainSwiper.appendChild(prevButton);
 
                 const thumbsSwiper = document.createElement('div');
