@@ -803,6 +803,7 @@
                 if (event && typeof event.stopPropagation === 'function') {
                     event.stopPropagation();
                 }
+
                 closeShareModal({ reason: 'overlay' });
             };
             const onCloseClick = () => closeShareModal({ reason: 'close-button' });
@@ -3016,6 +3017,7 @@
             const clickedInsideThumbs = Boolean(eventTarget.closest('.mga-thumbs-swiper'));
 
             if (clickedInsideShareModal) {
+                // Keep the viewer open when interacting with the share modal (including its overlay).
                 return;
             }
 
