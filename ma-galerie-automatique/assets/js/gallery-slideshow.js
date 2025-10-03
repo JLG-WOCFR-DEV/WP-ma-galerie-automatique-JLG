@@ -686,7 +686,12 @@
             dialog.setAttribute('aria-describedby', description.id);
             viewer.appendChild(modalContainer);
 
-            const onOverlayClick = () => closeShareModal({ reason: 'overlay' });
+            const onOverlayClick = (event) => {
+                if (event && typeof event.stopPropagation === 'function') {
+                    event.stopPropagation();
+                }
+                closeShareModal({ reason: 'overlay' });
+            };
             const onCloseClick = () => closeShareModal({ reason: 'close-button' });
 
             overlay.addEventListener('click', onOverlayClick);
@@ -2900,9 +2905,14 @@
                 return;
             }
             const clickedInsideViewer = viewer.contains(eventTarget);
+            const clickedInsideShareModal = Boolean(eventTarget.closest('.mga-share-modal'));
             const clickedInsideMainSwiper = Boolean(eventTarget.closest('.mga-main-swiper'));
             const clickedInsideHeader = Boolean(eventTarget.closest('.mga-header'));
             const clickedInsideThumbs = Boolean(eventTarget.closest('.mga-thumbs-swiper'));
+
+            if (clickedInsideShareModal) {
+                return;
+            }
 
             if (
                 eventTarget === viewer ||
