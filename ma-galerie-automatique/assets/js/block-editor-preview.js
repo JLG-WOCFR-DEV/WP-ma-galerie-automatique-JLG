@@ -150,7 +150,10 @@
             wrapperProps[ 'data-mga-lightbox-note' ] = noteText;
 
             if ( descriptionId ) {
-                wrapperProps[ 'aria-describedby' ] = descriptionId;
+                var existingDescription = wrapperProps[ 'aria-describedby' ];
+                wrapperProps[ 'aria-describedby' ] = existingDescription
+                    ? ( existingDescription + ' ' + descriptionId ).trim()
+                    : descriptionId;
             } else if ( ! wrapperProps[ 'aria-label' ] ) {
                 wrapperProps[ 'aria-label' ] = noteText;
             }
