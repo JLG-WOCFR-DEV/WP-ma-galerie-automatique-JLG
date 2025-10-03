@@ -49,17 +49,34 @@
     var defaults = root.mgaBlockDefaults && typeof root.mgaBlockDefaults === 'object'
         ? root.mgaBlockDefaults
         : {};
-    var currentSettings = root.mgaBlockSettings && typeof root.mgaBlockSettings === 'object'
+    var savedSettings = root.mgaBlockSettings && typeof root.mgaBlockSettings === 'object'
         ? root.mgaBlockSettings
         : null;
 
+    var effectiveSettings = {};
+    var key;
+
+    for ( key in defaults ) {
+        if ( Object.prototype.hasOwnProperty.call( defaults, key ) ) {
+            effectiveSettings[ key ] = defaults[ key ];
+        }
+    }
+
+    if ( savedSettings ) {
+        for ( key in savedSettings ) {
+            if ( Object.prototype.hasOwnProperty.call( savedSettings, key ) ) {
+                effectiveSettings[ key ] = savedSettings[ key ];
+            }
+        }
+    }
+
     function getConfigValue( key, fallback ) {
-        if ( currentSettings && Object.prototype.hasOwnProperty.call( currentSettings, key ) ) {
-            return currentSettings[ key ];
+        if ( savedSettings && Object.prototype.hasOwnProperty.call( savedSettings, key ) ) {
+            return savedSettings[ key ];
         }
 
-        if ( Object.prototype.hasOwnProperty.call( defaults, key ) ) {
-            return defaults[ key ];
+        if ( Object.prototype.hasOwnProperty.call( effectiveSettings, key ) ) {
+            return effectiveSettings[ key ];
         }
 
         return fallback;

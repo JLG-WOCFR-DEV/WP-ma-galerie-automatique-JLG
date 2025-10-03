@@ -236,10 +236,27 @@ class Assets {
             true
         );
 
-        $merged_settings   = wp_parse_args( $settings, $defaults );
-        $block_localization = $this->plugin->prepare_block_settings( $merged_settings );
+        $merged_settings = wp_parse_args( $settings, $defaults );
+        $block_settings  = $this->plugin->prepare_block_settings( $merged_settings );
 
-        wp_localize_script( 'mga-lightbox-editor-block', 'mgaBlockSettings', $block_localization );
+        $block_settings_json = wp_json_encode( $block_settings );
+
+        if ( false !== $block_settings_json ) {
+            $inline_settings = sprintf(
+                '( function() {' .
+                ' var defaults = ( window.mgaBlockDefaults && typeof window.mgaBlockDefaults === "object" ) ? window.mgaBlockDefaults : {};' .
+                ' var overrides = %1$s;' .
+                ' var merged = {};' .
+                ' var key;' .
+                ' for ( key in defaults ) { if ( Object.prototype.hasOwnProperty.call( defaults, key ) ) { merged[ key ] = defaults[ key ]; } }' .
+                ' for ( key in overrides ) { if ( Object.prototype.hasOwnProperty.call( overrides, key ) ) { merged[ key ] = overrides[ key ]; } }' .
+                ' window.mgaBlockSettings = merged;' .
+                '} )();',
+                $block_settings_json
+            );
+
+            wp_add_inline_script( 'mga-lightbox-editor-block', $inline_settings, 'before' );
+        }
 
         $localization = [
             'noteText'        => \__( 'Lightbox active', 'lightbox-jlg' ),
