@@ -388,17 +388,32 @@
         };
         const showZoom = normalizeFlag(settings.show_zoom, true);
         const showDownload = normalizeFlag(settings.show_download, true);
-        const showShare = normalizeFlag(settings.show_share, true);
+        let showShare = normalizeFlag(settings.show_share, true);
         const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
         const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
-        const shareCopyEnabled = normalizeFlag(settings.share_copy, true);
-        const shareDownloadEnabled = normalizeFlag(settings.share_download, true);
-        const shareChannels = normalizeShareChannels(settings.share_channels);
+        let shareCopyEnabled = normalizeFlag(settings.share_copy, true);
+        let shareDownloadEnabled = normalizeFlag(settings.share_download, true);
+        let shareChannels = normalizeShareChannels(settings.share_channels);
         const shareActionLabels = {
             copy: mga__( 'Copier le lien', 'lightbox-jlg' ),
             download: mga__( 'Téléchargement rapide', 'lightbox-jlg' ),
             native: mga__( "Partager via l'appareil", 'lightbox-jlg' ),
         };
+        const hasEnabledShareChannel = () => shareChannels.some((channel) => {
+            if (!channel || typeof channel !== 'object') {
+                return false;
+            }
+
+            if (!channel.enabled) {
+                return false;
+            }
+
+            return typeof channel.template === 'string' && channel.template.trim() !== '';
+        });
+        const hasAnyShareActionAvailable = () => (
+            hasEnabledShareChannel() || shareCopyEnabled || shareDownloadEnabled || hasNativeShareSupport()
+        );
+        const shouldDisplayShareButton = () => showShare && hasAnyShareActionAvailable();
         const optionalToolbarHandlers = [];
         const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
         let mainSwiper = null;
@@ -422,6 +437,40 @@
         let shareModalKeydownHandler = null;
 
         debug.init();
+
+        const shareToolbarHandlerConfig = {
+            selector: '#mga-share',
+            handler: (event) => {
+                event.preventDefault();
+                const activeData = getActiveImageData();
+                if (!activeData || !activeData.image) {
+                    debug.log(mga__( "Impossible de partager l’image active.", 'lightbox-jlg' ), true);
+                    return true;
+                }
+
+                const shared = openSharePanel(activeData.image);
+                if (!shared) {
+                    debug.log(mga__( "Aucune option de partage disponible pour l’image active.", 'lightbox-jlg' ), true);
+                }
+
+                return true;
+            },
+        };
+
+        const registerShareToolbarHandler = () => {
+            if (!optionalToolbarHandlers.includes(shareToolbarHandlerConfig)) {
+                optionalToolbarHandlers.push(shareToolbarHandlerConfig);
+                updateToolbarOptionalButtons();
+            }
+        };
+
+        const unregisterShareToolbarHandler = () => {
+            const index = optionalToolbarHandlers.indexOf(shareToolbarHandlerConfig);
+            if (index !== -1) {
+                optionalToolbarHandlers.splice(index, 1);
+                updateToolbarOptionalButtons();
+            }
+        };
 
         if (showZoom) {
             optionalToolbarHandlers.push({
@@ -457,25 +506,8 @@
             });
         }
 
-        if (showShare) {
-            optionalToolbarHandlers.push({
-                selector: '#mga-share',
-                handler: (event) => {
-                    event.preventDefault();
-                    const activeData = getActiveImageData();
-                    if (!activeData || !activeData.image) {
-                        debug.log(mga__( "Impossible de partager l’image active.", 'lightbox-jlg' ), true);
-                        return true;
-                    }
-
-                    const shared = openSharePanel(activeData.image);
-                    if (!shared) {
-                        debug.log(mga__( "Aucune option de partage disponible pour l’image active.", 'lightbox-jlg' ), true);
-                    }
-
-                    return true;
-                },
-            });
+        if (shouldDisplayShareButton()) {
+            registerShareToolbarHandler();
         }
 
         if (showFullscreen) {
@@ -613,12 +645,53 @@
             }
         }
 
+        function updateToolbarOptionalButtons(toolbarElement) {
+            const providedToolbar = toolbarElement || null;
+            let toolbar = providedToolbar;
+
+            if (!toolbar) {
+                const viewer = document.getElementById('mga-viewer');
+                if (viewer) {
+                    toolbar = viewer.querySelector('.mga-toolbar');
+                }
+            }
+
+            if (!toolbar) {
+                return;
+            }
+
+            toolbar.setAttribute('data-mga-optional-buttons', String(optionalToolbarHandlers.length));
+        }
+
+        function createShareToolbarButton() {
+            const shareButton = document.createElement('button');
+            shareButton.type = 'button';
+            shareButton.id = 'mga-share';
+            shareButton.className = 'mga-toolbar-button';
+            shareButton.setAttribute('aria-label', mga__( 'Partager l’image', 'lightbox-jlg' ));
+            shareButton.setAttribute('aria-haspopup', 'dialog');
+            shareButton.setAttribute('aria-expanded', 'false');
+
+            const shareIcon = createSvgElement('svg', {
+                class: 'mga-icon mga-share-icon',
+                viewBox: '0 0 24 24',
+                fill: 'currentColor',
+            });
+            const sharePath = createSvgElement('path', {
+                d: 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.02-4.11A2.99 2.99 0 0 0 18 7.91c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.03.47.09.7L8.07 9.7A2.99 2.99 0 0 0 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.03-.82l7.05 4.12c-.06.23-.08.46-.08.7 0 1.65 1.34 2.99 3 2.99s3-1.34 3-2.99-1.34-3-3-3z',
+            });
+            shareIcon.appendChild(sharePath);
+            shareButton.appendChild(shareIcon);
+
+            return shareButton;
+        }
+
         function hasNativeShareSupport() {
             return typeof navigator !== 'undefined' && navigator && typeof navigator.share === 'function';
         }
 
         function ensureShareModal(viewer) {
-            if (!showShare) {
+            if (!showShare || !hasAnyShareActionAvailable()) {
                 return null;
             }
 
@@ -1212,6 +1285,62 @@
             }
 
             return true;
+        }
+
+        function syncShareControl() {
+            const shouldShow = shouldDisplayShareButton();
+
+            if (shouldShow) {
+                registerShareToolbarHandler();
+            } else {
+                unregisterShareToolbarHandler();
+            }
+
+            const viewer = document.getElementById('mga-viewer');
+            if (!viewer) {
+                return;
+            }
+
+            const toolbar = viewer.querySelector('.mga-toolbar');
+            const shareButton = viewer.querySelector('#mga-share');
+
+            if (!shouldShow) {
+                if (shareModalIsOpen) {
+                    closeShareModal({ restoreFocus: false, reason: 'share-options-removed' });
+                }
+
+                if (shareButton) {
+                    shareButton.remove();
+                }
+
+                updateToolbarOptionalButtons(toolbar);
+                return;
+            }
+
+            if (!shareButton && toolbar) {
+                const newShareButton = createShareToolbarButton();
+                const fullscreenButton = toolbar.querySelector('#mga-fullscreen');
+                const closeButton = toolbar.querySelector('#mga-close');
+
+                if (fullscreenButton && fullscreenButton.parentElement === toolbar) {
+                    toolbar.insertBefore(newShareButton, fullscreenButton);
+                } else if (closeButton && closeButton.parentElement === toolbar) {
+                    toolbar.insertBefore(newShareButton, closeButton);
+                } else {
+                    toolbar.appendChild(newShareButton);
+                }
+            }
+
+            const ensuredModal = ensureShareModal(viewer);
+            if (ensuredModal) {
+                const refreshedShareButton = viewer.querySelector('#mga-share');
+                if (refreshedShareButton) {
+                    refreshedShareButton.setAttribute('aria-controls', 'mga-share-modal');
+                    refreshedShareButton.setAttribute('aria-expanded', 'false');
+                }
+            }
+
+            updateToolbarOptionalButtons(toolbar);
         }
 
         /**
@@ -1824,26 +1953,9 @@
                     downloadButton.appendChild(downloadIcon);
                 }
 
-                if (showShare) {
-                    const shareButton = document.createElement('button');
-                    shareButton.type = 'button';
-                    shareButton.id = 'mga-share';
-                    shareButton.className = 'mga-toolbar-button';
-                    shareButton.setAttribute('aria-label', mga__( 'Partager l’image', 'lightbox-jlg' ));
-                    shareButton.setAttribute('aria-haspopup', 'dialog');
-                    shareButton.setAttribute('aria-expanded', 'false');
+                if (shouldDisplayShareButton()) {
+                    const shareButton = createShareToolbarButton();
                     toolbar.appendChild(shareButton);
-
-                    const shareIcon = createSvgElement('svg', {
-                        class: 'mga-icon mga-share-icon',
-                        viewBox: '0 0 24 24',
-                        fill: 'currentColor',
-                    });
-                    const sharePath = createSvgElement('path', {
-                        d: 'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.02-4.11A2.99 2.99 0 0 0 18 7.91c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.03.47.09.7L8.07 9.7A2.99 2.99 0 0 0 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.03-.82l7.05 4.12c-.06.23-.08.46-.08.7 0 1.65 1.34 2.99 3 2.99s3-1.34 3-2.99-1.34-3-3-3z',
-                    });
-                    shareIcon.appendChild(sharePath);
-                    shareButton.appendChild(shareIcon);
                 }
 
                 if (showFullscreen) {
@@ -1920,7 +2032,7 @@
                 thumbsWrapper.id = 'mga-thumbs-wrapper';
                 thumbsSwiper.appendChild(thumbsWrapper);
 
-                if (showShare) {
+                if (shouldDisplayShareButton()) {
                     const createdShareModal = ensureShareModal(viewer);
                     if (createdShareModal) {
                         const shareButtonElement = viewer.querySelector('#mga-share');
@@ -2958,6 +3070,51 @@
             }
         });
 
+        const handleSharePreferencesChange = (event) => {
+            const detail = event && typeof event.detail === 'object' && event.detail !== null
+                ? event.detail
+                : {};
+
+            if (Object.prototype.hasOwnProperty.call(detail, 'show_share')) {
+                showShare = normalizeFlag(detail.show_share, showShare);
+            } else if (Object.prototype.hasOwnProperty.call(detail, 'showShare')) {
+                showShare = normalizeFlag(detail.showShare, showShare);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(detail, 'share_copy')) {
+                shareCopyEnabled = normalizeFlag(detail.share_copy, shareCopyEnabled);
+            } else if (Object.prototype.hasOwnProperty.call(detail, 'shareCopy')) {
+                shareCopyEnabled = normalizeFlag(detail.shareCopy, shareCopyEnabled);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(detail, 'share_download')) {
+                shareDownloadEnabled = normalizeFlag(detail.share_download, shareDownloadEnabled);
+            } else if (Object.prototype.hasOwnProperty.call(detail, 'shareDownload')) {
+                shareDownloadEnabled = normalizeFlag(detail.shareDownload, shareDownloadEnabled);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(detail, 'share_channels')) {
+                shareChannels = normalizeShareChannels(detail.share_channels);
+            } else if (Object.prototype.hasOwnProperty.call(detail, 'shareChannels')) {
+                shareChannels = normalizeShareChannels(detail.shareChannels);
+            }
+
+            syncShareControl();
+        };
+
+        const SHARE_PREFERENCES_EVENT = 'mga:share-preferences-change';
+        if (typeof window !== 'undefined') {
+            const previousHandler = window.__mgaSharePreferencesHandler__;
+            if (previousHandler && typeof window.removeEventListener === 'function') {
+                window.removeEventListener(SHARE_PREFERENCES_EVENT, previousHandler);
+            }
+
+            if (typeof window.addEventListener === 'function') {
+                window.addEventListener(SHARE_PREFERENCES_EVENT, handleSharePreferencesChange);
+                window.__mgaSharePreferencesHandler__ = handleSharePreferencesChange;
+            }
+        }
+
         if (typeof module !== 'undefined' && module.exports) {
             module.exports.__testExports = module.exports.__testExports || {};
             module.exports.__testExports.openViewer = openViewer;
@@ -2968,6 +3125,7 @@
             module.exports.__testExports.getActiveImageData = getActiveImageData;
             module.exports.__testExports.getShareChannels = () => shareChannels;
             module.exports.__testExports.getShareOptions = () => (shareModal && Array.isArray(shareModal.options)) ? shareModal.options : [];
+            module.exports.__testExports.syncShareControl = syncShareControl;
         }
 
         function closeViewer(viewer) {

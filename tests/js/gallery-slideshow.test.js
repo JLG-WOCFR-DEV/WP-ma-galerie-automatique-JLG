@@ -567,4 +567,25 @@ describe('download button integration', () => {
         expect(socialOption).toBeTruthy();
         expect(copyOption).toBeTruthy();
     });
+
+    it('removes the share control when no share actions remain available', () => {
+        expect(shareButton).not.toBeNull();
+
+        Object.defineProperty(navigator, 'share', {
+            configurable: true,
+            writable: true,
+            value: undefined,
+        });
+
+        window.dispatchEvent(new CustomEvent('mga:share-preferences-change', {
+            detail: {
+                share_channels: {},
+                share_copy: false,
+                share_download: false,
+            },
+        }));
+
+        const updatedShareButton = viewer.querySelector('#mga-share');
+        expect(updatedShareButton).toBeNull();
+    });
 });

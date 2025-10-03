@@ -678,4 +678,40 @@ test.describe('Gallery viewer', () => {
             await cleanup();
         }
     });
+
+    test('hides the share control when all sharing actions are disabled', async ({ page, requestUtils }) => {
+        await page.addInitScript(() => {
+            Object.defineProperty(navigator, 'share', {
+                configurable: true,
+                writable: true,
+                value: undefined,
+            });
+
+            const settings = (window as typeof window & { mga_settings?: Record<string, any> }).mga_settings || {};
+            settings.show_share = true;
+            settings.share_copy = false;
+            settings.share_download = false;
+            settings.share_channels = {};
+            (window as typeof window & { mga_settings?: Record<string, any> }).mga_settings = settings;
+        });
+
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            'Gallery share disabled',
+        );
+
+        try {
+            await page.goto(post.link);
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`);
+            await expect(trigger.locator('img')).toBeVisible();
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+            await expect(page.locator('#mga-share')).toHaveCount(0);
+        } finally {
+            await cleanup();
+        }
+    });
 });
