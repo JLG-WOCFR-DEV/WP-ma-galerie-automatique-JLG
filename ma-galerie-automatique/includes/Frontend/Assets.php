@@ -236,6 +236,11 @@ class Assets {
             true
         );
 
+        $merged_settings   = wp_parse_args( $settings, $defaults );
+        $block_localization = $this->plugin->prepare_block_settings( $merged_settings );
+
+        wp_localize_script( 'mga-lightbox-editor-block', 'mgaBlockSettings', $block_localization );
+
         $localization = [
             'noteText'        => \__( 'Lightbox active', 'lightbox-jlg' ),
             'supportedBlocks' => $allowed_block_names,

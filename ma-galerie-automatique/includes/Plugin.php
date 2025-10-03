@@ -171,26 +171,17 @@ class Plugin {
         );
 
         $defaults = $this->settings->get_default_settings();
+        $block_defaults = $this->prepare_block_settings( $defaults );
 
-        $localization = [
-            'accentColor'      => $defaults['accent_color'] ?? '#ffffff',
-            'backgroundStyle'  => $defaults['background_style'] ?? 'echo',
-            'autoplay'         => (bool) ( $defaults['autoplay_start'] ?? false ),
-            'loop'             => (bool) ( $defaults['loop'] ?? true ),
-            'delay'            => (int) ( $defaults['delay'] ?? 4 ),
-            'speed'            => (int) ( $defaults['speed'] ?? 600 ),
-            'effect'           => $defaults['effect'] ?? 'slide',
-            'easing'           => $defaults['easing'] ?? 'ease-out',
-            'bgOpacity'        => isset( $defaults['bg_opacity'] ) ? (float) $defaults['bg_opacity'] : 0.95,
-            'showThumbsMobile' => (bool) ( $defaults['show_thumbs_mobile'] ?? true ),
-            'showZoom'         => (bool) ( $defaults['show_zoom'] ?? true ),
-            'showDownload'     => (bool) ( $defaults['show_download'] ?? true ),
-            'showShare'        => (bool) ( $defaults['show_share'] ?? true ),
-            'showFullscreen'   => (bool) ( $defaults['show_fullscreen'] ?? true ),
-            'noteText'         => \__( 'Lightbox active', 'lightbox-jlg' ),
-        ];
+        $block_defaults_json = wp_json_encode( $block_defaults );
 
-        wp_localize_script( $script_handle, 'mgaBlockDefaults', $localization );
+        if ( false !== $block_defaults_json ) {
+            wp_add_inline_script(
+                $script_handle,
+                'window.mgaBlockDefaults = window.mgaBlockDefaults || ' . $block_defaults_json . ';',
+                'before'
+            );
+        }
 
         if ( $this->languages_directory_exists() ) {
             wp_set_script_translations( $script_handle, 'lightbox-jlg', $this->get_languages_path() );
@@ -204,5 +195,31 @@ class Plugin {
                 'render_callback' => '__return_empty_string',
             ]
         );
+    }
+
+    public function prepare_block_settings( array $settings ): array {
+        $accent_color = isset( $settings['accent_color'] ) ? sanitize_hex_color( $settings['accent_color'] ) : null;
+
+        if ( ! $accent_color ) {
+            $accent_color = '#ffffff';
+        }
+
+        return [
+            'accentColor'      => $accent_color,
+            'backgroundStyle'  => isset( $settings['background_style'] ) ? (string) $settings['background_style'] : 'echo',
+            'autoplay'         => ! empty( $settings['autoplay_start'] ),
+            'loop'             => isset( $settings['loop'] ) ? (bool) $settings['loop'] : true,
+            'delay'            => isset( $settings['delay'] ) ? (int) $settings['delay'] : 4,
+            'speed'            => isset( $settings['speed'] ) ? (int) $settings['speed'] : 600,
+            'effect'           => isset( $settings['effect'] ) ? (string) $settings['effect'] : 'slide',
+            'easing'           => isset( $settings['easing'] ) ? (string) $settings['easing'] : 'ease-out',
+            'bgOpacity'        => isset( $settings['bg_opacity'] ) ? (float) $settings['bg_opacity'] : 0.95,
+            'showThumbsMobile' => ! empty( $settings['show_thumbs_mobile'] ),
+            'showZoom'         => ! empty( $settings['show_zoom'] ),
+            'showDownload'     => ! empty( $settings['show_download'] ),
+            'showShare'        => ! empty( $settings['show_share'] ),
+            'showFullscreen'   => ! empty( $settings['show_fullscreen'] ),
+            'noteText'         => __( 'Lightbox active', 'lightbox-jlg' ),
+        ];
     }
 }
