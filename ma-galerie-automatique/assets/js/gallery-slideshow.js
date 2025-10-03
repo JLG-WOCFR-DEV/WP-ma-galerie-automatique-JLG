@@ -391,6 +391,7 @@
         let showShare = normalizeFlag(settings.show_share, true);
         const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
         const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
+        const closeOnBackdropClick = normalizeFlag(settings.close_on_backdrop, true);
         let shareCopyEnabled = normalizeFlag(settings.share_copy, true);
         let shareDownloadEnabled = normalizeFlag(settings.share_download, true);
         let shareChannels = normalizeShareChannels(settings.share_channels);
@@ -3025,7 +3026,9 @@
                 eventTarget === viewer ||
                 (clickedInsideViewer && !clickedInsideMainSwiper && !clickedInsideHeader && !clickedInsideThumbs)
             ) {
-                closeViewer(viewer);
+                if (closeOnBackdropClick) {
+                    closeViewer(viewer);
+                }
                 return;
             }
             if (eventTarget.closest('#mga-close')) {
