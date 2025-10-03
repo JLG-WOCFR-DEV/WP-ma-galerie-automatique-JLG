@@ -196,13 +196,172 @@ class Plugin {
             wp_set_script_translations( $script_handle, 'lightbox-jlg', $this->get_languages_path() );
         }
 
+        $block_attributes = [
+            'autoplay'       => [ 'type' => 'boolean', 'default' => $localization['autoplay'] ?? false ],
+            'loop'           => [ 'type' => 'boolean', 'default' => $localization['loop'] ?? true ],
+            'delay'          => [ 'type' => 'number', 'default' => $localization['delay'] ?? 4 ],
+            'speed'          => [ 'type' => 'number', 'default' => $localization['speed'] ?? 600 ],
+            'effect'         => [ 'type' => 'string', 'default' => $localization['effect'] ?? 'slide' ],
+            'easing'         => [ 'type' => 'string', 'default' => $localization['easing'] ?? 'ease-out' ],
+            'backgroundStyle'=> [ 'type' => 'string', 'default' => $localization['backgroundStyle'] ?? 'echo' ],
+            'accentColor'    => [ 'type' => 'string', 'default' => $localization['accentColor'] ?? '#ffffff' ],
+            'bgOpacity'      => [ 'type' => 'number', 'default' => $localization['bgOpacity'] ?? 0.95 ],
+            'showThumbsMobile' => [ 'type' => 'boolean', 'default' => $localization['showThumbsMobile'] ?? true ],
+            'showZoom'       => [ 'type' => 'boolean', 'default' => $localization['showZoom'] ?? true ],
+            'showDownload'   => [ 'type' => 'boolean', 'default' => $localization['showDownload'] ?? true ],
+            'showShare'      => [ 'type' => 'boolean', 'default' => $localization['showShare'] ?? true ],
+            'showFullscreen' => [ 'type' => 'boolean', 'default' => $localization['showFullscreen'] ?? true ],
+        ];
+
         register_block_type(
             'ma-galerie-automatique/lightbox-preview',
             [
                 'editor_script'   => $script_handle,
                 'editor_style'    => $style_handle,
-                'render_callback' => '__return_empty_string',
+                'attributes'      => $block_attributes,
+                'render_callback' => [ $this, 'render_lightbox_preview_block' ],
             ]
         );
+    }
+
+    private function normalize_block_boolean( $value, bool $fallback ): bool {
+        if ( is_bool( $value ) ) {
+            return $value;
+        }
+
+        if ( is_numeric( $value ) ) {
+            return (bool) $value;
+        }
+
+        if ( is_string( $value ) ) {
+            $normalized = strtolower( trim( $value ) );
+
+            if ( in_array( $normalized, [ 'true', '1', 'yes', 'on' ], true ) ) {
+                return true;
+            }
+
+            if ( in_array( $normalized, [ 'false', '0', 'no', 'off' ], true ) ) {
+                return false;
+            }
+        }
+
+        return $fallback;
+    }
+
+    private function normalize_block_int( $value, int $fallback, int $min, int $max ): int {
+        if ( is_numeric( $value ) ) {
+            $value = (int) $value;
+        } else {
+            $value = $fallback;
+        }
+
+        if ( $value < $min ) {
+            return $min;
+        }
+
+        if ( $value > $max ) {
+            return $max;
+        }
+
+        return $value;
+    }
+
+    private function normalize_block_float( $value, float $fallback, float $min, float $max ): float {
+        if ( is_numeric( $value ) ) {
+            $value = (float) $value;
+        } else {
+            $value = $fallback;
+        }
+
+        if ( $value < $min ) {
+            return $min;
+        }
+
+        if ( $value > $max ) {
+            return $max;
+        }
+
+        return $value;
+    }
+
+    private function normalize_block_choice( $value, array $allowed, string $fallback ): string {
+        if ( is_string( $value ) ) {
+            $normalized = strtolower( trim( $value ) );
+            if ( in_array( $normalized, $allowed, true ) ) {
+                return $normalized;
+            }
+        }
+
+        return $fallback;
+    }
+
+    private function normalize_block_color( ?string $value, string $fallback ): string {
+        $color = sanitize_hex_color( $value );
+
+        if ( ! $color ) {
+            $color = sanitize_hex_color( $fallback ) ?: '#ffffff';
+        }
+
+        return $color ?: '#ffffff';
+    }
+
+    private function build_preview_block_options( array $attributes ): array {
+        $defaults = $this->settings->get_default_settings();
+
+        $delay_default = isset( $defaults['delay'] ) ? (int) $defaults['delay'] : 4;
+        $speed_default = isset( $defaults['speed'] ) ? (int) $defaults['speed'] : 600;
+        $bg_default    = isset( $defaults['bg_opacity'] ) ? (float) $defaults['bg_opacity'] : 0.95;
+        $effect_default = isset( $defaults['effect'] ) ? strtolower( (string) $defaults['effect'] ) : 'slide';
+        $easing_default = isset( $defaults['easing'] ) ? strtolower( (string) $defaults['easing'] ) : 'ease-out';
+        $background_default = isset( $defaults['background_style'] ) ? strtolower( (string) $defaults['background_style'] ) : 'echo';
+        $accent_default = isset( $defaults['accent_color'] ) ? (string) $defaults['accent_color'] : '#ffffff';
+
+        $allowed_effects = [ 'slide', 'fade', 'cube', 'coverflow', 'flip' ];
+        $allowed_easings = [ 'ease-out', 'ease-in-out', 'ease-in', 'ease', 'linear' ];
+        $allowed_backgrounds = [ 'echo', 'texture', 'blur' ];
+
+        $options = [
+            'autoplay_start'   => $this->normalize_block_boolean( $attributes['autoplay'] ?? null, ! empty( $defaults['autoplay_start'] ) ),
+            'loop'             => $this->normalize_block_boolean( $attributes['loop'] ?? null, ! empty( $defaults['loop'] ) ),
+            'delay'            => $this->normalize_block_int( $attributes['delay'] ?? null, $delay_default, 1, 30 ),
+            'speed'            => $this->normalize_block_int( $attributes['speed'] ?? null, $speed_default, 100, 5000 ),
+            'effect'           => $this->normalize_block_choice( $attributes['effect'] ?? null, $allowed_effects, $effect_default ),
+            'easing'           => $this->normalize_block_choice( $attributes['easing'] ?? null, $allowed_easings, $easing_default ),
+            'background_style' => $this->normalize_block_choice( $attributes['backgroundStyle'] ?? null, $allowed_backgrounds, $background_default ),
+            'accent_color'     => $this->normalize_block_color( $attributes['accentColor'] ?? null, $accent_default ),
+            'bg_opacity'       => $this->normalize_block_float( $attributes['bgOpacity'] ?? null, $bg_default, 0.5, 1 ),
+            'show_thumbs_mobile' => $this->normalize_block_boolean( $attributes['showThumbsMobile'] ?? null, ! empty( $defaults['show_thumbs_mobile'] ) ),
+            'show_zoom'        => $this->normalize_block_boolean( $attributes['showZoom'] ?? null, ! empty( $defaults['show_zoom'] ) ),
+            'show_download'    => $this->normalize_block_boolean( $attributes['showDownload'] ?? null, ! empty( $defaults['show_download'] ) ),
+            'show_share'       => $this->normalize_block_boolean( $attributes['showShare'] ?? null, ! empty( $defaults['show_share'] ) ),
+            'show_fullscreen'  => $this->normalize_block_boolean( $attributes['showFullscreen'] ?? null, ! empty( $defaults['show_fullscreen'] ) ),
+        ];
+
+        return $options;
+    }
+
+    public function render_lightbox_preview_block( array $attributes, string $content, $block = null ): string {
+        $options = $this->build_preview_block_options( $attributes );
+        $json    = wp_json_encode( $options );
+
+        if ( false === $json ) {
+            return '';
+        }
+
+        $wrapper_attributes = function_exists( 'get_block_wrapper_attributes' )
+            ? get_block_wrapper_attributes(
+                [
+                    'class'            => 'mga-lightbox-config',
+                    'data-mga-options' => $json,
+                    'aria-hidden'      => 'true',
+                    'style'            => 'display:none',
+                ]
+            )
+            : sprintf(
+                'class="mga-lightbox-config" data-mga-options="%s" aria-hidden="true" style="display:none"',
+                esc_attr( $json )
+            );
+
+        return sprintf( '<div %s></div>', $wrapper_attributes );
     }
 }

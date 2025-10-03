@@ -94,6 +94,163 @@
         linear: __( 'Linéaire', 'lightbox-jlg' )
     };
 
+    var ALLOWED_EFFECTS = Object.keys( EFFECT_LABELS );
+    var ALLOWED_EASINGS = Object.keys( EASING_LABELS );
+    var ALLOWED_BACKGROUND_STYLES = [ 'echo', 'texture', 'blur' ];
+
+    function clamp( value, min, max ) {
+        var number = value;
+
+        if ( number < min ) {
+            return min;
+        }
+
+        if ( number > max ) {
+            return max;
+        }
+
+        return number;
+    }
+
+    function normalizeBoolean( value, fallback ) {
+        if ( typeof value === 'boolean' ) {
+            return value;
+        }
+
+        if ( typeof value === 'number' ) {
+            return value !== 0;
+        }
+
+        if ( typeof value === 'string' ) {
+            var normalized = value.trim().toLowerCase();
+
+            if ( 'true' === normalized || '1' === normalized || 'yes' === normalized || 'on' === normalized ) {
+                return true;
+            }
+
+            if ( 'false' === normalized || '0' === normalized || 'no' === normalized || 'off' === normalized ) {
+                return false;
+            }
+        }
+
+        return !! fallback;
+    }
+
+    function normalizeChoice( value, allowed, fallback ) {
+        if ( allowed.indexOf( value ) !== -1 ) {
+            return value;
+        }
+
+        if ( typeof value === 'string' ) {
+            var normalized = value.trim().toLowerCase();
+            for ( var i = 0; i < allowed.length; i++ ) {
+                if ( allowed[ i ] === normalized ) {
+                    return allowed[ i ];
+                }
+            }
+        }
+
+        return fallback;
+    }
+
+    function normalizeInteger( value, fallback, min, max ) {
+        var parsed = parseInt( value, 10 );
+
+        if ( isNaN( parsed ) ) {
+            parsed = parseInt( fallback, 10 );
+        }
+
+        if ( isNaN( parsed ) ) {
+            parsed = min;
+        }
+
+        return clamp( parsed, min, max );
+    }
+
+    function normalizeFloat( value, fallback, min, max ) {
+        var parsed = parseFloat( value );
+
+        if ( isNaN( parsed ) ) {
+            parsed = parseFloat( fallback );
+        }
+
+        if ( isNaN( parsed ) ) {
+            parsed = min;
+        }
+
+        return clamp( parsed, min, max );
+    }
+
+    function normalizeColor( value, fallback ) {
+        if ( typeof value !== 'string' ) {
+            return fallback;
+        }
+
+        var trimmed = value.trim();
+
+        if ( ! trimmed ) {
+            return fallback;
+        }
+
+        var HEX_COLOR = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+        if ( HEX_COLOR.test( trimmed ) ) {
+            return trimmed;
+        }
+
+        return fallback;
+    }
+
+    function normalizeAttributes( attributes ) {
+        var normalized = attributes ? Object.assign( {}, attributes ) : {};
+
+        normalized.autoplay = normalizeBoolean( normalized.autoplay, defaultAutoplay );
+        normalized.loop = normalizeBoolean( normalized.loop, defaultLoop );
+        normalized.delay = normalizeInteger( normalized.delay, defaultDelay, 1, 30 );
+        normalized.speed = normalizeInteger( normalized.speed, defaultSpeed, 100, 5000 );
+        normalized.effect = normalizeChoice( normalized.effect, ALLOWED_EFFECTS, defaultEffect );
+        normalized.easing = normalizeChoice( normalized.easing, ALLOWED_EASINGS, defaultEasing );
+        normalized.backgroundStyle = normalizeChoice( normalized.backgroundStyle, ALLOWED_BACKGROUND_STYLES, defaultBackgroundStyle );
+        normalized.accentColor = normalizeColor( normalized.accentColor, defaultAccent );
+        normalized.bgOpacity = normalizeFloat( normalized.bgOpacity, defaultBgOpacity, 0.5, 1 );
+        normalized.showThumbsMobile = normalizeBoolean( normalized.showThumbsMobile, defaultThumbsMobile );
+        normalized.showZoom = normalizeBoolean( normalized.showZoom, defaultZoom );
+        normalized.showDownload = normalizeBoolean( normalized.showDownload, defaultDownload );
+        normalized.showShare = normalizeBoolean( normalized.showShare, defaultShare );
+        normalized.showFullscreen = normalizeBoolean( normalized.showFullscreen, defaultFullscreen );
+
+        return normalized;
+    }
+
+    function serializeAttributes( normalized ) {
+        var source = normalized || {};
+
+        return {
+            autoplay_start: !! source.autoplay,
+            loop: !! source.loop,
+            delay: normalizeInteger( source.delay, defaultDelay, 1, 30 ),
+            speed: normalizeInteger( source.speed, defaultSpeed, 100, 5000 ),
+            effect: normalizeChoice( source.effect, ALLOWED_EFFECTS, defaultEffect ),
+            easing: normalizeChoice( source.easing, ALLOWED_EASINGS, defaultEasing ),
+            background_style: normalizeChoice( source.backgroundStyle, ALLOWED_BACKGROUND_STYLES, defaultBackgroundStyle ),
+            accent_color: normalizeColor( source.accentColor, defaultAccent ),
+            bg_opacity: normalizeFloat( source.bgOpacity, defaultBgOpacity, 0.5, 1 ),
+            show_thumbs_mobile: !! source.showThumbsMobile,
+            show_zoom: !! source.showZoom,
+            show_download: !! source.showDownload,
+            show_share: !! source.showShare,
+            show_fullscreen: !! source.showFullscreen
+        };
+    }
+
+    function serializeAttributesToJSON( attributes ) {
+        try {
+            return JSON.stringify( serializeAttributes( attributes ) );
+        } catch ( error ) {
+            return null;
+        }
+    }
+
     function createPlaceholder( color, label ) {
         var safeColor = color || '#888888';
         var safeLabel = label || '';
@@ -221,21 +378,21 @@
     }
 
     function Preview( props ) {
-        var attributes = props.attributes || {};
-        var accentColor = attributes.accentColor || defaultAccent;
-        var backgroundStyle = attributes.backgroundStyle || defaultBackgroundStyle;
-        var autoplay = typeof attributes.autoplay === 'boolean' ? attributes.autoplay : defaultAutoplay;
-        var loop = typeof attributes.loop === 'boolean' ? attributes.loop : defaultLoop;
-        var delay = attributes.delay || defaultDelay;
-        var speed = attributes.speed || defaultSpeed;
-        var effect = attributes.effect || defaultEffect;
-        var easing = attributes.easing || defaultEasing;
-        var bgOpacity = attributes.bgOpacity || defaultBgOpacity;
-        var showThumbsMobile = typeof attributes.showThumbsMobile === 'boolean' ? attributes.showThumbsMobile : defaultThumbsMobile;
-        var showZoom = typeof attributes.showZoom === 'boolean' ? attributes.showZoom : defaultZoom;
-        var showDownload = typeof attributes.showDownload === 'boolean' ? attributes.showDownload : defaultDownload;
-        var showShare = typeof attributes.showShare === 'boolean' ? attributes.showShare : defaultShare;
-        var showFullscreen = typeof attributes.showFullscreen === 'boolean' ? attributes.showFullscreen : defaultFullscreen;
+        var normalized = normalizeAttributes( props && props.attributes ? props.attributes : {} );
+        var accentColor = normalized.accentColor;
+        var backgroundStyle = normalized.backgroundStyle;
+        var autoplay = normalized.autoplay;
+        var loop = normalized.loop;
+        var delay = normalized.delay;
+        var speed = normalized.speed;
+        var effect = normalized.effect;
+        var easing = normalized.easing;
+        var bgOpacity = normalized.bgOpacity;
+        var showThumbsMobile = normalized.showThumbsMobile;
+        var showZoom = normalized.showZoom;
+        var showDownload = normalized.showDownload;
+        var showShare = normalized.showShare;
+        var showFullscreen = normalized.showFullscreen;
 
         var effectLabel = EFFECT_LABELS[ effect ] || effect;
         var easingLabel = EASING_LABELS[ easing ] || easing;
@@ -356,6 +513,9 @@
         var setAttributes = props.setAttributes || function() {};
         var palette = getPaletteColors();
 
+        var normalizedAttributes = normalizeAttributes( attributes );
+        var serializedOptions = serializeAttributesToJSON( normalizedAttributes );
+
         var blockProps = useBlockProps( {
             className: 'mga-block-preview mga-editor-preview--lightbox'
         } );
@@ -367,6 +527,12 @@
         }
 
         blockProps[ 'data-mga-lightbox-note' ] = noteText;
+
+        if ( serializedOptions ) {
+            blockProps[ 'data-mga-options' ] = serializedOptions;
+        } else if ( blockProps[ 'data-mga-options' ] ) {
+            delete blockProps[ 'data-mga-options' ];
+        }
 
         function onToggle( key ) {
             return function( value ) {
@@ -392,14 +558,14 @@
                     { title: __( 'Lecture automatique', 'lightbox-jlg' ), initialOpen: true },
                     el( ToggleControl, {
                         label: __( 'Activer l’autoplay', 'lightbox-jlg' ),
-                        checked: typeof attributes.autoplay === 'boolean' ? attributes.autoplay : defaultAutoplay,
+                        checked: normalizedAttributes.autoplay,
                         onChange: onToggle( 'autoplay' )
                     } ),
                     el( RangeControl, {
                         label: __( 'Délai entre les images (secondes)', 'lightbox-jlg' ),
                         min: 1,
                         max: 30,
-                        value: attributes.delay || defaultDelay,
+                        value: normalizedAttributes.delay,
                         onChange: function( value ) {
                             var parsed = parseInt( value, 10 );
                             if ( ! parsed || parsed < 1 ) {
@@ -413,7 +579,7 @@
                     } ),
                     el( ToggleControl, {
                         label: __( 'Lecture en boucle', 'lightbox-jlg' ),
-                        checked: typeof attributes.loop === 'boolean' ? attributes.loop : defaultLoop,
+                        checked: normalizedAttributes.loop,
                         onChange: onToggle( 'loop' )
                     } )
                 ),
@@ -422,7 +588,7 @@
                     { title: __( 'Transitions', 'lightbox-jlg' ), initialOpen: false },
                     el( SelectControl, {
                         label: __( 'Effet Swiper', 'lightbox-jlg' ),
-                        value: attributes.effect || defaultEffect,
+                        value: normalizedAttributes.effect,
                         options: [
                             { label: __( 'Glissement (recommandé)', 'lightbox-jlg' ), value: 'slide' },
                             { label: __( 'Fondu', 'lightbox-jlg' ), value: 'fade' },
@@ -439,7 +605,7 @@
                         min: 100,
                         max: 5000,
                         step: 50,
-                        value: attributes.speed || defaultSpeed,
+                        value: normalizedAttributes.speed,
                         onChange: function( value ) {
                             var parsed = parseInt( value, 10 );
                             if ( isNaN( parsed ) ) {
@@ -456,7 +622,7 @@
                     } ),
                     el( SelectControl, {
                         label: __( 'Courbe d’animation', 'lightbox-jlg' ),
-                        value: attributes.easing || defaultEasing,
+                        value: normalizedAttributes.easing,
                         options: [
                             { label: __( 'Décélération (par défaut)', 'lightbox-jlg' ), value: 'ease-out' },
                             { label: __( 'Douce (aller-retour)', 'lightbox-jlg' ), value: 'ease-in-out' },
@@ -474,22 +640,22 @@
                     { title: __( 'Contrôles affichés', 'lightbox-jlg' ), initialOpen: false },
                     el( ToggleControl, {
                         label: __( 'Zoom', 'lightbox-jlg' ),
-                        checked: typeof attributes.showZoom === 'boolean' ? attributes.showZoom : defaultZoom,
+                        checked: normalizedAttributes.showZoom,
                         onChange: onToggle( 'showZoom' )
                     } ),
                     el( ToggleControl, {
                         label: __( 'Téléchargement', 'lightbox-jlg' ),
-                        checked: typeof attributes.showDownload === 'boolean' ? attributes.showDownload : defaultDownload,
+                        checked: normalizedAttributes.showDownload,
                         onChange: onToggle( 'showDownload' )
                     } ),
                     el( ToggleControl, {
                         label: __( 'Partager', 'lightbox-jlg' ),
-                        checked: typeof attributes.showShare === 'boolean' ? attributes.showShare : defaultShare,
+                        checked: normalizedAttributes.showShare,
                         onChange: onToggle( 'showShare' )
                     } ),
                     el( ToggleControl, {
                         label: __( 'Plein écran', 'lightbox-jlg' ),
-                        checked: typeof attributes.showFullscreen === 'boolean' ? attributes.showFullscreen : defaultFullscreen,
+                        checked: normalizedAttributes.showFullscreen,
                         onChange: onToggle( 'showFullscreen' )
                     } )
                 ),
@@ -498,7 +664,7 @@
                     { title: __( 'Style', 'lightbox-jlg' ), initialOpen: false },
                     el( SelectControl, {
                         label: __( 'Arrière-plan', 'lightbox-jlg' ),
-                        value: attributes.backgroundStyle || defaultBackgroundStyle,
+                        value: normalizedAttributes.backgroundStyle,
                         options: [
                             { label: __( 'Écho d’image', 'lightbox-jlg' ), value: 'echo' },
                             { label: __( 'Texture', 'lightbox-jlg' ), value: 'texture' },
@@ -510,7 +676,7 @@
                     } ),
                     el( ToggleControl, {
                         label: __( 'Miniatures sur mobile', 'lightbox-jlg' ),
-                        checked: typeof attributes.showThumbsMobile === 'boolean' ? attributes.showThumbsMobile : defaultThumbsMobile,
+                        checked: normalizedAttributes.showThumbsMobile,
                         onChange: onToggle( 'showThumbsMobile' )
                     } ),
                     el( RangeControl, {
@@ -518,7 +684,7 @@
                         min: 0.5,
                         max: 1,
                         step: 0.05,
-                        value: attributes.bgOpacity || defaultBgOpacity,
+                        value: normalizedAttributes.bgOpacity,
                         onChange: function( value ) {
                             var parsed = parseFloat( value );
                             if ( isNaN( parsed ) ) {
@@ -537,7 +703,7 @@
                         BaseControl,
                         { label: __( 'Couleur d’accent', 'lightbox-jlg' ) },
                         el( ColorPalette, {
-                            value: attributes.accentColor || defaultAccent,
+                            value: normalizedAttributes.accentColor,
                             colors: palette,
                             disableCustomColors: false,
                             onChange: onChangeAccent
@@ -549,7 +715,7 @@
             el(
                 'div',
                 blockProps,
-                el( Preview, { attributes: attributes } )
+                el( Preview, { attributes: normalizedAttributes } )
             )
         );
     }
@@ -581,13 +747,31 @@
             showFullscreen: { type: 'boolean', default: defaultFullscreen }
         },
         edit: Edit,
-        save: function() {
-            return null;
+        save: function( props ) {
+            var attributes = props && props.attributes ? props.attributes : {};
+            var normalized = normalizeAttributes( attributes );
+            var optionsJson = serializeAttributesToJSON( normalized ) || '{}';
+            var saveBlockProps = ( useBlockProps && typeof useBlockProps.save === 'function' )
+                ? useBlockProps.save
+                : function( extraProps ) {
+                    return extraProps || {};
+                };
+            var wrapperProps = saveBlockProps( {
+                className: 'mga-lightbox-config',
+                'data-mga-options': optionsJson,
+                'aria-hidden': 'true',
+                style: 'display:none'
+            } );
+
+            return el( 'div', wrapperProps );
         }
     } );
 
     root.mgaLightboxPreview = {
         Preview: Preview,
-        defaults: defaults
+        defaults: defaults,
+        normalizeAttributes: normalizeAttributes,
+        serializeAttributes: serializeAttributes,
+        serializeAttributesToJSON: serializeAttributesToJSON
     };
 } )();

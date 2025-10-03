@@ -28,6 +28,21 @@
     };
 
     var previewSettings = root.mgaBlockEditorPreview || {};
+    var previewLibrary = root.mgaLightboxPreview || {};
+    var normalizeBlockAttributes = typeof previewLibrary.normalizeAttributes === 'function'
+        ? previewLibrary.normalizeAttributes
+        : function( attrs ) {
+            return attrs || {};
+        };
+    var serializeBlockAttributesToJSON = typeof previewLibrary.serializeAttributesToJSON === 'function'
+        ? previewLibrary.serializeAttributesToJSON
+        : function( attrs ) {
+            try {
+                return JSON.stringify( attrs || {} );
+            } catch ( error ) {
+                return null;
+            }
+        };
     var noteText = typeof previewSettings.noteText === 'string' && previewSettings.noteText.trim()
         ? previewSettings.noteText
         : __( 'Lightbox active', 'lightbox-jlg' );
@@ -142,6 +157,17 @@
             var wrapperProps = props.wrapperProps ? Object.assign( {}, props.wrapperProps ) : {};
             wrapperProps.className = classnames( wrapperProps.className, extraClass );
             wrapperProps[ 'data-mga-lightbox-note' ] = noteText;
+
+            if ( props.block && props.block.name === previewBlockName ) {
+                var normalizedAttributes = normalizeBlockAttributes( props.block.attributes || {} );
+                var optionsJson = serializeBlockAttributesToJSON( normalizedAttributes );
+
+                if ( optionsJson ) {
+                    wrapperProps[ 'data-mga-options' ] = optionsJson;
+                } else if ( wrapperProps[ 'data-mga-options' ] ) {
+                    delete wrapperProps[ 'data-mga-options' ];
+                }
+            }
 
             var enhancedProps = Object.assign( {}, props, {
                 className: mergedClassName,

@@ -140,7 +140,9 @@
     }
 
     function initGalleryViewer() {
-        const settings = window.mga_settings || {};
+        const baseSettings = (typeof window !== 'undefined' && window.mga_settings && typeof window.mga_settings === 'object')
+            ? window.mga_settings
+            : {};
         const IMAGE_FILE_PATTERN = /\.(jpe?g|png|gif|bmp|webp|avif|svg)(?:\?.*)?(?:#.*)?$/i;
         const noop = () => {};
         const normalizeFlag = (value, defaultValue = true) => {
@@ -166,6 +168,61 @@
 
             return Boolean(value);
         };
+        const clampNumber = (value, min, max) => {
+            if (Number.isNaN(value)) {
+                return min;
+            }
+
+            if (value < min) {
+                return min;
+            }
+
+            if (value > max) {
+                return max;
+            }
+
+            return value;
+        };
+        const sanitizeIntegerOption = (value, fallback, min, max) => {
+            const parsed = parseInt(value, 10);
+            if (Number.isNaN(parsed)) {
+                return clampNumber(parseInt(fallback, 10) || min, min, max);
+            }
+
+            return clampNumber(parsed, min, max);
+        };
+        const sanitizeFloatOption = (value, fallback, min, max) => {
+            const parsed = parseFloat(value);
+            if (Number.isNaN(parsed)) {
+                return clampNumber(parseFloat(fallback) || min, min, max);
+            }
+
+            return clampNumber(parsed, min, max);
+        };
+        const sanitizeChoiceOption = (value, allowed, fallback) => {
+            if (typeof value === 'string') {
+                const normalized = value.trim().toLowerCase();
+                if (allowed.includes(normalized)) {
+                    return normalized;
+                }
+            }
+
+            return allowed.includes(fallback) ? fallback : allowed[0];
+        };
+        const sanitizeAccentColorOption = (value, fallback) => {
+            if (typeof value === 'string') {
+                const trimmed = value.trim();
+                if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) {
+                    return trimmed;
+                }
+            }
+
+            if (typeof fallback === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(fallback)) {
+                return fallback;
+            }
+
+            return '#ffffff';
+        };
         const debug = window.mgaDebug || {
             enabled: false,
             init: noop,
@@ -177,16 +234,24 @@
             table: noop,
             shareAction: noop,
         };
-        const showZoom = normalizeFlag(settings.show_zoom, true);
-        const showDownload = normalizeFlag(settings.show_download, true);
-        const showShare = normalizeFlag(settings.show_share, true);
-        const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
-        const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
-        const shareCopyEnabled = normalizeFlag(settings.share_copy, true);
-        const shareDownloadEnabled = normalizeFlag(settings.share_download, true);
-        const shareChannels = settings.share_channels && typeof settings.share_channels === 'object'
-            ? settings.share_channels
-            : {};
+        let settings = {};
+        let showZoom = true;
+        let showDownload = true;
+        let showShare = true;
+        let showFullscreen = true;
+        let showThumbsMobile = true;
+        let shareCopyEnabled = true;
+        let shareDownloadEnabled = true;
+        let shareChannels = {};
+        let optionalToolbarHandlers = [];
+        const allowedBackgroundStyles = [ 'echo', 'texture', 'blur' ];
+        const defaultDelay = sanitizeIntegerOption(baseSettings.delay, 4, 1, 30);
+        const defaultSpeed = sanitizeIntegerOption(baseSettings.speed, 600, 100, 5000);
+        const defaultBgOpacity = sanitizeFloatOption(baseSettings.bg_opacity, 0.95, 0.5, 1);
+        const defaultEffect = sanitizeChoiceOption(baseSettings.effect, ALLOWED_EFFECTS, DEFAULT_EFFECT);
+        const defaultEasing = sanitizeChoiceOption(baseSettings.easing, ALLOWED_EASINGS, DEFAULT_EASING);
+        const defaultBackgroundStyle = sanitizeChoiceOption(baseSettings.background_style, allowedBackgroundStyles, 'echo');
+        const defaultAccentColor = sanitizeAccentColorOption(baseSettings.accent_color, '#c9356b');
         const shareTargetLabels = {
             facebook: mga__( 'Facebook', 'lightbox-jlg' ),
             twitter: mga__( 'Twitter', 'lightbox-jlg' ),
@@ -198,7 +263,296 @@
             download: mga__( 'Téléchargement rapide', 'lightbox-jlg' ),
             native: mga__( "Partager via l'appareil", 'lightbox-jlg' ),
         };
-        const optionalToolbarHandlers = [];
+        function rebuildOptionalToolbarHandlers() {
+            optionalToolbarHandlers = [];
+
+            if (showZoom) {
+                optionalToolbarHandlers.push({
+                    selector: '#mga-zoom',
+                    handler: () => {
+                        if (mainSwiper && mainSwiper.zoom) {
+                            mainSwiper.zoom.toggle();
+                            return true;
+                        }
+
+                        return false;
+                    },
+                });
+            }
+
+            if (showDownload) {
+                optionalToolbarHandlers.push({
+                    selector: '#mga-download',
+                    handler: (event) => {
+                        event.preventDefault();
+                        const highResUrl = getActiveHighResUrl();
+                        if (highResUrl) {
+                            const didDownload = triggerImageDownload(highResUrl);
+                            if (!didDownload) {
+                                debug.log(mga__( "Impossible de lancer le téléchargement de l’image active.", 'lightbox-jlg' ), true);
+                            }
+                        } else {
+                            debug.log(mga__( "URL haute résolution introuvable pour l’image active.", 'lightbox-jlg' ), true);
+                        }
+
+                        return true;
+                    },
+                });
+            }
+
+            if (showShare) {
+                optionalToolbarHandlers.push({
+                    selector: '#mga-share',
+                    handler: (event) => {
+                        event.preventDefault();
+                        const activeData = getActiveImageData();
+                        if (!activeData || !activeData.image) {
+                            debug.log(mga__( "Impossible de partager l’image active.", 'lightbox-jlg' ), true);
+                            return true;
+                        }
+
+                        const shared = openSharePanel(activeData.image);
+                        if (!shared) {
+                            debug.log(mga__( "Aucune option de partage disponible pour l’image active.", 'lightbox-jlg' ), true);
+                        }
+
+                        return true;
+                    },
+                });
+            }
+
+            if (showFullscreen) {
+                optionalToolbarHandlers.push({
+                    selector: '#mga-fullscreen',
+                    handler: (event, viewer) => {
+                        if (!viewer) {
+                            return false;
+                        }
+
+                        const { request: requestFullscreen, exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
+
+                        if (!fullscreenElement) {
+                            if (requestFullscreen) {
+                                try {
+                                    const result = requestFullscreen();
+                                    if (result && typeof result.catch === 'function') {
+                                        result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true));
+                                    }
+                                } catch (err) {
+                                    debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true);
+                                }
+                            } else {
+                                debug.log(mga__( 'API plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
+                            }
+                        } else if (exitFullscreen) {
+                            try {
+                                const result = exitFullscreen();
+                                if (result && typeof result.catch === 'function') {
+                                    result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
+                                }
+                            } catch (err) {
+                                debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true);
+                            }
+                        } else {
+                            debug.log(mga__( 'API de fermeture du plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
+                        }
+
+                        return true;
+                    },
+                });
+            }
+        }
+        function applyRuntimeSettings(overrides) {
+            const merged = Object.assign({}, baseSettings);
+
+            if (overrides && typeof overrides === 'object') {
+                Object.assign(merged, overrides);
+            }
+
+            settings = merged;
+            showZoom = normalizeFlag(settings.show_zoom, true);
+            showDownload = normalizeFlag(settings.show_download, true);
+            showShare = normalizeFlag(settings.show_share, true);
+            showFullscreen = normalizeFlag(settings.show_fullscreen, true);
+            showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
+            shareCopyEnabled = normalizeFlag(settings.share_copy, true);
+            shareDownloadEnabled = normalizeFlag(settings.share_download, true);
+            shareChannels = settings.share_channels && typeof settings.share_channels === 'object'
+                ? settings.share_channels
+                : {};
+
+            settings.autoplay_start = normalizeFlag(settings.autoplay_start, normalizeFlag(baseSettings.autoplay_start, false));
+            settings.loop = normalizeFlag(settings.loop, normalizeFlag(baseSettings.loop, true));
+            settings.delay = sanitizeIntegerOption(settings.delay, defaultDelay, 1, 30);
+            settings.speed = sanitizeIntegerOption(settings.speed, defaultSpeed, 100, 5000);
+            settings.effect = sanitizeChoiceOption(settings.effect, ALLOWED_EFFECTS, defaultEffect);
+            settings.easing = sanitizeChoiceOption(settings.easing, ALLOWED_EASINGS, defaultEasing);
+            settings.background_style = sanitizeChoiceOption(settings.background_style, allowedBackgroundStyles, defaultBackgroundStyle);
+            settings.bg_opacity = sanitizeFloatOption(settings.bg_opacity, defaultBgOpacity, 0.5, 1);
+            settings.accent_color = sanitizeAccentColorOption(settings.accent_color, defaultAccentColor);
+            settings.show_zoom = showZoom;
+            settings.show_download = showDownload;
+            settings.show_share = showShare;
+            settings.show_fullscreen = showFullscreen;
+            settings.show_thumbs_mobile = showThumbsMobile;
+
+            rebuildOptionalToolbarHandlers();
+        }
+        applyRuntimeSettings();
+        const OPTIONS_ATTRIBUTE = 'data-mga-options';
+        const OPTIONS_SELECTOR = '[' + OPTIONS_ATTRIBUTE + ']';
+        const ALLOWED_OVERRIDE_KEYS = [
+            'autoplay_start',
+            'loop',
+            'delay',
+            'speed',
+            'effect',
+            'easing',
+            'background_style',
+            'accent_color',
+            'bg_opacity',
+            'show_thumbs_mobile',
+            'show_zoom',
+            'show_download',
+            'show_share',
+            'show_fullscreen',
+        ];
+        const parsedOptionsCache = typeof WeakMap === 'function' ? new WeakMap() : new Map();
+        const triggerOptionsCache = typeof WeakMap === 'function' ? new WeakMap() : new Map();
+        const sanitizeOverrideOptions = (rawOptions) => {
+            if (!rawOptions || typeof rawOptions !== 'object') {
+                return null;
+            }
+
+            const sanitized = {};
+
+            ALLOWED_OVERRIDE_KEYS.forEach((key) => {
+                if (Object.prototype.hasOwnProperty.call(rawOptions, key)) {
+                    sanitized[key] = rawOptions[key];
+                }
+            });
+
+            return Object.keys(sanitized).length ? sanitized : null;
+        };
+        const parseOptionsJSON = (element) => {
+            if (!(element instanceof Element)) {
+                return null;
+            }
+
+            if (parsedOptionsCache.has(element)) {
+                return parsedOptionsCache.get(element);
+            }
+
+            const raw = element.getAttribute(OPTIONS_ATTRIBUTE);
+
+            if (!raw) {
+                parsedOptionsCache.set(element, null);
+                return null;
+            }
+
+            try {
+                const parsed = JSON.parse(raw);
+                const sanitized = sanitizeOverrideOptions(parsed);
+                parsedOptionsCache.set(element, sanitized);
+                return sanitized;
+            } catch (error) {
+                parsedOptionsCache.set(element, null);
+                if (debug && typeof debug.log === 'function') {
+                    debug.log(
+                        mgaSprintf(
+                            mga__( 'Options MGA invalides : %s', 'lightbox-jlg' ),
+                            error && error.message ? error.message : 'parse-error'
+                        ),
+                        true
+                    );
+                }
+                return null;
+            }
+        };
+        const searchOptionsInSiblings = (startElement, direction) => {
+            if (!(startElement instanceof Element)) {
+                return null;
+            }
+
+            let sibling = 'next' === direction
+                ? startElement.nextElementSibling
+                : startElement.previousElementSibling;
+
+            while (sibling) {
+                if (sibling instanceof Element && sibling.hasAttribute && sibling.hasAttribute(OPTIONS_ATTRIBUTE)) {
+                    return sibling;
+                }
+
+                if (sibling instanceof Element && typeof sibling.querySelector === 'function') {
+                    const descendant = sibling.querySelector(OPTIONS_SELECTOR);
+                    if (descendant) {
+                        return descendant;
+                    }
+                }
+
+                sibling = 'next' === direction ? sibling.nextElementSibling : sibling.previousElementSibling;
+            }
+
+            return null;
+        };
+        const findNearestOptionsElement = (trigger) => {
+            if (!(trigger instanceof Element)) {
+                return null;
+            }
+
+            const direct = trigger.closest(OPTIONS_SELECTOR);
+            if (direct) {
+                return direct;
+            }
+
+            let current = trigger.parentElement;
+
+            while (current) {
+                if (current instanceof Element && current.hasAttribute && current.hasAttribute(OPTIONS_ATTRIBUTE)) {
+                    return current;
+                }
+
+                const previousMatch = searchOptionsInSiblings(current, 'previous');
+                if (previousMatch) {
+                    return previousMatch;
+                }
+
+                const nextMatch = searchOptionsInSiblings(current, 'next');
+                if (nextMatch) {
+                    return nextMatch;
+                }
+
+                current = current.parentElement;
+            }
+
+            const fallback = document.querySelector(OPTIONS_SELECTOR);
+            return fallback instanceof Element ? fallback : null;
+        };
+        const resolveTriggerOptions = (trigger) => {
+            if (!(trigger instanceof Element)) {
+                return null;
+            }
+
+            if (triggerOptionsCache.has(trigger)) {
+                return triggerOptionsCache.get(trigger);
+            }
+
+            const sourceElement = findNearestOptionsElement(trigger);
+            if (!sourceElement) {
+                triggerOptionsCache.set(trigger, null);
+                return null;
+            }
+
+            const parsed = parseOptionsJSON(sourceElement);
+            if (!parsed) {
+                triggerOptionsCache.set(trigger, null);
+                return null;
+            }
+
+            const cloned = Object.assign({}, parsed);
+            triggerOptionsCache.set(trigger, cloned);
+            return cloned;
+        };
         const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
         let mainSwiper = null;
         let thumbsSwiper = null;
@@ -221,102 +575,6 @@
         let shareModalKeydownHandler = null;
 
         debug.init();
-
-        if (showZoom) {
-            optionalToolbarHandlers.push({
-                selector: '#mga-zoom',
-                handler: () => {
-                    if (mainSwiper && mainSwiper.zoom) {
-                        mainSwiper.zoom.toggle();
-                        return true;
-                    }
-
-                    return false;
-                },
-            });
-        }
-
-        if (showDownload) {
-            optionalToolbarHandlers.push({
-                selector: '#mga-download',
-                handler: (event) => {
-                    event.preventDefault();
-                    const highResUrl = getActiveHighResUrl();
-                    if (highResUrl) {
-                        const didDownload = triggerImageDownload(highResUrl);
-                        if (!didDownload) {
-                            debug.log(mga__( "Impossible de lancer le téléchargement de l’image active.", 'lightbox-jlg' ), true);
-                        }
-                    } else {
-                        debug.log(mga__( "URL haute résolution introuvable pour l’image active.", 'lightbox-jlg' ), true);
-                    }
-
-                    return true;
-                },
-            });
-        }
-
-        if (showShare) {
-            optionalToolbarHandlers.push({
-                selector: '#mga-share',
-                handler: (event) => {
-                    event.preventDefault();
-                    const activeData = getActiveImageData();
-                    if (!activeData || !activeData.image) {
-                        debug.log(mga__( "Impossible de partager l’image active.", 'lightbox-jlg' ), true);
-                        return true;
-                    }
-
-                    const shared = openSharePanel(activeData.image);
-                    if (!shared) {
-                        debug.log(mga__( "Aucune option de partage disponible pour l’image active.", 'lightbox-jlg' ), true);
-                    }
-
-                    return true;
-                },
-            });
-        }
-
-        if (showFullscreen) {
-            optionalToolbarHandlers.push({
-                selector: '#mga-fullscreen',
-                handler: (event, viewer) => {
-                    if (!viewer) {
-                        return false;
-                    }
-
-                    const { request: requestFullscreen, exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
-
-                    if (!fullscreenElement) {
-                        if (requestFullscreen) {
-                            try {
-                                const result = requestFullscreen();
-                                if (result && typeof result.catch === 'function') {
-                                    result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true));
-                                }
-                            } catch (err) {
-                                debug.log(mgaSprintf(mga__( 'Erreur plein écran : %s', 'lightbox-jlg' ), err.message), true);
-                            }
-                        } else {
-                            debug.log(mga__( 'API plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
-                        }
-                    } else if (exitFullscreen) {
-                        try {
-                            const result = exitFullscreen();
-                            if (result && typeof result.catch === 'function') {
-                                result.catch(err => debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true));
-                            }
-                        } catch (err) {
-                            debug.log(mgaSprintf(mga__( 'Erreur de sortie du plein écran : %s', 'lightbox-jlg' ), err.message), true);
-                        }
-                    } else {
-                        debug.log(mga__( 'API de fermeture du plein écran indisponible sur ce navigateur.', 'lightbox-jlg' ), true);
-                    }
-
-                    return true;
-                },
-            });
-        }
 
         function resolveEventTarget(event) {
             if (!event || !event.target) {
@@ -1953,7 +2211,7 @@
             ];
             const previouslyFocusedElement = document.activeElement;
             lastFocusedElementBeforeViewer = previouslyFocusedElement;
-            const viewerOpened = openViewer(testImages, 0);
+            const viewerOpened = openViewer(testImages, 0, null);
             if (!viewerOpened) {
                 lastFocusedElementBeforeViewer = null;
             }
@@ -2046,7 +2304,8 @@
                 if (startIndex !== -1) {
                     const previouslyFocusedElement = document.activeElement;
                     lastFocusedElementBeforeViewer = previouslyFocusedElement;
-                    const viewerOpened = openViewer(galleryData, startIndex);
+                    const overrideOptions = resolveTriggerOptions(targetLink);
+                    const viewerOpened = openViewer(galleryData, startIndex, overrideOptions);
                     if (viewerOpened) {
                         e.preventDefault();
                     } else {
@@ -2059,8 +2318,9 @@
             }
         });
 
-        function openViewer(images, startIndex) {
+        function openViewer(images, startIndex, overrideOptions) {
             debug.log(mgaSprintf(mga__( 'openViewer appelé avec %1$d images, index %2$d.', 'lightbox-jlg' ), images.length, startIndex));
+            applyRuntimeSettings(overrideOptions);
             if (debug && typeof debug.restartTimer === 'function') {
                 debug.restartTimer();
             }
@@ -2069,6 +2329,14 @@
 
             viewer.className = 'mga-viewer';
             viewer.classList.toggle('mga-has-caption', false);
+            if (viewer.style) {
+                if (settings.accent_color) {
+                    viewer.style.setProperty('--mga-accent-color', settings.accent_color);
+                } else {
+                    viewer.style.removeProperty('--mga-accent-color');
+                }
+                viewer.style.setProperty('--mga-bg-opacity', String(settings.bg_opacity));
+            }
             if (settings.background_style === 'blur') viewer.classList.add('mga-has-blur');
             if (settings.background_style === 'texture') viewer.classList.add('mga-has-texture');
             if (!showThumbsMobile) {
