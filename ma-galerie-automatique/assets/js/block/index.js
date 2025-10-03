@@ -359,6 +359,7 @@
         var blockProps = useBlockProps( {
             className: 'mga-block-preview mga-editor-preview--lightbox'
         } );
+        var hiddenNoteId = props.clientId ? 'mga-lightbox-note-' + props.clientId : null;
 
         if ( blockProps.className ) {
             blockProps.className += ' mga-block-preview--block';
@@ -367,6 +368,12 @@
         }
 
         blockProps[ 'data-mga-lightbox-note' ] = noteText;
+
+        if ( hiddenNoteId ) {
+            blockProps[ 'aria-describedby' ] = hiddenNoteId;
+        } else if ( ! blockProps[ 'aria-label' ] ) {
+            blockProps[ 'aria-label' ] = noteText;
+        }
 
         function onToggle( key ) {
             return function( value ) {
@@ -549,6 +556,7 @@
             el(
                 'div',
                 blockProps,
+                el( 'span', { className: 'mga-screen-reader-text', id: hiddenNoteId || undefined }, noteText ),
                 el( Preview, { attributes: attributes } )
             )
         );

@@ -35,6 +35,19 @@
     pointer-events: none;
 }
 
+.block-editor-block-list__layout .mga-screen-reader-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
 .block-editor-block-list__layout a.mga-editor-preview__link {
     position: relative;
     border-radius: 8px;
