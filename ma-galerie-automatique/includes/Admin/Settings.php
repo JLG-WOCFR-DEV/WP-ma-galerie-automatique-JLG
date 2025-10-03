@@ -43,7 +43,7 @@ class Settings {
         return (bool) $value;
     }
 
-    private function get_default_share_channels(): array {
+    private function get_builtin_share_channel_catalog(): array {
         return [
             [
                 'key'      => 'facebook',
@@ -73,7 +73,108 @@ class Settings {
                 'icon'     => 'pinterest',
                 'enabled'  => false,
             ],
+            [
+                'key'      => 'whatsapp',
+                'label'    => __( 'WhatsApp', 'lightbox-jlg' ),
+                'template' => 'https://api.whatsapp.com/send?text=%text%20%url%',
+                'icon'     => 'whatsapp',
+                'enabled'  => false,
+            ],
+            [
+                'key'      => 'telegram',
+                'label'    => __( 'Telegram', 'lightbox-jlg' ),
+                'template' => 'https://t.me/share/url?url=%url%&text=%text%',
+                'icon'     => 'telegram',
+                'enabled'  => false,
+            ],
+            [
+                'key'      => 'email',
+                'label'    => __( 'E-mail', 'lightbox-jlg' ),
+                'template' => 'mailto:?subject=%title%&body=%text%20%url%',
+                'icon'     => 'email',
+                'enabled'  => false,
+            ],
         ];
+    }
+
+    public function get_share_channel_catalog(): array {
+        $default_catalog = $this->get_builtin_share_channel_catalog();
+        $catalog         = \apply_filters( 'mga_share_channel_catalog', $default_catalog );
+
+        if ( ! is_array( $catalog ) ) {
+            $catalog = $default_catalog;
+        }
+
+        return $this->sanitize_share_channels_array(
+            $catalog,
+            [],
+            $default_catalog,
+            true
+        );
+    }
+
+    public function get_share_icon_choices(): array {
+        $base_choices = [
+            'facebook'  => __( 'Facebook', 'lightbox-jlg' ),
+            'twitter'   => __( 'Twitter', 'lightbox-jlg' ),
+            'linkedin'  => __( 'LinkedIn', 'lightbox-jlg' ),
+            'pinterest' => __( 'Pinterest', 'lightbox-jlg' ),
+            'whatsapp'  => __( 'WhatsApp', 'lightbox-jlg' ),
+            'telegram'  => __( 'Telegram', 'lightbox-jlg' ),
+            'email'     => __( 'E-mail', 'lightbox-jlg' ),
+            'link'      => __( 'Lien', 'lightbox-jlg' ),
+            'generic'   => __( 'Icône générique', 'lightbox-jlg' ),
+        ];
+
+        foreach ( $this->get_share_channel_catalog() as $channel ) {
+            if ( ! is_array( $channel ) ) {
+                continue;
+            }
+
+            if ( empty( $channel['icon'] ) || isset( $base_choices[ $channel['icon'] ] ) ) {
+                continue;
+            }
+
+            $base_choices[ $channel['icon'] ] = isset( $channel['label'] ) && '' !== trim( (string) $channel['label'] )
+                ? sanitize_text_field( (string) $channel['label'] )
+                : ucwords( str_replace( [ '-', '_' ], ' ', sanitize_key( (string) $channel['icon'] ) ) );
+        }
+
+        $choices = \apply_filters( 'mga_share_icon_choices', $base_choices );
+
+        if ( ! is_array( $choices ) ) {
+            $choices = $base_choices;
+        }
+
+        return $choices;
+    }
+
+    private function get_default_share_channels(): array {
+        $catalog = $this->get_share_channel_catalog();
+
+        $normalized = array_map(
+            static function ( $channel ) {
+                if ( ! is_array( $channel ) ) {
+                    return [];
+                }
+
+                $channel['enabled'] = isset( $channel['enabled'] )
+                    ? (bool) $channel['enabled']
+                    : false;
+
+                return $channel;
+            },
+            $catalog
+        );
+
+        return array_values(
+            array_filter(
+                $normalized,
+                static function ( $channel ) {
+                    return is_array( $channel ) && isset( $channel['key'] ) && '' !== $channel['key'];
+                }
+            )
+        );
     }
 
     public function add_admin_menu(): void {
@@ -602,6 +703,20 @@ class Settings {
 
         foreach ( $channels as $key => $channel ) {
             if ( ! is_array( $channel ) ) {
+                $legacy_entry = [
+                    'key' => is_string( $key ) ? $key : '',
+                ];
+
+                if ( is_string( $channel ) ) {
+                    $legacy_entry['template'] = $channel;
+                }
+
+                if ( is_scalar( $channel ) ) {
+                    $legacy_entry['enabled'] = $this->normalize_checkbox_value( $channel, true );
+                }
+
+                $normalized[] = $legacy_entry;
+
                 continue;
             }
 
