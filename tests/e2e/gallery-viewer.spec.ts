@@ -714,4 +714,67 @@ test.describe('Gallery viewer', () => {
             await cleanup();
         }
     });
+
+    test('removes the share control when sharing actions are disabled at runtime', async ({ page, requestUtils }) => {
+        await page.addInitScript(() => {
+            Object.defineProperty(navigator, 'share', {
+                configurable: true,
+                writable: true,
+                value: undefined,
+            });
+
+            const settings = (window as typeof window & { mga_settings?: Record<string, any> }).mga_settings || {};
+            settings.show_share = true;
+            settings.share_copy = true;
+            settings.share_download = true;
+            (window as typeof window & { mga_settings?: Record<string, any> }).mga_settings = settings;
+        });
+
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            'Gallery share dynamic removal',
+        );
+
+        try {
+            await page.goto(post.link);
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`);
+            await expect(trigger.locator('img')).toBeVisible();
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+
+            const shareButton = page.locator('#mga-share');
+            await expect(shareButton).toHaveCount(1);
+
+            const toolbar = page.locator('#mga-viewer .mga-toolbar');
+            const initialOptionalCount = await toolbar.getAttribute('data-mga-optional-buttons');
+            expect(initialOptionalCount).not.toBeNull();
+
+            await page.evaluate(() => {
+                const event = new CustomEvent('mga:share-preferences-change', {
+                    detail: {
+                        show_share: true,
+                        share_copy: false,
+                        share_download: false,
+                        share_channels: [],
+                    },
+                });
+
+                window.dispatchEvent(event);
+            });
+
+            await expect(shareButton).toHaveCount(0);
+
+            const finalOptionalCount = await toolbar.getAttribute('data-mga-optional-buttons');
+            expect(finalOptionalCount).not.toBeNull();
+
+            if (initialOptionalCount && finalOptionalCount) {
+                expect(Number(finalOptionalCount)).toBeLessThan(Number(initialOptionalCount));
+            }
+        } finally {
+            await cleanup();
+        }
+    });
 });
