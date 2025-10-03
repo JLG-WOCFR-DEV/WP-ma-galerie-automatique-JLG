@@ -268,6 +268,7 @@ class Settings {
             'show_download'      => true,
             'show_share'         => true,
             'show_fullscreen'    => true,
+            'close_on_backdrop'  => true,
             'show_thumbs_mobile' => true,
             'share_channels'     => $this->get_default_share_channels(),
             'share_copy'         => true,
@@ -358,7 +359,7 @@ class Settings {
                 : false;
         };
 
-        foreach ( [ 'loop', 'autoplay_start', 'debug_mode', 'allowBodyFallback' ] as $checkbox_key ) {
+        foreach ( [ 'loop', 'autoplay_start', 'debug_mode', 'allowBodyFallback', 'close_on_backdrop' ] as $checkbox_key ) {
             $output[ $checkbox_key ] = $resolve_checkbox_value( $checkbox_key );
         }
 
