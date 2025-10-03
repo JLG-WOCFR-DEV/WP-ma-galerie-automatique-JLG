@@ -1,4 +1,4 @@
-/* global mgaBlockDefaults */
+/* global mgaBlockDefaults, mgaBlockSettings */
 ( function() {
     'use strict';
 
@@ -46,9 +46,18 @@
     var data = wp.data || {};
     var useSelect = typeof data.useSelect === 'function' ? data.useSelect : null;
 
-    var defaults = root.mgaBlockDefaults || {};
+    var defaults = root.mgaBlockDefaults && typeof root.mgaBlockDefaults === 'object'
+        ? root.mgaBlockDefaults
+        : {};
+    var currentSettings = root.mgaBlockSettings && typeof root.mgaBlockSettings === 'object'
+        ? root.mgaBlockSettings
+        : null;
 
-    function getDefault( key, fallback ) {
+    function getConfigValue( key, fallback ) {
+        if ( currentSettings && Object.prototype.hasOwnProperty.call( currentSettings, key ) ) {
+            return currentSettings[ key ];
+        }
+
         if ( Object.prototype.hasOwnProperty.call( defaults, key ) ) {
             return defaults[ key ];
         }
@@ -56,21 +65,21 @@
         return fallback;
     }
 
-    var defaultAccent = getDefault( 'accentColor', '#ffffff' );
-    var defaultBackgroundStyle = getDefault( 'backgroundStyle', 'echo' );
-    var defaultAutoplay = !! getDefault( 'autoplay', false );
-    var defaultLoop = !! getDefault( 'loop', true );
-    var defaultDelay = parseInt( getDefault( 'delay', 4 ), 10 ) || 4;
-    var defaultBgOpacity = parseFloat( getDefault( 'bgOpacity', 0.95 ) ) || 0.95;
-    var defaultSpeed = parseInt( getDefault( 'speed', 600 ), 10 ) || 600;
-    var defaultEffect = getDefault( 'effect', 'slide' );
-    var defaultEasing = getDefault( 'easing', 'ease-out' );
-    var defaultThumbsMobile = !! getDefault( 'showThumbsMobile', true );
-    var defaultZoom = !! getDefault( 'showZoom', true );
-    var defaultDownload = !! getDefault( 'showDownload', true );
-    var defaultShare = !! getDefault( 'showShare', true );
-    var defaultFullscreen = !! getDefault( 'showFullscreen', true );
-    var noteText = getDefault( 'noteText', __( 'Lightbox active', 'lightbox-jlg' ) );
+    var defaultAccent = getConfigValue( 'accentColor', '#ffffff' );
+    var defaultBackgroundStyle = getConfigValue( 'backgroundStyle', 'echo' );
+    var defaultAutoplay = !! getConfigValue( 'autoplay', false );
+    var defaultLoop = !! getConfigValue( 'loop', true );
+    var defaultDelay = parseInt( getConfigValue( 'delay', 4 ), 10 ) || 4;
+    var defaultBgOpacity = parseFloat( getConfigValue( 'bgOpacity', 0.95 ) ) || 0.95;
+    var defaultSpeed = parseInt( getConfigValue( 'speed', 600 ), 10 ) || 600;
+    var defaultEffect = getConfigValue( 'effect', 'slide' );
+    var defaultEasing = getConfigValue( 'easing', 'ease-out' );
+    var defaultThumbsMobile = !! getConfigValue( 'showThumbsMobile', true );
+    var defaultZoom = !! getConfigValue( 'showZoom', true );
+    var defaultDownload = !! getConfigValue( 'showDownload', true );
+    var defaultShare = !! getConfigValue( 'showShare', true );
+    var defaultFullscreen = !! getConfigValue( 'showFullscreen', true );
+    var noteText = getConfigValue( 'noteText', __( 'Lightbox active', 'lightbox-jlg' ) );
 
     var PLACEHOLDER_IMAGES = [
         { color: '#3148a5', label: __( 'Montagnes', 'lightbox-jlg' ) },
