@@ -6,8 +6,9 @@
 if ( ! defined( 'ABSPATH' ) ) exit; // Sécurité
 
 // On prépare les valeurs de manière sécurisée pour éviter les erreurs
-$defaults = mga_get_default_settings();
-$settings = wp_parse_args( $settings, $defaults );
+$defaults          = mga_get_default_settings();
+$sanitized_settings = mga_sanitize_settings( $settings, $settings );
+$settings          = wp_parse_args( $sanitized_settings, $defaults );
 
 ?>
 <div class="wrap mga-admin-wrap">
@@ -285,58 +286,191 @@ $settings = wp_parse_args( $settings, $defaults );
                     <th scope="row"><?php echo esc_html__( 'Canaux de partage', 'lightbox-jlg' ); ?></th>
                     <td>
                         <?php
-                        $share_channels_labels = [
-                            'facebook'  => esc_html__( 'Facebook', 'lightbox-jlg' ),
-                            'twitter'   => esc_html__( 'Twitter', 'lightbox-jlg' ),
-                            'linkedin'  => esc_html__( 'LinkedIn', 'lightbox-jlg' ),
-                            'pinterest' => esc_html__( 'Pinterest', 'lightbox-jlg' ),
-                        ];
-                        $share_channels        = isset( $settings['share_channels'] ) && is_array( $settings['share_channels'] )
-                            ? $settings['share_channels']
+                        $share_channels = isset( $settings['share_channels'] ) && is_array( $settings['share_channels'] )
+                            ? array_values( $settings['share_channels'] )
                             : [];
+                        $share_icon_choices = [
+                            'facebook'  => __( 'Facebook', 'lightbox-jlg' ),
+                            'twitter'   => __( 'Twitter', 'lightbox-jlg' ),
+                            'linkedin'  => __( 'LinkedIn', 'lightbox-jlg' ),
+                            'pinterest' => __( 'Pinterest', 'lightbox-jlg' ),
+                            'whatsapp'  => __( 'WhatsApp', 'lightbox-jlg' ),
+                            'telegram'  => __( 'Telegram', 'lightbox-jlg' ),
+                            'email'     => __( 'E-mail', 'lightbox-jlg' ),
+                            'link'      => __( 'Lien', 'lightbox-jlg' ),
+                            'generic'   => __( 'Icône générique', 'lightbox-jlg' ),
+                        ];
+                        $render_icon_options = static function ( array $choices, string $selected ): string {
+                            $options = '';
+
+                            foreach ( $choices as $value => $label ) {
+                                $options .= sprintf(
+                                    '<option value="%1$s" %2$s>%3$s</option>',
+                                    esc_attr( $value ),
+                                    selected( $selected, $value, false ),
+                                    esc_html( $label )
+                                );
+                            }
+
+                            return $options;
+                        };
                         ?>
                         <p class="description"><?php echo esc_html__( 'Activez les réseaux à proposer dans la modale de partage et ajustez leurs URL gabarits. Utilisez %url% pour l’URL finale, %text% pour la légende et %title% pour le titre du document.', 'lightbox-jlg' ); ?></p>
-                        <div class="mga-share-channels">
-                            <?php foreach ( $share_channels_labels as $channel_key => $channel_label ) :
-                                $channel_settings = $share_channels[ $channel_key ] ?? [];
-                                $channel_enabled  = ! empty( $channel_settings['enabled'] );
-                                $channel_template = $channel_settings['template'] ?? '';
-                                $template_id      = sprintf( 'mga-share-template-%s', esc_attr( $channel_key ) );
-                                $checkbox_id      = sprintf( 'mga-share-enabled-%s', esc_attr( $channel_key ) );
-                                ?>
-                                <div class="mga-share-channels__item">
-                                    <input type="hidden" name="mga_settings[share_channels][<?php echo esc_attr( $channel_key ); ?>][enabled]" value="0" />
-                                    <label class="mga-share-channels__toggle" for="<?php echo esc_attr( $checkbox_id ); ?>">
-                                        <input
-                                            type="checkbox"
-                                            id="<?php echo esc_attr( $checkbox_id ); ?>"
-                                            name="mga_settings[share_channels][<?php echo esc_attr( $channel_key ); ?>][enabled]"
-                                            value="1"
-                                            <?php checked( $channel_enabled, true ); ?>
-                                        />
-                                        <span><?php echo esc_html( $channel_label ); ?></span>
-                                    </label>
-                                    <label class="screen-reader-text" for="<?php echo esc_attr( $template_id ); ?>">
-                                        <?php
-                                        echo esc_html(
-                                            sprintf(
-                                                /* translators: %s: Social network name. */
-                                                __( 'Modèle d’URL pour %s', 'lightbox-jlg' ),
-                                                $channel_label
-                                            )
-                                        );
-                                        ?>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        class="regular-text mga-share-channels__template"
-                                        id="<?php echo esc_attr( $template_id ); ?>"
-                                        name="mga_settings[share_channels][<?php echo esc_attr( $channel_key ); ?>][template]"
-                                        value="<?php echo esc_attr( $channel_template ); ?>"
-                                        placeholder="<?php echo esc_attr__( 'https://exemple.com/?u=%url%', 'lightbox-jlg' ); ?>"
-                                    />
+                        <div class="mga-share-repeater" data-share-repeater>
+                            <div class="mga-share-repeater__list" data-share-repeater-list>
+                                <?php foreach ( $share_channels as $index => $channel ) :
+                                    $channel_key       = isset( $channel['key'] ) ? sanitize_key( (string) $channel['key'] ) : '';
+                                    $channel_label     = isset( $channel['label'] ) ? (string) $channel['label'] : '';
+                                    $channel_template  = isset( $channel['template'] ) ? (string) $channel['template'] : '';
+                                    $channel_icon      = isset( $channel['icon'] ) ? (string) $channel['icon'] : '';
+                                    $channel_enabled   = ! empty( $channel['enabled'] );
+                                    $base_name         = sprintf( 'mga_settings[share_channels][%d]', $index );
+                                    $item_uid          = sprintf( 'mga-share-channel-%d', $index + 1 );
+                                    $channel_title     = $channel_label;
+
+                                    if ( '' === $channel_title ) {
+                                        $channel_title = $channel_key ? strtoupper( $channel_key ) : __( 'Nouveau canal', 'lightbox-jlg' );
+                                    }
+                                    ?>
+                                    <div class="mga-share-repeater__item" data-share-repeater-item data-share-uid="<?php echo esc_attr( $item_uid ); ?>">
+                                        <div class="mga-share-repeater__header">
+                                            <span class="mga-share-repeater__title" data-share-repeater-title><?php echo esc_html( $channel_title ); ?></span>
+                                            <div class="mga-share-repeater__controls">
+                                                <button type="button" class="button button-secondary" data-share-action="move-up">
+                                                    <span aria-hidden="true">▲</span>
+                                                    <span class="screen-reader-text"><?php echo esc_html__( 'Monter', 'lightbox-jlg' ); ?></span>
+                                                </button>
+                                                <button type="button" class="button button-secondary" data-share-action="move-down">
+                                                    <span aria-hidden="true">▼</span>
+                                                    <span class="screen-reader-text"><?php echo esc_html__( 'Descendre', 'lightbox-jlg' ); ?></span>
+                                                </button>
+                                                <button type="button" class="button button-link-delete" data-share-action="remove">
+                                                    <?php echo esc_html__( 'Supprimer', 'lightbox-jlg' ); ?>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mga-share-repeater__fields">
+                                            <div class="mga-share-repeater__field">
+                                                <label data-share-id-suffix="label"><?php echo esc_html__( 'Libellé affiché', 'lightbox-jlg' ); ?></label>
+                                                <input
+                                                    type="text"
+                                                    class="regular-text"
+                                                    name="<?php echo esc_attr( $base_name . '[label]' ); ?>"
+                                                    value="<?php echo esc_attr( $channel_label ); ?>"
+                                                    data-share-field="label"
+                                                    data-share-id-suffix="label"
+                                                />
+                                            </div>
+                                            <div class="mga-share-repeater__field">
+                                                <label data-share-id-suffix="key"><?php echo esc_html__( 'Clé technique', 'lightbox-jlg' ); ?></label>
+                                                <input
+                                                    type="text"
+                                                    class="regular-text"
+                                                    name="<?php echo esc_attr( $base_name . '[key]' ); ?>"
+                                                    value="<?php echo esc_attr( $channel_key ); ?>"
+                                                    data-share-field="key"
+                                                    data-share-id-suffix="key"
+                                                />
+                                                <p class="description"><?php echo esc_html__( 'Utilisé pour identifier le canal. Lettres, chiffres et tirets uniquement.', 'lightbox-jlg' ); ?></p>
+                                            </div>
+                                            <div class="mga-share-repeater__field mga-share-repeater__field--full">
+                                                <label data-share-id-suffix="template"><?php echo esc_html__( 'Modèle d’URL', 'lightbox-jlg' ); ?></label>
+                                                <input
+                                                    type="text"
+                                                    class="regular-text"
+                                                    name="<?php echo esc_attr( $base_name . '[template]' ); ?>"
+                                                    value="<?php echo esc_attr( $channel_template ); ?>"
+                                                    data-share-field="template"
+                                                    data-share-id-suffix="template"
+                                                    placeholder="<?php echo esc_attr__( 'https://exemple.com/?u=%url%', 'lightbox-jlg' ); ?>"
+                                                />
+                                                <p class="description"><?php echo esc_html__( 'Placez %url%, %text% ou %title% pour injecter les informations de l’image.', 'lightbox-jlg' ); ?></p>
+                                            </div>
+                                            <div class="mga-share-repeater__field">
+                                                <label data-share-id-suffix="icon"><?php echo esc_html__( 'Icône', 'lightbox-jlg' ); ?></label>
+                                                <div class="mga-share-repeater__icon-picker">
+                                                    <select
+                                                        name="<?php echo esc_attr( $base_name . '[icon]' ); ?>"
+                                                        data-share-field="icon"
+                                                        data-share-id-suffix="icon"
+                                                    >
+                                                        <?php echo $render_icon_options( $share_icon_choices, $channel_icon ); ?>
+                                                    </select>
+                                                    <span class="mga-share-repeater__icon-preview" data-share-icon-preview aria-hidden="true"></span>
+                                                </div>
+                                            </div>
+                                            <div class="mga-share-repeater__field mga-share-repeater__field--checkbox">
+                                                <input type="hidden" value="0" name="<?php echo esc_attr( $base_name . '[enabled]' ); ?>" data-share-field="enabled-hidden" />
+                                                <label class="mga-share-repeater__checkbox">
+                                                    <input
+                                                        type="checkbox"
+                                                        value="1"
+                                                        <?php checked( $channel_enabled, true ); ?>
+                                                        name="<?php echo esc_attr( $base_name . '[enabled]' ); ?>"
+                                                        data-share-field="enabled"
+                                                    />
+                                                    <span><?php echo esc_html__( 'Canal actif', 'lightbox-jlg' ); ?></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <button type="button" class="button button-secondary mga-share-repeater__add" data-share-repeater-add>
+                                <?php echo esc_html__( 'Ajouter un canal', 'lightbox-jlg' ); ?>
+                            </button>
+                            <template id="mga-share-channel-template">
+                                <div class="mga-share-repeater__item" data-share-repeater-item>
+                                    <div class="mga-share-repeater__header">
+                                        <span class="mga-share-repeater__title" data-share-repeater-title><?php echo esc_html__( 'Nouveau canal', 'lightbox-jlg' ); ?></span>
+                                        <div class="mga-share-repeater__controls">
+                                            <button type="button" class="button button-secondary" data-share-action="move-up">
+                                                <span aria-hidden="true">▲</span>
+                                                <span class="screen-reader-text"><?php echo esc_html__( 'Monter', 'lightbox-jlg' ); ?></span>
+                                            </button>
+                                            <button type="button" class="button button-secondary" data-share-action="move-down">
+                                                <span aria-hidden="true">▼</span>
+                                                <span class="screen-reader-text"><?php echo esc_html__( 'Descendre', 'lightbox-jlg' ); ?></span>
+                                            </button>
+                                            <button type="button" class="button button-link-delete" data-share-action="remove">
+                                                <?php echo esc_html__( 'Supprimer', 'lightbox-jlg' ); ?>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mga-share-repeater__fields">
+                                        <div class="mga-share-repeater__field">
+                                            <label data-share-id-suffix="label"><?php echo esc_html__( 'Libellé affiché', 'lightbox-jlg' ); ?></label>
+                                            <input type="text" class="regular-text" value="" data-share-field="label" data-share-id-suffix="label" />
+                                        </div>
+                                        <div class="mga-share-repeater__field">
+                                            <label data-share-id-suffix="key"><?php echo esc_html__( 'Clé technique', 'lightbox-jlg' ); ?></label>
+                                            <input type="text" class="regular-text" value="" data-share-field="key" data-share-id-suffix="key" />
+                                            <p class="description"><?php echo esc_html__( 'Utilisé pour identifier le canal. Lettres, chiffres et tirets uniquement.', 'lightbox-jlg' ); ?></p>
+                                        </div>
+                                        <div class="mga-share-repeater__field mga-share-repeater__field--full">
+                                            <label data-share-id-suffix="template"><?php echo esc_html__( 'Modèle d’URL', 'lightbox-jlg' ); ?></label>
+                                            <input type="text" class="regular-text" value="" data-share-field="template" data-share-id-suffix="template" placeholder="<?php echo esc_attr__( 'https://exemple.com/?u=%url%', 'lightbox-jlg' ); ?>" />
+                                            <p class="description"><?php echo esc_html__( 'Placez %url%, %text% ou %title% pour injecter les informations de l’image.', 'lightbox-jlg' ); ?></p>
+                                        </div>
+                                        <div class="mga-share-repeater__field">
+                                            <label data-share-id-suffix="icon"><?php echo esc_html__( 'Icône', 'lightbox-jlg' ); ?></label>
+                                            <div class="mga-share-repeater__icon-picker">
+                                                <select data-share-field="icon" data-share-id-suffix="icon">
+                                                    <?php echo $render_icon_options( $share_icon_choices, 'link' ); ?>
+                                                </select>
+                                                <span class="mga-share-repeater__icon-preview" data-share-icon-preview aria-hidden="true"></span>
+                                            </div>
+                                        </div>
+                                        <div class="mga-share-repeater__field mga-share-repeater__field--checkbox">
+                                            <input type="hidden" value="0" data-share-field="enabled-hidden" />
+                                            <label class="mga-share-repeater__checkbox">
+                                                <input type="checkbox" value="1" data-share-field="enabled" />
+                                                <span><?php echo esc_html__( 'Canal actif', 'lightbox-jlg' ); ?></span>
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
-                            <?php endforeach; ?>
+                            </template>
                         </div>
                         <div class="mga-share-actions">
                             <div class="mga-share-actions__item">
