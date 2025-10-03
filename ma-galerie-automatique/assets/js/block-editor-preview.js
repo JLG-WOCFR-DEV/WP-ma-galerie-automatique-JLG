@@ -140,8 +140,20 @@
             var extraClass = 'mga-editor-preview--lightbox';
             var mergedClassName = classnames( props.className, extraClass );
             var wrapperProps = props.wrapperProps ? Object.assign( {}, props.wrapperProps ) : {};
+            var descriptionId = null;
+
+            if ( props.block && props.block.name === previewBlockName && props.block.clientId ) {
+                descriptionId = 'mga-lightbox-note-' + props.block.clientId;
+            }
+
             wrapperProps.className = classnames( wrapperProps.className, extraClass );
             wrapperProps[ 'data-mga-lightbox-note' ] = noteText;
+
+            if ( descriptionId ) {
+                wrapperProps[ 'aria-describedby' ] = descriptionId;
+            } else if ( ! wrapperProps[ 'aria-label' ] ) {
+                wrapperProps[ 'aria-label' ] = noteText;
+            }
 
             var enhancedProps = Object.assign( {}, props, {
                 className: mergedClassName,
