@@ -38,33 +38,125 @@
     margin: 4px 0 0 28px;
 }
 
-.mga-share-channels {
+
+.mga-share-repeater {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
     margin-top: 12px;
 }
 
-.mga-share-channels__item {
+.mga-share-repeater__list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 12px;
+    gap: 16px;
+}
+
+.mga-share-repeater__item {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
     border: 1px solid #dcdcde;
-    border-radius: 6px;
+    border-radius: 8px;
     background-color: #fff;
 }
 
-.mga-share-channels__toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+.mga-share-repeater__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.mga-share-repeater__title {
+    margin: 0;
+    font-size: 1rem;
     font-weight: 600;
 }
 
-.mga-share-channels__template {
-    max-width: 100%;
-    width: 100%;
+.mga-share-repeater__controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.mga-share-repeater__controls .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mga-share-repeater__controls .button span[aria-hidden="true"] {
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+.mga-share-repeater__controls .button-link-delete {
+    color: #b32d2e;
+}
+
+.mga-share-repeater__controls .button-link-delete:hover,
+.mga-share-repeater__controls .button-link-delete:focus {
+    color: #8a2425;
+}
+
+.mga-share-repeater__fields {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.mga-share-repeater__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mga-share-repeater__field--full {
+    grid-column: 1 / -1;
+}
+
+.mga-share-repeater__field--checkbox {
+    align-self: flex-end;
+}
+
+.mga-share-repeater__icon-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mga-share-repeater__icon-picker select {
+    min-width: 160px;
+}
+
+.mga-share-repeater__icon-preview {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #f0f0f1;
+    color: #1d2327;
+}
+
+.mga-share-repeater__icon-preview svg {
+    width: 18px;
+    height: 18px;
+}
+
+.mga-share-repeater__checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.mga-share-repeater__add {
+    align-self: flex-start;
 }
 
 .mga-share-actions {

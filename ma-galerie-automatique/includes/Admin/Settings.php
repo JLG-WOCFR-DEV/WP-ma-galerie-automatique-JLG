@@ -11,6 +11,71 @@ class Settings {
         $this->plugin = $plugin;
     }
 
+    private function normalize_checkbox_value( $value, $default = false ): bool {
+        if ( null === $value ) {
+            return (bool) $default;
+        }
+
+        if ( is_bool( $value ) ) {
+            return $value;
+        }
+
+        if ( is_string( $value ) ) {
+            $normalized = strtolower( trim( $value ) );
+
+            if ( '' === $normalized ) {
+                return false;
+            }
+
+            if ( in_array( $normalized, [ '1', 'true', 'yes', 'on' ], true ) ) {
+                return true;
+            }
+
+            if ( in_array( $normalized, [ '0', 'false', 'no', 'off' ], true ) ) {
+                return false;
+            }
+        }
+
+        if ( is_numeric( $value ) ) {
+            return (int) $value !== 0;
+        }
+
+        return (bool) $value;
+    }
+
+    private function get_default_share_channels(): array {
+        return [
+            [
+                'key'      => 'facebook',
+                'label'    => __( 'Facebook', 'lightbox-jlg' ),
+                'template' => 'https://www.facebook.com/sharer/sharer.php?u=%url%',
+                'icon'     => 'facebook',
+                'enabled'  => true,
+            ],
+            [
+                'key'      => 'twitter',
+                'label'    => __( 'Twitter', 'lightbox-jlg' ),
+                'template' => 'https://twitter.com/intent/tweet?url=%url%&text=%text%',
+                'icon'     => 'twitter',
+                'enabled'  => true,
+            ],
+            [
+                'key'      => 'linkedin',
+                'label'    => __( 'LinkedIn', 'lightbox-jlg' ),
+                'template' => 'https://www.linkedin.com/sharing/share-offsite/?url=%url%',
+                'icon'     => 'linkedin',
+                'enabled'  => false,
+            ],
+            [
+                'key'      => 'pinterest',
+                'label'    => __( 'Pinterest', 'lightbox-jlg' ),
+                'template' => 'https://pinterest.com/pin/create/button/?url=%url%&description=%text%',
+                'icon'     => 'pinterest',
+                'enabled'  => false,
+            ],
+        ];
+    }
+
     public function add_admin_menu(): void {
         add_menu_page(
             __( 'Lightbox - JLG', 'lightbox-jlg' ),
@@ -103,24 +168,7 @@ class Settings {
             'show_share'         => true,
             'show_fullscreen'    => true,
             'show_thumbs_mobile' => true,
-            'share_channels'     => [
-                'facebook' => [
-                    'enabled'  => true,
-                    'template' => 'https://www.facebook.com/sharer/sharer.php?u=%url%',
-                ],
-                'twitter'  => [
-                    'enabled'  => true,
-                    'template' => 'https://twitter.com/intent/tweet?url=%url%&text=%text%',
-                ],
-                'linkedin' => [
-                    'enabled'  => false,
-                    'template' => 'https://www.linkedin.com/sharing/share-offsite/?url=%url%',
-                ],
-                'pinterest' => [
-                    'enabled'  => false,
-                    'template' => 'https://pinterest.com/pin/create/button/?url=%url%&description=%text%',
-                ],
-            ],
+            'share_channels'     => $this->get_default_share_channels(),
             'share_copy'         => true,
             'share_download'     => true,
             'groupAttribute'     => 'data-mga-gallery',
@@ -195,49 +243,17 @@ class Settings {
             ? max( min( (float) $input['bg_opacity'], 1 ), 0 )
             : $defaults['bg_opacity'];
 
-        $normalize_checkbox = static function ( $value, $default = false ) {
-            if ( null === $value ) {
-                return (bool) $default;
-            }
-
-            if ( is_bool( $value ) ) {
-                return $value;
-            }
-
-            if ( is_string( $value ) ) {
-                $normalized = strtolower( trim( $value ) );
-
-                if ( '' === $normalized ) {
-                    return false;
-                }
-
-                if ( in_array( $normalized, [ '1', 'true', 'yes', 'on' ], true ) ) {
-                    return true;
-                }
-
-                if ( in_array( $normalized, [ '0', 'false', 'no', 'off' ], true ) ) {
-                    return false;
-                }
-            }
-
-            if ( is_numeric( $value ) ) {
-                return (int) $value !== 0;
-            }
-
-            return (bool) $value;
-        };
-
-        $resolve_checkbox_value = static function ( string $key ) use ( $input, $existing_settings, $defaults, $normalize_checkbox ) {
+        $resolve_checkbox_value = function ( string $key ) use ( $input, $existing_settings, $defaults ) {
             if ( is_array( $input ) && array_key_exists( $key, $input ) ) {
-                return $normalize_checkbox( $input[ $key ], $defaults[ $key ] ?? false );
+                return $this->normalize_checkbox_value( $input[ $key ], $defaults[ $key ] ?? false );
             }
 
             if ( is_array( $existing_settings ) && array_key_exists( $key, $existing_settings ) ) {
-                return $normalize_checkbox( $existing_settings[ $key ], $defaults[ $key ] ?? false );
+                return $this->normalize_checkbox_value( $existing_settings[ $key ], $defaults[ $key ] ?? false );
             }
 
             return array_key_exists( $key, $defaults )
-                ? $normalize_checkbox( $defaults[ $key ], $defaults[ $key ] )
+                ? $this->normalize_checkbox_value( $defaults[ $key ], $defaults[ $key ] )
                 : false;
         };
 
@@ -366,43 +382,27 @@ class Settings {
             $existing_share_channels = $existing_settings['share_channels'];
         }
 
-        $raw_share_channels = [];
-
-        if ( isset( $input['share_channels'] ) && is_array( $input['share_channels'] ) ) {
-            $raw_share_channels = $input['share_channels'];
-        }
-
-        $sanitized_share_channels = [];
-
-        foreach ( $default_share_channels as $channel_key => $channel_defaults ) {
-            $channel_input    = $raw_share_channels[ $channel_key ] ?? [];
-            $channel_existing = $existing_share_channels[ $channel_key ] ?? [];
-
-            $channel_enabled = $channel_defaults['enabled'] ?? false;
-            $channel_template = $channel_defaults['template'] ?? '';
-
-            if ( array_key_exists( 'enabled', $channel_input ) ) {
-                $channel_enabled = $normalize_checkbox( $channel_input['enabled'], $channel_enabled );
-            } elseif ( array_key_exists( 'enabled', $channel_existing ) ) {
-                $channel_enabled = $normalize_checkbox( $channel_existing['enabled'], $channel_defaults['enabled'] ?? false );
-            }
-
-            if ( array_key_exists( 'template', $channel_input ) ) {
-                $channel_template = sanitize_text_field( (string) $channel_input['template'] );
-            } elseif ( array_key_exists( 'template', $channel_existing ) ) {
-                $channel_template = sanitize_text_field( (string) $channel_existing['template'] );
-            }
-
-            $sanitized_share_channels[ $channel_key ] = [
-                'enabled'  => (bool) $channel_enabled,
-                'template' => $channel_template,
-            ];
-        }
-
-        if ( ! empty( $sanitized_share_channels ) ) {
-            $output['share_channels'] = $sanitized_share_channels;
+        if ( array_key_exists( 'share_channels', $input ) ) {
+            $output['share_channels'] = $this->sanitize_share_channels_array(
+                $input['share_channels'] ?? [],
+                $existing_share_channels,
+                $default_share_channels,
+                false
+            );
+        } elseif ( ! empty( $existing_share_channels ) ) {
+            $output['share_channels'] = $this->sanitize_share_channels_array(
+                $existing_share_channels,
+                [],
+                $default_share_channels,
+                false
+            );
         } else {
-            $output['share_channels'] = $default_share_channels;
+            $output['share_channels'] = $this->sanitize_share_channels_array(
+                $default_share_channels,
+                [],
+                $default_share_channels,
+                true
+            );
         }
 
         $all_post_types               = get_post_types( [], 'names' );
@@ -445,5 +445,197 @@ class Settings {
         $saved_settings = get_option( 'mga_settings', [] );
 
         return $this->sanitize_settings( $saved_settings, $saved_settings );
+    }
+
+    private function sanitize_share_channels_array( $raw_channels, array $existing_channels, array $default_channels, bool $use_defaults_as_fallback = true ): array {
+        $channels_list = [];
+
+        if ( is_array( $raw_channels ) ) {
+            $channels_list = $this->is_list( $raw_channels )
+                ? $raw_channels
+                : $this->normalize_legacy_share_channels( $raw_channels );
+        }
+
+        if ( $use_defaults_as_fallback && empty( $channels_list ) && $this->is_list( $default_channels ) ) {
+            $channels_list = $default_channels;
+        }
+
+        $defaults_by_key  = $this->index_share_channels_by_key( $default_channels );
+        $existing_by_key  = $this->index_share_channels_by_key( $existing_channels );
+        $sanitized        = [];
+        $registered_keys  = [];
+
+        foreach ( $channels_list as $channel_candidate ) {
+            if ( ! is_array( $channel_candidate ) ) {
+                continue;
+            }
+
+            $candidate_key = '';
+
+            if ( isset( $channel_candidate['key'] ) ) {
+                $candidate_key = (string) $channel_candidate['key'];
+            } elseif ( isset( $channel_candidate['slug'] ) ) {
+                $candidate_key = (string) $channel_candidate['slug'];
+            }
+
+            $sanitized_key = sanitize_key( $candidate_key );
+
+            if ( '' === $sanitized_key && isset( $channel_candidate['label'] ) ) {
+                $label_key    = sanitize_title( (string) $channel_candidate['label'] );
+                $sanitized_key = sanitize_key( $label_key );
+            }
+
+            if ( '' === $sanitized_key && isset( $channel_candidate['template'] ) ) {
+                $hash          = md5( (string) $channel_candidate['template'] );
+                $sanitized_key = sanitize_key( substr( $hash, 0, 12 ) );
+            }
+
+            if ( '' === $sanitized_key || isset( $registered_keys[ $sanitized_key ] ) ) {
+                continue;
+            }
+
+            $registered_keys[ $sanitized_key ] = true;
+
+            $defaults_for_key = $defaults_by_key[ $sanitized_key ] ?? null;
+            $existing_for_key = $existing_by_key[ $sanitized_key ] ?? null;
+
+            $label = '';
+
+            if ( isset( $channel_candidate['label'] ) ) {
+                $label = sanitize_text_field( (string) $channel_candidate['label'] );
+            }
+
+            if ( '' === $label && $existing_for_key && isset( $existing_for_key['label'] ) ) {
+                $label = sanitize_text_field( (string) $existing_for_key['label'] );
+            }
+
+            if ( '' === $label && $defaults_for_key && isset( $defaults_for_key['label'] ) ) {
+                $label = sanitize_text_field( (string) $defaults_for_key['label'] );
+            }
+
+            if ( '' === $label ) {
+                $label = ucwords( str_replace( [ '-', '_' ], ' ', $sanitized_key ) );
+            }
+
+            $template = '';
+
+            if ( isset( $channel_candidate['template'] ) ) {
+                $template = sanitize_text_field( (string) $channel_candidate['template'] );
+            }
+
+            if ( '' === $template && $existing_for_key && isset( $existing_for_key['template'] ) ) {
+                $template = sanitize_text_field( (string) $existing_for_key['template'] );
+            }
+
+            if ( '' === $template && $defaults_for_key && isset( $defaults_for_key['template'] ) ) {
+                $template = sanitize_text_field( (string) $defaults_for_key['template'] );
+            }
+
+            $enabled_default = $defaults_for_key['enabled'] ?? false;
+
+            if ( isset( $channel_candidate['enabled'] ) ) {
+                $enabled = $this->normalize_checkbox_value( $channel_candidate['enabled'], $enabled_default );
+            } elseif ( $existing_for_key && array_key_exists( 'enabled', $existing_for_key ) ) {
+                $enabled = $this->normalize_checkbox_value( $existing_for_key['enabled'], $enabled_default );
+            } else {
+                $enabled = (bool) $enabled_default;
+            }
+
+            $icon = '';
+
+            if ( isset( $channel_candidate['icon'] ) ) {
+                $icon = $this->sanitize_share_channel_icon( (string) $channel_candidate['icon'] );
+            } elseif ( $existing_for_key && isset( $existing_for_key['icon'] ) ) {
+                $icon = $this->sanitize_share_channel_icon( (string) $existing_for_key['icon'] );
+            } elseif ( $defaults_for_key && isset( $defaults_for_key['icon'] ) ) {
+                $icon = $this->sanitize_share_channel_icon( (string) $defaults_for_key['icon'] );
+            }
+
+            if ( '' === $icon ) {
+                $icon = $this->sanitize_share_channel_icon( $sanitized_key, 'generic' );
+            }
+
+            $sanitized[] = [
+                'key'      => $sanitized_key,
+                'label'    => $label,
+                'template' => $template,
+                'icon'     => $icon,
+                'enabled'  => (bool) $enabled,
+            ];
+        }
+
+        return array_values( $sanitized );
+    }
+
+    private function index_share_channels_by_key( array $channels ): array {
+        $indexed = [];
+
+        foreach ( $channels as $key => $channel ) {
+            if ( ! is_array( $channel ) ) {
+                continue;
+            }
+
+            $channel_key = '';
+
+            if ( isset( $channel['key'] ) ) {
+                $channel_key = sanitize_key( (string) $channel['key'] );
+            } elseif ( is_string( $key ) ) {
+                $channel_key = sanitize_key( $key );
+            }
+
+            if ( '' === $channel_key ) {
+                continue;
+            }
+
+            if ( ! isset( $channel['key'] ) ) {
+                $channel['key'] = $channel_key;
+            }
+
+            $indexed[ $channel_key ] = $channel;
+        }
+
+        return $indexed;
+    }
+
+    private function normalize_legacy_share_channels( array $channels ): array {
+        $normalized = [];
+
+        foreach ( $channels as $key => $channel ) {
+            if ( ! is_array( $channel ) ) {
+                continue;
+            }
+
+            if ( ! isset( $channel['key'] ) ) {
+                $channel['key'] = is_string( $key ) ? $key : '';
+            }
+
+            $normalized[] = $channel;
+        }
+
+        return $normalized;
+    }
+
+    private function is_list( array $array ): bool {
+        return array_keys( $array ) === range( 0, count( $array ) - 1 );
+    }
+
+    private function sanitize_share_channel_icon( string $icon, $fallback = '' ): string {
+        $normalized = strtolower( trim( $icon ) );
+        $normalized = preg_replace( '/[^a-z0-9_-]/', '', $normalized );
+
+        if ( is_string( $normalized ) && '' !== $normalized ) {
+            return $normalized;
+        }
+
+        if ( is_string( $fallback ) && '' !== $fallback ) {
+            $fallback_normalized = strtolower( trim( $fallback ) );
+            $fallback_normalized = preg_replace( '/[^a-z0-9_-]/', '', $fallback_normalized );
+
+            if ( is_string( $fallback_normalized ) && '' !== $fallback_normalized ) {
+                return $fallback_normalized;
+            }
+        }
+
+        return 'generic';
     }
 }
