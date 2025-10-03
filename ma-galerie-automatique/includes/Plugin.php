@@ -170,17 +170,29 @@ class Plugin {
             MGA_VERSION
         );
 
-        $defaults = $this->settings->get_default_settings();
+        $defaults          = $this->settings->get_default_settings();
+        $sanitized_settings = $this->settings->get_sanitized_settings();
+        $merged_settings    = wp_parse_args( $sanitized_settings, $defaults );
+
         $block_defaults = $this->prepare_block_settings( $defaults );
+        $block_settings = $this->prepare_block_settings( $merged_settings );
+
+        $inline_chunks = [];
 
         $block_defaults_json = wp_json_encode( $block_defaults );
 
         if ( false !== $block_defaults_json ) {
-            wp_add_inline_script(
-                $script_handle,
-                'window.mgaBlockDefaults = window.mgaBlockDefaults || ' . $block_defaults_json . ';',
-                'before'
-            );
+            $inline_chunks[] = 'window.mgaBlockDefaults = window.mgaBlockDefaults || ' . $block_defaults_json . ';';
+        }
+
+        $block_settings_json = wp_json_encode( $block_settings );
+
+        if ( false !== $block_settings_json ) {
+            $inline_chunks[] = 'window.mgaBlockSettings = window.mgaBlockSettings || ' . $block_settings_json . ';';
+        }
+
+        if ( ! empty( $inline_chunks ) ) {
+            wp_add_inline_script( $script_handle, implode( '', $inline_chunks ), 'before' );
         }
 
         if ( $this->languages_directory_exists() ) {
