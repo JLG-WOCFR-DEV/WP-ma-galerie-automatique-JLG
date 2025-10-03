@@ -129,6 +129,19 @@
         return value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
     };
 
+    const buildLabelFromKey = (key) => {
+        if (typeof key !== 'string' || key.trim() === '') {
+            return '';
+        }
+
+        return key
+            .trim()
+            .split(/[-_\s]+/)
+            .filter(Boolean)
+            .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+            .join(' ');
+    };
+
     const createSvgElement = (tag, attributes = {}) => {
         const element = document.createElementNS(SVG_NS, tag);
 
@@ -165,17 +178,6 @@
         wrapper.appendChild(svg);
 
         return wrapper;
-    };
-
-    const SHARE_CHANNEL_LABELS = {
-        facebook: mga__( 'Facebook', 'lightbox-jlg' ),
-        twitter: mga__( 'Twitter', 'lightbox-jlg' ),
-        linkedin: mga__( 'LinkedIn', 'lightbox-jlg' ),
-        pinterest: mga__( 'Pinterest', 'lightbox-jlg' ),
-        whatsapp: mga__( 'WhatsApp', 'lightbox-jlg' ),
-        telegram: mga__( 'Telegram', 'lightbox-jlg' ),
-        email: mga__( 'E-mail', 'lightbox-jlg' ),
-        link: mga__( 'Lien', 'lightbox-jlg' ),
     };
 
     function normalizeShareChannels(rawChannels) {
@@ -224,7 +226,7 @@
 
             const label = typeof entry.label === 'string' && entry.label.trim()
                 ? entry.label.trim()
-                : (SHARE_CHANNEL_LABELS[key] || key.charAt(0).toUpperCase() + key.slice(1));
+                : buildLabelFromKey(key);
 
             const template = typeof entry.template === 'string'
                 ? entry.template.trim()
@@ -811,7 +813,7 @@
                 options.push({
                     type: 'social',
                     key: channel.key,
-                    label: channel.label || SHARE_CHANNEL_LABELS[channel.key] || channel.key,
+                    label: channel.label || buildLabelFromKey(channel.key) || channel.key,
                     template: template.trim(),
                     icon: channel.icon || channel.key,
                 });

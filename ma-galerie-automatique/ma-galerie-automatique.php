@@ -211,6 +211,18 @@ function mga_get_default_settings(): array {
     return $plugin ? $plugin->settings()->get_default_settings() : [];
 }
 
+function mga_get_share_channel_catalog(): array {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->settings()->get_share_channel_catalog() : [];
+}
+
+function mga_get_share_icon_choices(): array {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->settings()->get_share_icon_choices() : [];
+}
+
 function mga_sanitize_settings( $input, $existing_settings = null ): array {
     $plugin = mga_plugin();
 

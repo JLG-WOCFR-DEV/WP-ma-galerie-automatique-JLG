@@ -286,22 +286,18 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                     <th scope="row"><?php echo esc_html__( 'Canaux de partage', 'lightbox-jlg' ); ?></th>
                     <td>
                         <?php
-                        $share_channels = isset( $settings['share_channels'] ) && is_array( $settings['share_channels'] )
+                        $share_channels     = isset( $settings['share_channels'] ) && is_array( $settings['share_channels'] )
                             ? array_values( $settings['share_channels'] )
                             : [];
-                        $share_icon_choices = [
-                            'facebook'  => __( 'Facebook', 'lightbox-jlg' ),
-                            'twitter'   => __( 'Twitter', 'lightbox-jlg' ),
-                            'linkedin'  => __( 'LinkedIn', 'lightbox-jlg' ),
-                            'pinterest' => __( 'Pinterest', 'lightbox-jlg' ),
-                            'whatsapp'  => __( 'WhatsApp', 'lightbox-jlg' ),
-                            'telegram'  => __( 'Telegram', 'lightbox-jlg' ),
-                            'email'     => __( 'E-mail', 'lightbox-jlg' ),
-                            'link'      => __( 'Lien', 'lightbox-jlg' ),
-                            'generic'   => __( 'Icône générique', 'lightbox-jlg' ),
-                        ];
+                        $share_icon_choices = mga_get_share_icon_choices();
                         $render_icon_options = static function ( array $choices, string $selected ): string {
                             $options = '';
+
+                            if ( '' !== $selected && ! array_key_exists( $selected, $choices ) ) {
+                                $choices = [
+                                    $selected => ucwords( str_replace( [ '-', '_' ], ' ', $selected ) ),
+                                ] + $choices;
+                            }
 
                             foreach ( $choices as $value => $label ) {
                                 $options .= sprintf(
