@@ -399,20 +399,60 @@
             download: mga__( 'Téléchargement rapide', 'lightbox-jlg' ),
             native: mga__( "Partager via l'appareil", 'lightbox-jlg' ),
         };
-        const hasEnabledShareChannel = () => shareChannels.some((channel) => {
-            if (!channel || typeof channel !== 'object') {
-                return false;
+        const resolveShareOptionsSnapshot = () => {
+            const options = [];
+
+            shareChannels.forEach((channel) => {
+                if (!channel || typeof channel !== 'object') {
+                    return;
+                }
+
+                const { enabled, template } = channel;
+                const hasTemplate = typeof template === 'string' && template.trim() !== '';
+
+                if (!enabled || !hasTemplate) {
+                    return;
+                }
+
+                options.push({
+                    type: 'social',
+                    key: channel.key,
+                    label: channel.label || buildLabelFromKey(channel.key) || channel.key,
+                    template: template.trim(),
+                    icon: channel.icon || channel.key,
+                });
+            });
+
+            if (shareCopyEnabled) {
+                options.push({
+                    type: 'copy',
+                    key: 'copy',
+                    label: shareActionLabels.copy,
+                    icon: 'copy',
+                });
             }
 
-            if (!channel.enabled) {
-                return false;
+            if (shareDownloadEnabled) {
+                options.push({
+                    type: 'download',
+                    key: 'download',
+                    label: shareActionLabels.download,
+                    icon: 'download',
+                });
             }
 
-            return typeof channel.template === 'string' && channel.template.trim() !== '';
-        });
-        const hasAnyShareActionAvailable = () => (
-            hasEnabledShareChannel() || shareCopyEnabled || shareDownloadEnabled || hasNativeShareSupport()
-        );
+            if (hasNativeShareSupport()) {
+                options.push({
+                    type: 'native',
+                    key: 'native',
+                    label: shareActionLabels.native,
+                    icon: 'native',
+                });
+            }
+
+            return options;
+        };
+        const hasAnyShareActionAvailable = () => resolveShareOptionsSnapshot().length > 0;
         const shouldDisplayShareButton = () => showShare && hasAnyShareActionAvailable();
         const optionalToolbarHandlers = [];
         const SCROLL_LOCK_CLASS = 'mga-scroll-locked';
@@ -874,57 +914,9 @@
         }
 
         function buildShareOptions(sharePayload) {
-            const options = [];
+            void sharePayload;
 
-            shareChannels.forEach((channel) => {
-                if (!channel || typeof channel !== 'object') {
-                    return;
-                }
-
-                const { enabled, template } = channel;
-                const hasTemplate = typeof template === 'string' && template.trim() !== '';
-
-                if (!enabled || !hasTemplate) {
-                    return;
-                }
-
-                options.push({
-                    type: 'social',
-                    key: channel.key,
-                    label: channel.label || buildLabelFromKey(channel.key) || channel.key,
-                    template: template.trim(),
-                    icon: channel.icon || channel.key,
-                });
-            });
-
-            if (shareCopyEnabled) {
-                options.push({
-                    type: 'copy',
-                    key: 'copy',
-                    label: shareActionLabels.copy,
-                    icon: 'copy',
-                });
-            }
-
-            if (shareDownloadEnabled) {
-                options.push({
-                    type: 'download',
-                    key: 'download',
-                    label: shareActionLabels.download,
-                    icon: 'download',
-                });
-            }
-
-            if (hasNativeShareSupport()) {
-                options.push({
-                    type: 'native',
-                    key: 'native',
-                    label: shareActionLabels.native,
-                    icon: 'native',
-                });
-            }
-
-            return options;
+            return resolveShareOptionsSnapshot().map((option) => ({ ...option }));
         }
 
         function getShareModalFocusableElements(modalInstance) {
@@ -1271,6 +1263,7 @@
 
             if (!options.length) {
                 debug.shareAction('no-options', { url: imageData.highResUrl });
+                syncShareControl();
                 return false;
             }
 
