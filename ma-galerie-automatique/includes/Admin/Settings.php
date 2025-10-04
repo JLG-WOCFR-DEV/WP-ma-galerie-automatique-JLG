@@ -305,6 +305,13 @@ class Settings {
         $defaults = $this->get_default_settings();
         $output   = [];
 
+        /*
+         * Partial updates (e.g. when a settings form only submits a subset of fields)
+         * must respect the previously saved values instead of reverting to defaults
+         * for every missing key. We therefore keep a sanitized version of the
+         * existing settings as a fallback before we reach for the defaults.
+         */
+
         if ( null === $existing_settings ) {
             $existing_settings = get_option( 'mga_settings', [] );
         }
@@ -317,6 +324,9 @@ class Settings {
             $delay           = (int) $input['delay'];
             $bounded_delay   = max( 1, min( 30, $delay ) );
             $output['delay'] = $bounded_delay;
+        } elseif ( isset( $existing_settings['delay'] ) ) {
+            $delay           = (int) $existing_settings['delay'];
+            $output['delay'] = max( 1, min( 30, $delay ) );
         } else {
             $output['delay'] = $defaults['delay'];
         }
@@ -333,9 +343,12 @@ class Settings {
         }
 
         if ( isset( $input['thumb_size'] ) ) {
-            $thumb_size             = (int) $input['thumb_size'];
-            $bounded_thumb_size     = max( 50, min( 150, $thumb_size ) );
-            $output['thumb_size']   = $bounded_thumb_size;
+            $thumb_size           = (int) $input['thumb_size'];
+            $bounded_thumb_size   = max( 50, min( 150, $thumb_size ) );
+            $output['thumb_size'] = $bounded_thumb_size;
+        } elseif ( isset( $existing_settings['thumb_size'] ) ) {
+            $thumb_size           = (int) $existing_settings['thumb_size'];
+            $output['thumb_size'] = max( 50, min( 150, $thumb_size ) );
         } else {
             $output['thumb_size'] = $defaults['thumb_size'];
         }
@@ -344,20 +357,30 @@ class Settings {
             $thumb_size_mobile           = (int) $input['thumb_size_mobile'];
             $bounded_thumb_size_mobile   = max( 40, min( 100, $thumb_size_mobile ) );
             $output['thumb_size_mobile'] = $bounded_thumb_size_mobile;
+        } elseif ( isset( $existing_settings['thumb_size_mobile'] ) ) {
+            $thumb_size_mobile           = (int) $existing_settings['thumb_size_mobile'];
+            $output['thumb_size_mobile'] = max( 40, min( 100, $thumb_size_mobile ) );
         } else {
             $output['thumb_size_mobile'] = $defaults['thumb_size_mobile'];
         }
 
         if ( isset( $input['accent_color'] ) ) {
-            $sanitized_accent          = sanitize_hex_color( $input['accent_color'] );
-            $output['accent_color']    = $sanitized_accent ? $sanitized_accent : $defaults['accent_color'];
+            $sanitized_accent       = sanitize_hex_color( $input['accent_color'] );
+            $output['accent_color'] = $sanitized_accent ? $sanitized_accent : $defaults['accent_color'];
+        } elseif ( isset( $existing_settings['accent_color'] ) ) {
+            $sanitized_accent       = sanitize_hex_color( $existing_settings['accent_color'] );
+            $output['accent_color'] = $sanitized_accent ? $sanitized_accent : $defaults['accent_color'];
         } else {
             $output['accent_color'] = $defaults['accent_color'];
         }
 
-        $output['bg_opacity'] = isset( $input['bg_opacity'] )
-            ? max( min( (float) $input['bg_opacity'], 1 ), 0 )
-            : $defaults['bg_opacity'];
+        if ( isset( $input['bg_opacity'] ) ) {
+            $output['bg_opacity'] = max( min( (float) $input['bg_opacity'], 1 ), 0 );
+        } elseif ( isset( $existing_settings['bg_opacity'] ) ) {
+            $output['bg_opacity'] = max( min( (float) $existing_settings['bg_opacity'], 1 ), 0 );
+        } else {
+            $output['bg_opacity'] = $defaults['bg_opacity'];
+        }
 
         $resolve_checkbox_value = function ( string $key ) use ( $input, $existing_settings, $defaults ) {
             if ( is_array( $input ) && array_key_exists( $key, $input ) ) {
@@ -410,10 +433,15 @@ class Settings {
             $output['groupAttribute'] = $defaults['groupAttribute'];
         }
 
-        $allowed_bg_styles            = [ 'echo', 'blur', 'texture' ];
-        $output['background_style']   = isset( $input['background_style'] ) && in_array( $input['background_style'], $allowed_bg_styles, true )
-            ? $input['background_style']
-            : $defaults['background_style'];
+        $allowed_bg_styles          = [ 'echo', 'blur', 'texture' ];
+
+        if ( isset( $input['background_style'] ) && in_array( $input['background_style'], $allowed_bg_styles, true ) ) {
+            $output['background_style'] = $input['background_style'];
+        } elseif ( isset( $existing_settings['background_style'] ) && in_array( $existing_settings['background_style'], $allowed_bg_styles, true ) ) {
+            $output['background_style'] = $existing_settings['background_style'];
+        } else {
+            $output['background_style'] = $defaults['background_style'];
+        }
 
         $allowed_effects = [ 'slide', 'fade', 'cube', 'coverflow', 'flip' ];
 
@@ -438,8 +466,11 @@ class Settings {
         }
 
         if ( isset( $input['z_index'] ) ) {
-            $raw_z_index        = (int) $input['z_index'];
-            $output['z_index']  = max( 0, $raw_z_index );
+            $raw_z_index       = (int) $input['z_index'];
+            $output['z_index'] = max( 0, $raw_z_index );
+        } elseif ( isset( $existing_settings['z_index'] ) ) {
+            $raw_z_index       = (int) $existing_settings['z_index'];
+            $output['z_index'] = max( 0, $raw_z_index );
         } else {
             $output['z_index'] = $defaults['z_index'];
         }
