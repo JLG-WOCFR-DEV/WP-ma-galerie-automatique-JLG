@@ -306,10 +306,14 @@ class Detection {
         $link_url_keys          = [ 'href', 'linkUrl', 'linkHref', 'imageLink', 'link' ];
 
         foreach ( $media_destination_keys as $destination_key ) {
-            if ( isset( $attrs[ $destination_key ] ) && is_string( $attrs[ $destination_key ] ) ) {
-                if ( 'media' === $attrs[ $destination_key ] ) {
-                    return true;
-                }
+            if ( ! isset( $attrs[ $destination_key ] ) || ! is_string( $attrs[ $destination_key ] ) ) {
+                continue;
+            }
+
+            $destination_value = strtolower( $attrs[ $destination_key ] );
+
+            if ( in_array( $destination_value, [ 'media', 'attachment', 'attachment-page', 'file' ], true ) ) {
+                return true;
             }
         }
 
@@ -320,13 +324,17 @@ class Detection {
 
             $link_value = $attrs[ $link_key ];
 
-            if ( is_string( $link_value ) && $this->is_image_url( $link_value ) ) {
-                return true;
+            if ( is_string( $link_value ) ) {
+                if ( $this->is_image_url( $link_value ) || $this->is_attachment_permalink( $link_value ) ) {
+                    return true;
+                }
             }
 
             if ( is_array( $link_value ) ) {
-                if ( isset( $link_value['url'] ) && is_string( $link_value['url'] ) && $this->is_image_url( $link_value['url'] ) ) {
-                    return true;
+                if ( isset( $link_value['url'] ) && is_string( $link_value['url'] ) ) {
+                    if ( $this->is_image_url( $link_value['url'] ) || $this->is_attachment_permalink( $link_value['url'] ) ) {
+                        return true;
+                    }
                 }
 
                 if ( $this->block_attributes_link_to_media( $link_value ) ) {
@@ -364,6 +372,32 @@ class Detection {
         $allowed_extensions = [ 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'avif', 'svg' ];
 
         return in_array( $extension, $allowed_extensions, true );
+    }
+
+    public function is_attachment_permalink( $url ): bool {
+        if ( ! is_string( $url ) || '' === $url ) {
+            return false;
+        }
+
+        $hash_position = strpos( $url, '#' );
+
+        if ( false !== $hash_position ) {
+            $url = substr( $url, 0, $hash_position );
+        }
+
+        $attachment_id = url_to_postid( $url );
+
+        if ( ! $attachment_id ) {
+            return false;
+        }
+
+        $attachment = get_post( $attachment_id );
+
+        if ( ! $attachment instanceof WP_Post || 'attachment' !== $attachment->post_type ) {
+            return false;
+        }
+
+        return wp_attachment_is_image( $attachment_id );
     }
 
     public function gallery_attributes_link_to_media( array $attributes ): bool {
