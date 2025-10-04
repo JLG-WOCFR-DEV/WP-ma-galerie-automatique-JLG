@@ -171,6 +171,8 @@ class Detection {
             'core/query',
             'core/post-template',
             'core/post-featured-image',
+            'core/post-content',
+            'core/template-part',
         ];
 
         $linked_block_names = apply_filters( 'mga_linked_image_blocks', $default_block_names );
@@ -321,15 +323,23 @@ class Detection {
 
         $is_link = $this->normalize_to_bool( $normalized_attrs['islink'] ?? null );
 
-        if ( null === $is_link && isset( $normalized_attrs['linktarget'] ) ) {
-            $is_link = true;
-        }
-
         if ( null === $is_link ) {
             $bound_is_link = $this->get_bound_attribute_value( $attrs, 'isLink' );
 
             if ( null !== $bound_is_link ) {
                 $is_link = $this->normalize_to_bool( $bound_is_link );
+            }
+        }
+
+        if ( null === $is_link && isset( $normalized_attrs['linktarget'] ) ) {
+            $is_link = true;
+        }
+
+        if ( null === $is_link ) {
+            $bound_link_target = $this->get_bound_attribute_value( $attrs, 'linkTarget' );
+
+            if ( null !== $bound_link_target ) {
+                $is_link = true;
             }
         }
 
@@ -359,6 +369,10 @@ class Detection {
                     return true;
                 }
             }
+        }
+
+        if ( $this->metadata_bindings_link_to_media( $attrs, $allowed_destination_values, $is_link ) ) {
+            return true;
         }
 
         $link_url_keys = [ 'href', 'linkurl', 'linkhref', 'imagelink', 'link' ];
@@ -410,6 +424,77 @@ class Detection {
         return false;
     }
 
+    private function metadata_bindings_link_to_media( array $attrs, array $allowed_destination_values, ?bool $is_link ): bool {
+        if ( empty( $attrs['metadata'] ) || ! is_array( $attrs['metadata'] ) ) {
+            return false;
+        }
+
+        $metadata = array_change_key_case( $attrs['metadata'], CASE_LOWER );
+
+        if ( empty( $metadata['bindings'] ) || ! is_array( $metadata['bindings'] ) ) {
+            return false;
+        }
+
+        foreach ( $metadata['bindings'] as $binding_value ) {
+            $scalar_value = $this->extract_scalar_from_binding_value( $binding_value );
+
+            if ( is_bool( $scalar_value ) ) {
+                continue;
+            }
+
+            if ( is_string( $scalar_value ) ) {
+                $normalized_value = strtolower( $scalar_value );
+
+                if ( in_array( $normalized_value, $allowed_destination_values, true ) ) {
+                    if ( null === $is_link || true === $is_link ) {
+                        return true;
+                    }
+
+                    continue;
+                }
+
+                if ( $this->is_image_url( $scalar_value ) || $this->is_attachment_permalink( $scalar_value ) ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function extract_scalar_from_binding_value( $value ) {
+        if ( is_bool( $value ) || is_string( $value ) || is_int( $value ) || is_float( $value ) ) {
+            return $value;
+        }
+
+        if ( ! is_array( $value ) ) {
+            return null;
+        }
+
+        $value_lower = array_change_key_case( $value, CASE_LOWER );
+        $priority_keys = [ 'value', 'default', 'args', 'linkdestination', 'destination', 'href', 'url', 'type' ];
+
+        foreach ( $priority_keys as $priority_key ) {
+            if ( array_key_exists( $priority_key, $value_lower ) ) {
+                $extracted = $this->extract_scalar_from_binding_value( $value_lower[ $priority_key ] );
+
+                if ( null !== $extracted ) {
+                    return $extracted;
+                }
+            }
+        }
+
+        foreach ( $value_lower as $sub_value ) {
+            $extracted = $this->extract_scalar_from_binding_value( $sub_value );
+
+            if ( null !== $extracted ) {
+                return $extracted;
+            }
+        }
+
+        return null;
+    }
+
     private function normalize_to_bool( $value ): ?bool {
         if ( is_bool( $value ) ) {
             return $value;
@@ -438,7 +523,7 @@ class Detection {
         return null;
     }
 
-    private function get_bound_attribute_value( array $attrs, string $attribute ): ?string {
+    private function get_bound_attribute_value( array $attrs, string $attribute ): string|bool|null {
         if ( empty( $attrs['metadata'] ) || ! is_array( $attrs['metadata'] ) ) {
             return null;
         }
@@ -456,30 +541,18 @@ class Detection {
                 continue;
             }
 
-            if ( is_string( $binding_value ) ) {
-                return $binding_value;
+            $extracted_value = $this->extract_scalar_from_binding_value( $binding_value );
+
+            if ( is_bool( $extracted_value ) ) {
+                return $extracted_value;
             }
 
-            if ( ! is_array( $binding_value ) ) {
-                continue;
+            if ( is_string( $extracted_value ) ) {
+                return $extracted_value;
             }
 
-            $binding_value_lower = array_change_key_case( $binding_value, CASE_LOWER );
-
-            foreach ( [ 'value', 'default' ] as $value_key ) {
-                if ( isset( $binding_value_lower[ $value_key ] ) && is_string( $binding_value_lower[ $value_key ] ) ) {
-                    return $binding_value_lower[ $value_key ];
-                }
-            }
-
-            if ( isset( $binding_value_lower['args'] ) && is_array( $binding_value_lower['args'] ) ) {
-                $args = array_change_key_case( $binding_value_lower['args'], CASE_LOWER );
-
-                foreach ( [ 'value', 'linkdestination', 'destination', 'href', 'url' ] as $arg_key ) {
-                    if ( isset( $args[ $arg_key ] ) && is_string( $args[ $arg_key ] ) ) {
-                        return $args[ $arg_key ];
-                    }
-                }
+            if ( is_int( $extracted_value ) || is_float( $extracted_value ) ) {
+                return (string) $extracted_value;
             }
         }
 
