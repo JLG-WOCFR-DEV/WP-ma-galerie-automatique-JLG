@@ -7,6 +7,12 @@ use MaGalerieAutomatique\Content\Detection;
 use MaGalerieAutomatique\Frontend\Assets;
 
 class Plugin {
+    private const DETECTION_SETTING_KEYS = [
+        'tracked_post_types',
+        'contentSelectors',
+        'allowBodyFallback',
+        'groupAttribute',
+    ];
     private string $plugin_file;
 
     private Settings $settings;
@@ -34,6 +40,7 @@ class Plugin {
         add_action( 'admin_init', [ $this->settings, 'register_settings' ] );
         add_action( 'admin_enqueue_scripts', [ $this->settings, 'enqueue_assets' ] );
         add_action( 'init', [ $this, 'register_block' ] );
+        add_action( 'update_option_mga_settings', [ $this, 'maybe_purge_detection_cache' ], 10, 3 );
     }
 
     public function activate(): void {
@@ -233,5 +240,96 @@ class Plugin {
             'showFullscreen'   => ! empty( $settings['show_fullscreen'] ),
             'noteText'         => __( 'Lightbox active', 'lightbox-jlg' ),
         ];
+    }
+
+    public function maybe_purge_detection_cache( $old_value, $value, string $option ): void {
+        unset( $option );
+
+        if ( ! is_array( $old_value ) ) {
+            $old_value = [];
+        }
+
+        if ( ! is_array( $value ) ) {
+            $value = [];
+        }
+
+        $old_snapshot = $this->normalize_detection_settings( $old_value );
+        $new_snapshot = $this->normalize_detection_settings( $value );
+
+        if ( $old_snapshot === $new_snapshot ) {
+            return;
+        }
+
+        delete_post_meta_by_key( '_mga_has_linked_images' );
+    }
+
+    private function normalize_detection_settings( array $settings ): array {
+        $normalized = [];
+
+        foreach ( self::DETECTION_SETTING_KEYS as $key ) {
+            $normalized[ $key ] = $this->normalize_detection_setting_value( $key, $settings[ $key ] ?? null );
+        }
+
+        return $normalized;
+    }
+
+    private function normalize_detection_setting_value( string $key, $value ) {
+        switch ( $key ) {
+            case 'tracked_post_types':
+                if ( ! is_array( $value ) ) {
+                    return [];
+                }
+
+                $normalized = array_map( 'sanitize_key', $value );
+                $normalized = array_values( array_filter( array_unique( $normalized ) ) );
+                sort( $normalized );
+
+                return $normalized;
+            case 'contentSelectors':
+                if ( ! is_array( $value ) ) {
+                    return [];
+                }
+
+                $normalized = array_map(
+                    static function ( $selector ) {
+                        if ( ! is_string( $selector ) ) {
+                            return '';
+                        }
+
+                        $trimmed = trim( $selector );
+
+                        if ( '' === $trimmed ) {
+                            return '';
+                        }
+
+                        $condensed = preg_replace( '/\s+/u', ' ', $trimmed );
+
+                        return is_string( $condensed ) ? $condensed : $trimmed;
+                    },
+                    $value
+                );
+
+                $normalized = array_values(
+                    array_filter(
+                        array_unique( $normalized ),
+                        static function ( $selector ) {
+                            return '' !== $selector;
+                        }
+                    )
+                );
+                sort( $normalized );
+
+                return $normalized;
+            case 'allowBodyFallback':
+                return (bool) $value;
+            case 'groupAttribute':
+                if ( ! is_string( $value ) ) {
+                    return '';
+                }
+
+                return strtolower( trim( $value ) );
+            default:
+                return $value;
+        }
     }
 }
