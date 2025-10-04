@@ -676,10 +676,13 @@
                     const pathname = resolvedUrl && typeof resolvedUrl.pathname === 'string'
                         ? resolvedUrl.pathname
                         : '';
+
                     if (pathname) {
                         const segments = pathname.split('/').filter(Boolean);
-                        if (segments.length) {
-                            fallbackName = segments[segments.length - 1];
+                        const lastSegment = segments.pop();
+
+                        if (lastSegment) {
+                            fallbackName = lastSegment;
                         }
                     }
                 } catch (innerError) {
