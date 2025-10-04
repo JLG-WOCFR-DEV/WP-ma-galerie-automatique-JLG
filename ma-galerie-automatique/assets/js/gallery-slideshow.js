@@ -667,10 +667,25 @@
             try {
                 link = document.createElement('a');
                 link.href = imageUrl;
-                link.rel = 'noopener';
+                link.rel = 'noopener noreferrer';
 
-                const urlParts = imageUrl.split('/').filter(Boolean);
-                const fallbackName = urlParts.length ? urlParts[urlParts.length - 1] : 'image';
+                let fallbackName = 'image';
+
+                try {
+                    const resolvedUrl = new URL(imageUrl, window.location.href);
+                    const pathname = resolvedUrl && typeof resolvedUrl.pathname === 'string'
+                        ? resolvedUrl.pathname
+                        : '';
+                    if (pathname) {
+                        const segments = pathname.split('/').filter(Boolean);
+                        if (segments.length) {
+                            fallbackName = segments[segments.length - 1];
+                        }
+                    }
+                } catch (innerError) {
+                    // Intentionally swallow URL parsing errors; fallbackName remains 'image'.
+                }
+
                 link.download = fallbackName;
 
                 document.body.appendChild(link);
@@ -1129,7 +1144,7 @@
                 let popup = null;
 
                 if (typeof window !== 'undefined' && window && typeof window.open === 'function') {
-                    popup = window.open(shareUrl, '_blank', 'noopener');
+                    popup = window.open(shareUrl, '_blank', 'noopener,noreferrer');
                 }
 
                 if (popup) {
