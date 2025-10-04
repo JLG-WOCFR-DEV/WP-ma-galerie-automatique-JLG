@@ -679,6 +679,151 @@ test.describe('Gallery viewer', () => {
         }
     });
 
+    test('displays an error message and debug entry when popup opening fails', async ({ page, requestUtils }) => {
+        await page.addInitScript(() => {
+            Object.defineProperty(navigator, 'share', {
+                configurable: true,
+                writable: true,
+                value: undefined,
+            });
+
+            const settings = (window as typeof window & { mga_settings?: Record<string, any> }).mga_settings || {};
+            settings.show_share = true;
+            settings.share_copy = false;
+            settings.share_download = false;
+            settings.share_channels = [
+                {
+                    key: 'example',
+                    label: 'Partage Exemple',
+                    enabled: true,
+                    template: 'about:blank#%url%',
+                    icon: 'link',
+                },
+            ];
+            (window as typeof window & { mga_settings?: Record<string, any> }).mga_settings = settings;
+
+            const shareActions: Array<{ type: string; detail: Record<string, unknown> }> = [];
+            (window as typeof window & { __mgaShareActions?: typeof shareActions }).__mgaShareActions = shareActions;
+
+            (window as typeof window & { mgaDebug?: Record<string, any> }).mgaDebug = {
+                enabled: true,
+                init: () => {},
+                log: () => {},
+                updateInfo: () => {},
+                onForceOpen: () => {},
+                stopTimer: () => {},
+                restartTimer: () => {},
+                table: () => {},
+                shareAction: (type: string, detail: Record<string, unknown>) => {
+                    shareActions.push({ type, detail });
+                },
+            };
+
+            window.open = ((..._args: Parameters<typeof window.open>) => {
+                return null;
+            }) as typeof window.open;
+        });
+
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            'Gallery share popup blocked',
+        );
+
+        try {
+            await page.goto(post.link);
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`);
+            await expect(trigger.locator('img')).toBeVisible();
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+
+            await page.locator('#mga-share').click();
+
+            const shareOption = page.locator('button[data-share-type="social"][data-share-key="example"]');
+            await expect(shareOption).toBeVisible();
+            await shareOption.click();
+
+            const feedback = page.locator('.mga-share-modal__feedback');
+            await expect(feedback).toHaveAttribute('data-mga-state', 'error');
+            await expect(feedback).toContainText('Impossible d’ouvrir');
+            await expect(feedback).toContainText('Partage Exemple');
+
+            const shareActions = await page.evaluate(() => {
+                return (window as typeof window & { __mgaShareActions?: Array<{ type: string; detail: Record<string, unknown> }> })
+                    .__mgaShareActions || [];
+            });
+
+            expect(Array.isArray(shareActions)).toBe(true);
+            const socialEntries = shareActions.filter((entry) => entry.type === 'social');
+            expect(socialEntries.length).toBeGreaterThan(0);
+            const lastSocial = socialEntries[socialEntries.length - 1];
+            const lastSocialDetail = lastSocial.detail as { target?: string; success?: boolean };
+            expect(lastSocialDetail.target).toBe('example');
+            expect(lastSocialDetail.success).toBe(false);
+        } finally {
+            await cleanup();
+        }
+    });
+
+    test('opens share links without exposing window.opener', async ({ page, requestUtils }) => {
+        await page.addInitScript(() => {
+            Object.defineProperty(navigator, 'share', {
+                configurable: true,
+                writable: true,
+                value: undefined,
+            });
+
+            const settings = (window as typeof window & { mga_settings?: Record<string, any> }).mga_settings || {};
+            settings.show_share = true;
+            settings.share_copy = false;
+            settings.share_download = false;
+            settings.share_channels = [
+                {
+                    key: 'example',
+                    label: 'Partage Exemple',
+                    enabled: true,
+                    template: 'about:blank#%url%',
+                    icon: 'link',
+                },
+            ];
+            (window as typeof window & { mga_settings?: Record<string, any> }).mga_settings = settings;
+        });
+
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            'Gallery share opener safety',
+        );
+
+        try {
+            await page.goto(post.link);
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`);
+            await expect(trigger.locator('img')).toBeVisible();
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+
+            await page.locator('#mga-share').click();
+
+            const shareOption = page.locator('button[data-share-type="social"][data-share-key="example"]');
+            await expect(shareOption).toBeVisible();
+
+            const [popup] = await Promise.all([
+                page.waitForEvent('popup'),
+                shareOption.click(),
+            ]);
+
+            const openerValue = await popup.evaluate(() => window.opener);
+            expect(openerValue).toBeNull();
+            await popup.close();
+        } finally {
+            await cleanup();
+        }
+    });
+
     test('hides the share control when all sharing actions are disabled', async ({ page, requestUtils }) => {
         await page.addInitScript(() => {
             Object.defineProperty(navigator, 'share', {
