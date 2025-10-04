@@ -1151,6 +1151,16 @@
 
                 if (typeof window !== 'undefined' && window && typeof window.open === 'function') {
                     popup = window.open(shareUrl, '_blank', 'noopener,noreferrer');
+
+                    if (popup && typeof popup === 'object' && 'opener' in popup) {
+                        try {
+                            popup.opener = null;
+                        } catch (error) {
+                            // Some browsers might throw when attempting to modify opener on cross-origin windows.
+                            // Silently ignore as the security mitigation is best-effort.
+                            void error;
+                        }
+                    }
                 }
 
                 if (popup) {
