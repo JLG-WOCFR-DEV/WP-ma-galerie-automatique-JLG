@@ -197,6 +197,29 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     ],
                 ],
             ],
+            'partial_updates_preserve_existing_values' => [
+                [
+                    'thumb_size_mobile' => 60,
+                ],
+                [
+                    'delay'             => 8,
+                    'thumb_size'        => 120,
+                    'thumb_size_mobile' => 55,
+                    'accent_color'      => '#123456',
+                    'bg_opacity'        => 0.65,
+                    'z_index'           => 50,
+                    'background_style'  => 'blur',
+                ],
+                [
+                    'delay'            => 8,
+                    'thumb_size'       => 120,
+                    'thumb_size_mobile'=> 60,
+                    'accent_color'     => '#123456',
+                    'bg_opacity'       => 0.65,
+                    'z_index'          => 50,
+                    'background_style' => 'blur',
+                ],
+            ],
         ];
     }
 
