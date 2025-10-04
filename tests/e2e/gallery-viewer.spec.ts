@@ -168,13 +168,21 @@ async function prepareGalleryImages(minimumCount = 2): Promise<PreparedImages> {
 async function createPublishedGalleryPost(
     requestUtils: any,
     title = 'Gallery viewer E2E',
-    options: { contentBuilder?: (mediaItems: UploadedMedia[]) => string; minimumImages?: number } = {},
+    options: {
+        contentBuilder?: (mediaItems: UploadedMedia[]) => string;
+        minimumImages?: number;
+        postOverrides?: Record<string, unknown>;
+    } = {},
 ): Promise<{
     post: { link: string };
     uploads: UploadedMedia[];
     cleanup: () => Promise<void>;
 }> {
-    const { contentBuilder = buildGalleryContent, minimumImages = 2 } = options;
+    const {
+        contentBuilder = buildGalleryContent,
+        minimumImages = 2,
+        postOverrides = {},
+    } = options;
     const preparedImages = await prepareGalleryImages(minimumImages);
     const uploads: UploadedMedia[] = [];
 
@@ -192,6 +200,7 @@ async function createPublishedGalleryPost(
             status: 'publish',
             date: now,
             date_gmt: now,
+            ...postOverrides,
         });
 
         return {
@@ -352,6 +361,51 @@ test.describe('Gallery viewer', () => {
             );
         } finally {
             await cleanup();
+        }
+    });
+
+    test('launches the viewer on category archives when archive support is enabled', async ({ page, requestUtils }) => {
+        const archiveTitle = 'Gallery viewer archives';
+        const siteSettings = await requestUtils.getSiteSettings();
+        const previousMGASettings = siteSettings?.mga_settings
+            ? { ...siteSettings.mga_settings }
+            : {};
+
+        await requestUtils.updateSiteSettings({
+            mga_settings: {
+                ...previousMGASettings,
+                load_on_archives: true,
+            },
+        });
+
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            archiveTitle,
+            {
+                postOverrides: { categories: [1] },
+            },
+        );
+
+        const archiveUrl = new URL('/category/uncategorized/', post.link).toString();
+
+        try {
+            await page.goto(archiveUrl);
+            await expect(page).toHaveURL(archiveUrl);
+            await expect(page.locator('body')).toContainText(archiveTitle);
+
+            const trigger = page.locator(`a[href="${uploads[0].source_url}"]`).first();
+            await expect(trigger.locator('img')).toBeVisible();
+
+            await trigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+            await expect(page.locator('#mga-counter')).toHaveText(`1 / ${uploads.length}`);
+        } finally {
+            await cleanup();
+            await requestUtils.updateSiteSettings({
+                mga_settings: previousMGASettings,
+            });
         }
     });
 

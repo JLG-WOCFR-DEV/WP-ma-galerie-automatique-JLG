@@ -190,7 +190,20 @@ class Settings {
     }
 
     public function register_settings(): void {
-        register_setting( 'mga_settings_group', 'mga_settings', [ $this, 'sanitize_settings' ] );
+        register_setting(
+            'mga_settings_group',
+            'mga_settings',
+            [
+                'sanitize_callback' => [ $this, 'sanitize_settings' ],
+                'default'           => $this->get_default_settings(),
+                'show_in_rest'      => [
+                    'schema' => [
+                        'type'                 => 'object',
+                        'additionalProperties' => true,
+                    ],
+                ],
+            ]
+        );
     }
 
     public function enqueue_assets( string $hook ): void {
@@ -276,6 +289,7 @@ class Settings {
             'groupAttribute'     => 'data-mga-gallery',
             'contentSelectors'   => [],
             'allowBodyFallback'  => false,
+            'load_on_archives'   => false,
             'tracked_post_types' => [ 'post', 'page' ],
         ];
     }
@@ -364,6 +378,7 @@ class Settings {
             'autoplay_start',
             'debug_mode',
             'allowBodyFallback',
+            'load_on_archives',
             'close_on_backdrop',
         ];
 
