@@ -270,6 +270,7 @@ class Settings {
             'easing'             => 'ease-out',
             'thumb_size'         => 90,
             'thumb_size_mobile'  => 70,
+            'thumbs_layout'      => 'bottom',
             'accent_color'       => '#ffffff',
             'bg_opacity'         => 0.95,
             'loop'               => true,
@@ -441,6 +442,19 @@ class Settings {
             $output['background_style'] = $existing_settings['background_style'];
         } else {
             $output['background_style'] = $defaults['background_style'];
+        }
+
+        $allowed_thumb_layouts = [ 'bottom', 'left', 'hidden' ];
+
+        if ( isset( $input['thumbs_layout'] ) ) {
+            $raw_layout         = is_string( $input['thumbs_layout'] ) ? strtolower( $input['thumbs_layout'] ) : '';
+            $output['thumbs_layout'] = in_array( $raw_layout, $allowed_thumb_layouts, true )
+                ? $raw_layout
+                : $defaults['thumbs_layout'];
+        } elseif ( isset( $existing_settings['thumbs_layout'] ) && in_array( $existing_settings['thumbs_layout'], $allowed_thumb_layouts, true ) ) {
+            $output['thumbs_layout'] = $existing_settings['thumbs_layout'];
+        } else {
+            $output['thumbs_layout'] = $defaults['thumbs_layout'];
         }
 
         $allowed_effects = [ 'slide', 'fade', 'cube', 'coverflow', 'flip' ];

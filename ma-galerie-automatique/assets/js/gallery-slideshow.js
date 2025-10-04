@@ -258,6 +258,8 @@
     const ALLOWED_EFFECTS = [ 'slide', 'fade', 'cube', 'coverflow', 'flip' ];
     const HEAVY_EFFECTS = new Set( [ 'cube', 'coverflow', 'flip' ] );
     const ALLOWED_EASINGS = [ 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear' ];
+    const DEFAULT_THUMBS_LAYOUT = 'bottom';
+    const ALLOWED_THUMBS_LAYOUTS = [ 'bottom', 'left', 'hidden' ];
 
     const sanitizeEffect = ( rawEffect ) => {
         if ( typeof rawEffect !== 'string' ) {
@@ -285,6 +287,15 @@
 
         const normalized = rawEasing.trim().toLowerCase();
         return ALLOWED_EASINGS.includes( normalized ) ? normalized : DEFAULT_EASING;
+    };
+
+    const sanitizeThumbsLayout = ( rawLayout ) => {
+        if ( typeof rawLayout !== 'string' ) {
+            return DEFAULT_THUMBS_LAYOUT;
+        }
+
+        const normalized = rawLayout.trim().toLowerCase();
+        return ALLOWED_THUMBS_LAYOUTS.includes( normalized ) ? normalized : DEFAULT_THUMBS_LAYOUT;
     };
 
     const applyTransitionEasing = ( swiperInstance, easing ) => {
@@ -353,6 +364,7 @@
 
     function initGalleryViewer() {
         const settings = window.mga_settings || {};
+        const thumbsLayout = sanitizeThumbsLayout(settings.thumbs_layout);
         const IMAGE_FILE_PATTERN = /\.(jpe?g|png|gif|bmp|webp|avif|svg)(?:\?.*)?(?:#.*)?$/i;
         const noop = () => {};
         const normalizeFlag = (value, defaultValue = true) => {
@@ -2049,14 +2061,16 @@
                 prevButton.setAttribute('title', mga__( 'Image précédente', 'lightbox-jlg' ));
                 mainSwiper.appendChild(prevButton);
 
-                const thumbsSwiper = document.createElement('div');
-                thumbsSwiper.className = 'swiper mga-thumbs-swiper';
-                viewer.appendChild(thumbsSwiper);
+                if (thumbsLayout !== 'hidden') {
+                    const thumbsSwiper = document.createElement('div');
+                    thumbsSwiper.className = 'swiper mga-thumbs-swiper';
+                    viewer.appendChild(thumbsSwiper);
 
-                const thumbsWrapper = document.createElement('div');
-                thumbsWrapper.className = 'swiper-wrapper';
-                thumbsWrapper.id = 'mga-thumbs-wrapper';
-                thumbsSwiper.appendChild(thumbsWrapper);
+                    const thumbsWrapper = document.createElement('div');
+                    thumbsWrapper.className = 'swiper-wrapper';
+                    thumbsWrapper.id = 'mga-thumbs-wrapper';
+                    thumbsSwiper.appendChild(thumbsWrapper);
+                }
 
                 if (shouldDisplayShareButton()) {
                     const createdShareModal = ensureShareModal(viewer);
@@ -2433,6 +2447,11 @@
 
             viewer.className = 'mga-viewer';
             viewer.classList.toggle('mga-has-caption', false);
+            if (thumbsLayout === 'left') {
+                viewer.classList.add('mga-thumbs-left');
+            } else if (thumbsLayout === 'hidden') {
+                viewer.classList.add('mga-thumbs-hidden');
+            }
             if (settings.background_style === 'blur') viewer.classList.add('mga-has-blur');
             if (settings.background_style === 'texture') viewer.classList.add('mga-has-texture');
             if (!showThumbsMobile) {
@@ -2453,7 +2472,9 @@
                 const mainWrapper = viewer.querySelector('#mga-main-wrapper');
                 const thumbsWrapper = viewer.querySelector('#mga-thumbs-wrapper');
                 mainWrapper.textContent = '';
-                thumbsWrapper.textContent = '';
+                if (thumbsWrapper) {
+                    thumbsWrapper.textContent = '';
+                }
 
                 const createThumbAriaLabel = (image, position) => {
                     if (image && image.caption) {
@@ -2506,33 +2527,35 @@
                     slide.appendChild(zoomContainer);
                     mainWrapper.appendChild(slide);
 
-                    const thumbSlide = document.createElement('div');
-                    thumbSlide.className = 'swiper-slide';
+                    if (thumbsWrapper) {
+                        const thumbSlide = document.createElement('div');
+                        thumbSlide.className = 'swiper-slide';
 
-                    const thumbButton = document.createElement('button');
-                    thumbButton.type = 'button';
-                    thumbButton.className = 'mga-thumb-button';
-                    thumbButton.setAttribute('data-slide-index', String(index));
-                    thumbButton.setAttribute('aria-label', createThumbAriaLabel(img, index + 1));
+                        const thumbButton = document.createElement('button');
+                        thumbButton.type = 'button';
+                        thumbButton.className = 'mga-thumb-button';
+                        thumbButton.setAttribute('data-slide-index', String(index));
+                        thumbButton.setAttribute('aria-label', createThumbAriaLabel(img, index + 1));
 
-                    const thumbImg = document.createElement('img');
-                    thumbImg.setAttribute('loading', 'lazy');
-                    thumbImg.setAttribute('src', img.thumbUrl);
-                    thumbImg.setAttribute('alt', img.caption);
-                    thumbButton.appendChild(thumbImg);
+                        const thumbImg = document.createElement('img');
+                        thumbImg.setAttribute('loading', 'lazy');
+                        thumbImg.setAttribute('src', img.thumbUrl);
+                        thumbImg.setAttribute('alt', img.caption);
+                        thumbButton.appendChild(thumbImg);
 
-                    const activateThumb = (event) => {
-                        if (event) {
-                            event.preventDefault();
-                        }
-                        handleThumbNavigation(index);
-                    };
+                        const activateThumb = (event) => {
+                            if (event) {
+                                event.preventDefault();
+                            }
+                            handleThumbNavigation(index);
+                        };
 
-                    thumbButton.addEventListener('click', activateThumb);
+                        thumbButton.addEventListener('click', activateThumb);
 
-                    thumbSlide.appendChild(thumbButton);
+                        thumbSlide.appendChild(thumbButton);
 
-                    thumbsWrapper.appendChild(thumbSlide);
+                        thumbsWrapper.appendChild(thumbSlide);
+                    }
                 });
                 debug.log(mga__( 'Wrappers HTML remplis avec URLs optimisées.', 'lightbox-jlg' ));
 
@@ -2688,21 +2711,37 @@
             const sanitizedEasing = sanitizeEasing(settings.easing);
 
             const mainSwiperContainer = viewer.querySelector('.mga-main-swiper');
-            const thumbsSwiperContainer = viewer.querySelector('.mga-thumbs-swiper');
+            const thumbsSwiperContainer = thumbsLayout === 'hidden'
+                ? null
+                : viewer.querySelector('.mga-thumbs-swiper');
 
-            thumbsSwiper = createSwiperInstance(thumbsSwiperContainer, {
-                spaceBetween: 10,
-                slidesPerView: 'auto',
-                freeMode: true,
-                watchSlidesProgress: true,
-                passiveListeners: true,
-            });
+            if (thumbsSwiperContainer) {
+                const thumbsConfig = {
+                    spaceBetween: 10,
+                    slidesPerView: 'auto',
+                    freeMode: true,
+                    watchSlidesProgress: true,
+                    passiveListeners: true,
+                };
 
-            if (thumbsSwiper) {
-                applyTransitionEasing(thumbsSwiper, sanitizedEasing);
+                if (thumbsLayout === 'left') {
+                    thumbsConfig.direction = 'vertical';
+                    thumbsConfig.breakpoints = {
+                        0: { direction: 'horizontal' },
+                        769: { direction: 'vertical' },
+                    };
+                }
+
+                thumbsSwiper = createSwiperInstance(thumbsSwiperContainer, thumbsConfig);
+
+                if (thumbsSwiper) {
+                    applyTransitionEasing(thumbsSwiper, sanitizedEasing);
+                }
+            } else {
+                thumbsSwiper = null;
             }
 
-            if (!thumbsSwiper) {
+            if (!thumbsSwiper && thumbsLayout !== 'hidden') {
                 const thumbsMessage = mga__( 'Initialisation des miniatures Swiper impossible. La visionneuse fonctionnera sans elles.', 'lightbox-jlg' );
                 if (debug && typeof debug.log === 'function') {
                     debug.log(thumbsMessage, true);
