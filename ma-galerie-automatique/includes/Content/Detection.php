@@ -166,6 +166,9 @@ class Detection {
             'core/group',
             'core/columns',
             'core/column',
+            'core/query',
+            'core/post-template',
+            'core/post-featured-image',
         ];
 
         $linked_block_names = apply_filters( 'mga_linked_image_blocks', $default_block_names );
@@ -314,20 +317,45 @@ class Detection {
             }
         }
 
-        $destination_checks = [
-            'linkdestination' => [ 'media', 'attachment', 'attachment-page' ],
-            'linkto'          => [ 'file', 'media', 'attachment', 'attachment-page' ],
-        ];
+        $is_link = $this->normalize_to_bool( $normalized_attrs['islink'] ?? null );
 
-        foreach ( $destination_checks as $destination_key => $allowed_values ) {
-            if ( ! isset( $normalized_attrs[ $destination_key ] ) || ! is_string( $normalized_attrs[ $destination_key ] ) ) {
-                continue;
+        if ( null === $is_link && isset( $normalized_attrs['linktarget'] ) ) {
+            $is_link = true;
+        }
+
+        if ( null === $is_link ) {
+            $bound_is_link = $this->get_bound_attribute_value( $attrs, 'isLink' );
+
+            if ( null !== $bound_is_link ) {
+                $is_link = $this->normalize_to_bool( $bound_is_link );
             }
+        }
 
-            $destination_value = strtolower( $normalized_attrs[ $destination_key ] );
+        $allowed_destination_values = [ 'media', 'attachment', 'attachment-page', 'file' ];
+        $destination_keys           = [ 'linkdestination', 'linkto' ];
+        $destination_values         = [];
 
-            if ( in_array( $destination_value, $allowed_values, true ) ) {
-                return true;
+        foreach ( $destination_keys as $destination_key ) {
+            if ( isset( $normalized_attrs[ $destination_key ] ) && is_string( $normalized_attrs[ $destination_key ] ) ) {
+                $destination_values[] = strtolower( $normalized_attrs[ $destination_key ] );
+            }
+        }
+
+        foreach ( [ 'linkDestination', 'linkTo' ] as $binding_key ) {
+            $bound_value = $this->get_bound_attribute_value( $attrs, $binding_key );
+
+            if ( is_string( $bound_value ) ) {
+                $destination_values[] = strtolower( $bound_value );
+            }
+        }
+
+        $destination_values = array_values( array_unique( $destination_values ) );
+
+        foreach ( $destination_values as $destination_value ) {
+            if ( in_array( $destination_value, $allowed_destination_values, true ) ) {
+                if ( null === $is_link || true === $is_link ) {
+                    return true;
+                }
             }
         }
 
@@ -361,6 +389,16 @@ class Detection {
             }
         }
 
+        foreach ( [ 'href', 'url', 'linkurl', 'linkhref', 'imagelink', 'link' ] as $binding_key ) {
+            $bound_link_value = $this->get_bound_attribute_value( $attrs, $binding_key );
+
+            if ( is_string( $bound_link_value ) ) {
+                if ( $this->is_image_url( $bound_link_value ) || $this->is_attachment_permalink( $bound_link_value ) ) {
+                    return true;
+                }
+            }
+        }
+
         foreach ( $attrs as $value ) {
             if ( is_array( $value ) && $this->block_attributes_link_to_media( $value ) ) {
                 return true;
@@ -368,6 +406,82 @@ class Detection {
         }
 
         return false;
+    }
+
+    private function normalize_to_bool( $value ): ?bool {
+        if ( is_bool( $value ) ) {
+            return $value;
+        }
+
+        if ( is_string( $value ) ) {
+            $value = strtolower( trim( $value ) );
+
+            if ( '' === $value ) {
+                return null;
+            }
+
+            if ( in_array( $value, [ '1', 'true', 'yes', 'on' ], true ) ) {
+                return true;
+            }
+
+            if ( in_array( $value, [ '0', 'false', 'no', 'off' ], true ) ) {
+                return false;
+            }
+        }
+
+        if ( is_numeric( $value ) ) {
+            return (float) $value > 0;
+        }
+
+        return null;
+    }
+
+    private function get_bound_attribute_value( array $attrs, string $attribute ): ?string {
+        if ( empty( $attrs['metadata'] ) || ! is_array( $attrs['metadata'] ) ) {
+            return null;
+        }
+
+        $metadata = array_change_key_case( $attrs['metadata'], CASE_LOWER );
+
+        if ( empty( $metadata['bindings'] ) || ! is_array( $metadata['bindings'] ) ) {
+            return null;
+        }
+
+        $target_key = strtolower( $attribute );
+
+        foreach ( $metadata['bindings'] as $binding_key => $binding_value ) {
+            if ( strtolower( $binding_key ) !== $target_key ) {
+                continue;
+            }
+
+            if ( is_string( $binding_value ) ) {
+                return $binding_value;
+            }
+
+            if ( ! is_array( $binding_value ) ) {
+                continue;
+            }
+
+            $binding_value_lower = array_change_key_case( $binding_value, CASE_LOWER );
+
+            foreach ( [ 'value', 'default' ] as $value_key ) {
+                if ( isset( $binding_value_lower[ $value_key ] ) && is_string( $binding_value_lower[ $value_key ] ) ) {
+                    return $binding_value_lower[ $value_key ];
+                }
+            }
+
+            if ( isset( $binding_value_lower['args'] ) && is_array( $binding_value_lower['args'] ) ) {
+                $args = array_change_key_case( $binding_value_lower['args'], CASE_LOWER );
+
+                foreach ( [ 'value', 'linkdestination', 'destination', 'href', 'url' ] as $arg_key ) {
+                    if ( isset( $args[ $arg_key ] ) && is_string( $args[ $arg_key ] ) ) {
+                        return $args[ $arg_key ];
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     public function is_image_url( $url ): bool {
