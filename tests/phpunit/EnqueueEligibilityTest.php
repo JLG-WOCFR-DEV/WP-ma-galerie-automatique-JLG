@@ -213,6 +213,45 @@ HTML;
     }
 
     /**
+     * Image blocks linking to attachment pages should enqueue assets to enable the lightbox.
+     */
+    public function test_core_image_linking_to_attachment_triggers_enqueue() {
+        $attachment_id = self::factory()->attachment->create_upload_object(
+            DIR_TESTDATA . '/images/canola.jpg'
+        );
+
+        $this->assertNotWPError( $attachment_id, 'Attachment creation should succeed.' );
+        $this->assertNotEmpty( $attachment_id, 'An attachment ID should be returned.' );
+
+        $image_src  = wp_get_attachment_image_url( $attachment_id, 'full' );
+        $image_link = get_attachment_link( $attachment_id );
+
+        $this->assertNotFalse( $image_src, 'The attachment should provide a source URL.' );
+        $this->assertNotFalse( $image_link, 'The attachment should expose a permalink.' );
+        $block_markup = sprintf(
+            '<!-- wp:image {"id":%1$d,"linkDestination":"attachment"} -->'
+            . '<figure class="wp-block-image"><a href="%2$s"><img src="%3$s" class="wp-image-%1$d" /></a></figure>'
+            . '<!-- /wp:image -->',
+            $attachment_id,
+            $image_link,
+            $image_src
+        );
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => $block_markup,
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $this->assertTrue(
+            $this->detection()->should_enqueue_assets( $post_id ),
+            'Image blocks linked to attachments should enqueue assets.'
+        );
+    }
+
+    /**
      * Forcing an enqueue on non singular views without a global WP_Post should not trigger notices.
      */
     public function test_force_enqueue_without_global_post_object() {
