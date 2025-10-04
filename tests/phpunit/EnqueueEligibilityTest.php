@@ -327,6 +327,32 @@ HTML;
     }
 
     /**
+     * Query Loop featured images relying on block bindings to link to media files should enqueue assets.
+     */
+    public function test_query_loop_featured_image_metadata_bindings_trigger_enqueue() {
+        $query_loop_markup = <<<'HTML'
+<!-- wp:query {"query":{"perPage":3,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","inherit":true}} -->
+<!-- wp:post-template -->
+<!-- wp:post-featured-image {"metadata":{"bindings":{"isLink":{"source":"core/post-featured-image","args":{"value":true}},"linkDestination":{"source":"core/post-featured-image","args":{"type":"media"}},"linkTarget":{"source":"core/post-featured-image","args":{"value":"_self"}},"href":{"source":"core/post-featured-image","args":{"type":"media"}}}}} /-->
+<!-- /wp:post-template -->
+<!-- /wp:query -->
+HTML;
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => $query_loop_markup,
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $this->assertTrue(
+            $this->detection()->should_enqueue_assets( $post_id ),
+            'Query Loop featured images linking to media files through block bindings should enqueue assets.'
+        );
+    }
+
+    /**
      * Forcing an enqueue on non singular views without a global WP_Post should not trigger notices.
      */
     public function test_force_enqueue_without_global_post_object() {
