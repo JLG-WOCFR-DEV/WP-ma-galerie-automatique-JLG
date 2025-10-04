@@ -289,6 +289,65 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
         );
     }
 
+    public function test_detection_setting_update_purges_cached_meta() {
+        update_option(
+            'mga_settings',
+            [
+                'tracked_post_types' => [ 'post' ],
+            ]
+        );
+
+        $post_id = self::factory()->post->create();
+
+        update_post_meta( $post_id, '_mga_has_linked_images', '1' );
+
+        $this->assertSame(
+            '1',
+            get_post_meta( $post_id, '_mga_has_linked_images', true ),
+            'Sanity check: the cached meta flag should exist before updating the settings.'
+        );
+
+        update_option(
+            'mga_settings',
+            [
+                'tracked_post_types' => [ 'page' ],
+            ]
+        );
+
+        $this->assertSame(
+            '',
+            get_post_meta( $post_id, '_mga_has_linked_images', true ),
+            'Updating detection-related settings should clear cached detection results.'
+        );
+    }
+
+    public function test_unrelated_setting_update_preserves_cached_meta() {
+        update_option(
+            'mga_settings',
+            [
+                'tracked_post_types' => [ 'post' ],
+            ]
+        );
+
+        $post_id = self::factory()->post->create();
+
+        update_post_meta( $post_id, '_mga_has_linked_images', '1' );
+
+        update_option(
+            'mga_settings',
+            [
+                'tracked_post_types' => [ 'post' ],
+                'delay'              => 8,
+            ]
+        );
+
+        $this->assertSame(
+            '1',
+            get_post_meta( $post_id, '_mga_has_linked_images', true ),
+            'Updating unrelated settings should keep the cached detection results intact.'
+        );
+    }
+
     private function detection(): \MaGalerieAutomatique\Content\Detection {
         $plugin = mga_plugin();
         $this->assertInstanceOf( \MaGalerieAutomatique\Plugin::class, $plugin, 'The plugin instance should be available.' );
