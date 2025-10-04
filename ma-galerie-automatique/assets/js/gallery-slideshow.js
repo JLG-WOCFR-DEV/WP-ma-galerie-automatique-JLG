@@ -305,6 +305,9 @@
 
         const newImg = document.createElement('img');
         newImg.className = 'mga-echo-bg__image';
+        newImg.alt = '';
+        newImg.setAttribute('aria-hidden', 'true');
+        newImg.setAttribute('role', 'presentation');
         let hasLoaded = false;
 
         const handleLoad = () => {
