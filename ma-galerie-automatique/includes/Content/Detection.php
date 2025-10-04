@@ -302,27 +302,43 @@ class Detection {
     }
 
     public function block_attributes_link_to_media( array $attrs ): bool {
-        $media_destination_keys = [ 'linkDestination', 'linkTo' ];
-        $link_url_keys          = [ 'href', 'linkUrl', 'linkHref', 'imageLink', 'link' ];
+        if ( empty( $attrs ) ) {
+            return false;
+        }
 
-        foreach ( $media_destination_keys as $destination_key ) {
-            if ( ! isset( $attrs[ $destination_key ] ) || ! is_string( $attrs[ $destination_key ] ) ) {
+        $normalized_attrs = [];
+
+        foreach ( $attrs as $key => $value ) {
+            if ( is_string( $key ) ) {
+                $normalized_attrs[ strtolower( $key ) ] = $value;
+            }
+        }
+
+        $destination_checks = [
+            'linkdestination' => [ 'media', 'attachment', 'attachment-page' ],
+            'linkto'          => [ 'file', 'media', 'attachment', 'attachment-page' ],
+        ];
+
+        foreach ( $destination_checks as $destination_key => $allowed_values ) {
+            if ( ! isset( $normalized_attrs[ $destination_key ] ) || ! is_string( $normalized_attrs[ $destination_key ] ) ) {
                 continue;
             }
 
-            $destination_value = strtolower( $attrs[ $destination_key ] );
+            $destination_value = strtolower( $normalized_attrs[ $destination_key ] );
 
-            if ( in_array( $destination_value, [ 'media', 'attachment', 'attachment-page', 'file' ], true ) ) {
+            if ( in_array( $destination_value, $allowed_values, true ) ) {
                 return true;
             }
         }
 
+        $link_url_keys = [ 'href', 'linkurl', 'linkhref', 'imagelink', 'link' ];
+
         foreach ( $link_url_keys as $link_key ) {
-            if ( ! isset( $attrs[ $link_key ] ) ) {
+            if ( ! array_key_exists( $link_key, $normalized_attrs ) ) {
                 continue;
             }
 
-            $link_value = $attrs[ $link_key ];
+            $link_value = $normalized_attrs[ $link_key ];
 
             if ( is_string( $link_value ) ) {
                 if ( $this->is_image_url( $link_value ) || $this->is_attachment_permalink( $link_value ) ) {
@@ -331,9 +347,11 @@ class Detection {
             }
 
             if ( is_array( $link_value ) ) {
-                if ( isset( $link_value['url'] ) && is_string( $link_value['url'] ) ) {
-                    if ( $this->is_image_url( $link_value['url'] ) || $this->is_attachment_permalink( $link_value['url'] ) ) {
-                        return true;
+                foreach ( [ 'url', 'href' ] as $url_key ) {
+                    if ( isset( $link_value[ $url_key ] ) && is_string( $link_value[ $url_key ] ) ) {
+                        if ( $this->is_image_url( $link_value[ $url_key ] ) || $this->is_attachment_permalink( $link_value[ $url_key ] ) ) {
+                            return true;
+                        }
                     }
                 }
 

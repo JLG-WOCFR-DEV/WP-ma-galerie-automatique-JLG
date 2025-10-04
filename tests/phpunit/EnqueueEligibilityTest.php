@@ -252,6 +252,55 @@ HTML;
     }
 
     /**
+     * Image blocks using a custom link object that targets an attachment should enqueue assets.
+     */
+    public function test_core_image_with_custom_attachment_link_object_triggers_enqueue() {
+        $attachment_id = self::factory()->attachment->create_upload_object(
+            DIR_TESTDATA . '/images/canola.jpg'
+        );
+
+        $this->assertNotWPError( $attachment_id, 'Attachment creation should succeed.' );
+        $this->assertNotEmpty( $attachment_id, 'An attachment ID should be returned.' );
+
+        $image_src  = wp_get_attachment_image_url( $attachment_id, 'full' );
+        $image_link = get_attachment_link( $attachment_id );
+
+        $this->assertNotFalse( $image_src, 'The attachment should provide a source URL.' );
+        $this->assertNotFalse( $image_link, 'The attachment should expose a permalink.' );
+
+        $attributes = [
+            'id'              => $attachment_id,
+            'linkDestination' => 'custom',
+            'linkTo'          => 'custom',
+            'link'            => [
+                'type' => 'custom',
+                'href' => $image_link,
+            ],
+        ];
+
+        $block_markup = sprintf(
+            '<!-- wp:image %1$s --><figure class="wp-block-image"><a href="%2$s"><img src="%3$s" class="wp-image-%4$d" /></a></figure><!-- /wp:image -->',
+            wp_json_encode( $attributes ),
+            esc_url( $image_link ),
+            esc_url( $image_src ),
+            $attachment_id
+        );
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => $block_markup,
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $this->assertTrue(
+            $this->detection()->should_enqueue_assets( $post_id ),
+            'Image blocks linking to attachment permalinks through custom link objects should enqueue assets.'
+        );
+    }
+
+    /**
      * Forcing an enqueue on non singular views without a global WP_Post should not trigger notices.
      */
     public function test_force_enqueue_without_global_post_object() {
