@@ -22,6 +22,7 @@ Lightbox - JLG est un plugin WordPress qui transforme les galeries d'images en d
 - **Lecture en boucle** et **lancement automatique** du diaporama.
 - **Z‑index** de la galerie et **mode débogage**.
 - **Sélecteurs CSS personnalisés** : complétez la liste par défaut lorsque votre thème encapsule le contenu dans des conteneurs non standards (ex. `.site-main > .article-body`). Collez-les dans le champ multi-lignes (un sélecteur par ligne), cliquez sur **Ajouter un sélecteur** ou appuyez sur la touche **Entrée** depuis un champ pour alimenter la liste dynamique.
+- **Analyse des archives** : autorise le scan des pages de liste (page de blog, catégories, étiquettes, résultats de recherche) pour charger la lightbox dès qu’une image liée est détectée.
 
 ## Fonctionnalités
 La visionneuse plein écran pilotée par `assets/js/gallery-slideshow.js` et mise en forme par `assets/css/gallery-slideshow.css` offre les contrôles suivants :
@@ -125,6 +126,7 @@ Si votre thème n’utilise pas les classes habituelles comme `.entry-content`, 
 ### `mga_force_enqueue`
 - **Rôle** : forcer le chargement des assets même si aucune image éligible n'est détectée.
 - **Moment** : appelé tout au début de `mga_should_enqueue_assets()` avant les vérifications de contexte.
+- **Compatibilité archives** : lorsque l’option **Analyser les archives** est activée, la détection s’exécute également sur les pages de liste. Ce filtre reste prioritaire et peut toujours forcer (ou empêcher) l’enfilement selon vos besoins.
 - **Exemple** : activer systématiquement la lightbox sur un type de contenu personnalisé.
   ```php
   add_filter( 'mga_force_enqueue', function ( $force, $post ) {

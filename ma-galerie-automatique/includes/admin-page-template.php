@@ -245,6 +245,21 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                             </div>
 
                             <div class="mga-toggle-list__item">
+                                <input type="hidden" name="mga_settings[load_on_archives]" value="0" />
+                                <label for="mga_load_on_archives">
+                                    <input
+                                        name="mga_settings[load_on_archives]"
+                                        type="checkbox"
+                                        id="mga_load_on_archives"
+                                        value="1"
+                                        <?php checked( ! empty( $settings['load_on_archives'] ), 1 ); ?>
+                                    />
+                                    <span><?php echo esc_html__( 'Analyser les archives', 'lightbox-jlg' ); ?></span>
+                                </label>
+                                <p class="description"><?php echo esc_html__( 'Autorise la détection des images liées dans les listes d’articles (page de blog, catégories, étiquettes, etc.).', 'lightbox-jlg' ); ?></p>
+                            </div>
+
+                            <div class="mga-toggle-list__item">
                                 <input type="hidden" name="mga_settings[close_on_backdrop]" value="0" />
                                 <label for="mga_close_on_backdrop">
                                     <input

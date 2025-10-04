@@ -48,7 +48,9 @@ class Detection {
         $tracked_post_types = apply_filters( 'mga_tracked_post_types', $tracked_post_types, $post );
         $tracked_post_types = array_values( array_filter( (array) $tracked_post_types ) );
 
-        if ( ! is_singular() && ! $force_enqueue ) {
+        $load_on_archives = ! empty( $settings['load_on_archives'] );
+
+        if ( ! is_singular() && ! $force_enqueue && ! $load_on_archives ) {
             return false;
         }
 
