@@ -459,6 +459,119 @@ test.describe('Gallery viewer', () => {
         }
     });
 
+    test.describe('thumbnail layout settings', () => {
+        test('displays thumbnails at the bottom by default', async ({ page, requestUtils }) => {
+            const { post, uploads, cleanup } = await createPublishedGalleryPost(
+                requestUtils,
+                'Default thumbs layout',
+                { minimumImages: 3 },
+            );
+
+            try {
+                await page.goto(post.link);
+
+                const triggerLink = page.locator(`a[href="${uploads[0].source_url}"]`).first();
+                await expect(triggerLink.locator('img')).toBeVisible();
+
+                await triggerLink.click();
+
+                const viewer = page.locator('#mga-viewer');
+                await expect(viewer).toBeVisible();
+                await expect(viewer).not.toHaveClass(/mga-thumbs-left/);
+                await expect(viewer).not.toHaveClass(/mga-thumbs-hidden/);
+
+                const thumbsSwiper = viewer.locator('.mga-thumbs-swiper');
+                await expect(thumbsSwiper).toHaveCount(1);
+                await expect(thumbsSwiper).toBeVisible();
+                await expect(thumbsSwiper).not.toHaveClass(/swiper-vertical/);
+            } finally {
+                await cleanup();
+            }
+        });
+
+        test('supports a left sidebar for thumbnails', async ({ page, requestUtils }) => {
+            const siteSettings = await requestUtils.getSiteSettings();
+            const previousMGASettings = siteSettings?.mga_settings
+                ? { ...siteSettings.mga_settings }
+                : {};
+
+            await requestUtils.updateSiteSettings({
+                mga_settings: {
+                    ...previousMGASettings,
+                    thumbs_layout: 'left',
+                },
+            });
+
+            const { post, uploads, cleanup } = await createPublishedGalleryPost(
+                requestUtils,
+                'Left thumbs layout',
+                { minimumImages: 3 },
+            );
+
+            try {
+                await page.goto(post.link);
+
+                const triggerLink = page.locator(`a[href="${uploads[0].source_url}"]`).first();
+                await expect(triggerLink.locator('img')).toBeVisible();
+
+                await triggerLink.click();
+
+                const viewer = page.locator('#mga-viewer');
+                await expect(viewer).toHaveClass(/mga-thumbs-left/);
+
+                const thumbsSwiper = viewer.locator('.mga-thumbs-swiper');
+                await expect(thumbsSwiper).toHaveCount(1);
+                await expect(thumbsSwiper).toBeVisible();
+                await expect(thumbsSwiper).toHaveClass(/swiper-vertical/);
+            } finally {
+                await cleanup();
+                await requestUtils.updateSiteSettings({
+                    mga_settings: previousMGASettings,
+                });
+            }
+        });
+
+        test('hides thumbnails when the layout is set to hidden', async ({ page, requestUtils }) => {
+            const siteSettings = await requestUtils.getSiteSettings();
+            const previousMGASettings = siteSettings?.mga_settings
+                ? { ...siteSettings.mga_settings }
+                : {};
+
+            await requestUtils.updateSiteSettings({
+                mga_settings: {
+                    ...previousMGASettings,
+                    thumbs_layout: 'hidden',
+                },
+            });
+
+            const { post, uploads, cleanup } = await createPublishedGalleryPost(
+                requestUtils,
+                'Hidden thumbs layout',
+                { minimumImages: 3 },
+            );
+
+            try {
+                await page.goto(post.link);
+
+                const triggerLink = page.locator(`a[href="${uploads[0].source_url}"]`).first();
+                await expect(triggerLink.locator('img')).toBeVisible();
+
+                await triggerLink.click();
+
+                const viewer = page.locator('#mga-viewer');
+                await expect(viewer).toHaveClass(/mga-thumbs-hidden/);
+
+                const thumbsSwiper = viewer.locator('.mga-thumbs-swiper');
+                await expect(thumbsSwiper).toHaveCount(0);
+            } finally {
+                await cleanup();
+                await requestUtils.updateSiteSettings({
+                    mga_settings: previousMGASettings,
+                });
+            }
+        });
+    });
+
     test('keeps toolbar actions accessible on a mobile viewport', async ({ page, requestUtils }) => {
         await page.setViewportSize({ width: 320, height: 640 });
 

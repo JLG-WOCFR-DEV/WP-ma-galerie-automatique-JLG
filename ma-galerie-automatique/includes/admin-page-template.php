@@ -146,6 +146,17 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><label for="mga_thumbs_layout"><?php echo esc_html__( 'Disposition des miniatures', 'lightbox-jlg' ); ?></label></th>
+                    <td>
+                        <select name="mga_settings[thumbs_layout]" id="mga_thumbs_layout">
+                            <option value="bottom" <?php selected( $settings['thumbs_layout'], 'bottom' ); ?>><?php echo esc_html__( 'Barre inférieure (par défaut)', 'lightbox-jlg' ); ?></option>
+                            <option value="left" <?php selected( $settings['thumbs_layout'], 'left' ); ?>><?php echo esc_html__( 'Colonne latérale', 'lightbox-jlg' ); ?></option>
+                            <option value="hidden" <?php selected( $settings['thumbs_layout'], 'hidden' ); ?>><?php echo esc_html__( 'Masquées', 'lightbox-jlg' ); ?></option>
+                        </select>
+                        <p class="description"><?php echo esc_html__( 'Choisissez où afficher les miniatures dans la visionneuse. La disposition latérale passe en bas sur mobile pour préserver l’espace.', 'lightbox-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><label for="mga_accent_color"><?php echo esc_html__( "Couleur d'accentuation", 'lightbox-jlg' ); ?></label></th>
                     <td>
                         <input

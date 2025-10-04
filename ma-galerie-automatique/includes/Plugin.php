@@ -233,6 +233,7 @@ class Plugin {
             'effect'           => isset( $settings['effect'] ) ? (string) $settings['effect'] : 'slide',
             'easing'           => isset( $settings['easing'] ) ? (string) $settings['easing'] : 'ease-out',
             'bgOpacity'        => isset( $settings['bg_opacity'] ) ? (float) $settings['bg_opacity'] : 0.95,
+            'thumbsLayout'     => isset( $settings['thumbs_layout'] ) ? (string) $settings['thumbs_layout'] : 'bottom',
             'showThumbsMobile' => ! empty( $settings['show_thumbs_mobile'] ),
             'showZoom'         => ! empty( $settings['show_zoom'] ),
             'showDownload'     => ! empty( $settings['show_download'] ),
