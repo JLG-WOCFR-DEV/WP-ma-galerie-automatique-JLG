@@ -11,7 +11,35 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
      * @param array $expected_subset
      */
     public function test_sanitize_settings( $input, $existing, $expected_subset ) {
+        $expected_doing_it_wrong = null;
+
+        if ( array_key_exists( '__expected_doing_it_wrong', $expected_subset ) ) {
+            $expected_doing_it_wrong = (int) $expected_subset['__expected_doing_it_wrong'];
+            unset( $expected_subset['__expected_doing_it_wrong'] );
+        }
+
+        $doing_it_wrong_listener = null;
+        $doing_it_wrong_count    = 0;
+
+        if ( null !== $expected_doing_it_wrong ) {
+            $doing_it_wrong_listener = static function () use ( &$doing_it_wrong_count ) {
+                $doing_it_wrong_count++;
+            };
+
+            add_action( 'doing_it_wrong_run', $doing_it_wrong_listener );
+        }
+
         $result = $this->settings()->sanitize_settings( $input, $existing );
+
+        if ( null !== $doing_it_wrong_listener ) {
+            remove_action( 'doing_it_wrong_run', $doing_it_wrong_listener );
+
+            $this->assertSame(
+                $expected_doing_it_wrong,
+                $doing_it_wrong_count,
+                'The number of doing_it_wrong notices did not match the expected count.'
+            );
+        }
 
         foreach ( $expected_subset as $key => $expected_value ) {
             $this->assertArrayHasKey( $key, $result, sprintf( 'The %s key should exist in the sanitized settings.', $key ) );
@@ -263,6 +291,12 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                         'twitter' => [
                             'enabled'  => 'yes',
                         ],
+                        'reseau_perso' => [
+                            'label'    => 'Réseau Perso',
+                            'enabled'  => 'on',
+                            'template' => ' https://reseau.example/share?u=%url% ',
+                            'icon'     => 'Link ',
+                        ],
                     ],
                 ],
                 [
@@ -274,6 +308,12 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                         'linkedin' => [
                             'enabled'  => false,
                             'template' => 'https://linked.in/share?u=%url%',
+                        ],
+                        'reseau_perso' => [
+                            'enabled'  => true,
+                            'template' => 'https://existing.example/share?u=%url%',
+                            'label'    => 'Réseau existant',
+                            'icon'     => 'custom',
                         ],
                     ],
                 ],
@@ -295,7 +335,14 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                             'enabled'  => $default_share_channels['pinterest']['enabled'],
                             'template' => $default_share_channels['pinterest']['template'],
                         ],
+                        'reseau_perso' => [
+                            'enabled'  => true,
+                            'template' => 'https://reseau.example/share?u=%url%',
+                            'label'    => 'Réseau Perso',
+                            'icon'     => 'link',
+                        ],
                     ],
+                    '__expected_doing_it_wrong' => 0,
                 ],
             ],
             'share_channel_rejects_javascript_template' => [

@@ -694,23 +694,43 @@ class Settings {
             }
 
             $template_candidates = [];
+            $template            = '';
+
+            $candidate_template_sanitized = '';
 
             if ( isset( $channel_candidate['template'] ) ) {
-                $candidate_template = sanitize_text_field( (string) $channel_candidate['template'] );
-                $template           = $this->sanitize_share_channel_template( $candidate_template );
+                $candidate_template           = sanitize_text_field( (string) $channel_candidate['template'] );
+                $candidate_template_sanitized = $this->sanitize_share_channel_template( $candidate_template );
+                $template_candidates[]        = $candidate_template_sanitized;
             }
 
-            if ( '' === $template && $existing_for_key && isset( $existing_for_key['template'] ) ) {
-                $existing_template = sanitize_text_field( (string) $existing_for_key['template'] );
-                $template          = $this->sanitize_share_channel_template( $existing_template );
+            $existing_template_sanitized = '';
+
+            if ( $existing_for_key && isset( $existing_for_key['template'] ) ) {
+                $existing_template           = sanitize_text_field( (string) $existing_for_key['template'] );
+                $existing_template_sanitized = $this->sanitize_share_channel_template( $existing_template );
+                $template_candidates[]       = $existing_template_sanitized;
             }
 
-            if ( '' === $template && $defaults_for_key && isset( $defaults_for_key['template'] ) ) {
-                $default_template = sanitize_text_field( (string) $defaults_for_key['template'] );
-                $template         = $this->sanitize_share_channel_template( $default_template );
+            $default_template_sanitized = '';
+
+            if ( $defaults_for_key && isset( $defaults_for_key['template'] ) ) {
+                $default_template           = sanitize_text_field( (string) $defaults_for_key['template'] );
+                $default_template_sanitized = $this->sanitize_share_channel_template( $default_template );
+                $template_candidates[]      = $default_template_sanitized;
             }
 
-            $template = $this->resolve_share_channel_template( $template_candidates );
+            if ( ! empty( $template_candidates ) ) {
+                $template = $this->resolve_share_channel_template( $template_candidates );
+            }
+
+            if ( '' === $template ) {
+                if ( '' !== $default_template_sanitized ) {
+                    $template = $default_template_sanitized;
+                } else {
+                    continue;
+                }
+            }
 
             $enabled_default = $defaults_for_key['enabled'] ?? false;
 
