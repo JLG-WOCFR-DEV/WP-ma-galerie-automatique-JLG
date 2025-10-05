@@ -769,7 +769,8 @@ class Settings {
     }
 
     private function sanitize_share_channel_template( string $template ): string {
-        $normalized_template = trim( $template );
+        $normalized_template = sanitize_text_field( $template );
+        $normalized_template = trim( $normalized_template );
 
         if ( '' === $normalized_template ) {
             return '';
@@ -787,10 +788,23 @@ class Settings {
             return '';
         }
 
-        $allowed_protocols = \wp_allowed_protocols();
-        $additional_protocols = [ 'sms', 'whatsapp', 'tg', 'fb-messenger', 'viber', 'line' ];
-        $allowed_protocols = array_unique( array_merge( $allowed_protocols, $additional_protocols ) );
-        $allowed_protocols = \apply_filters( 'mga_allowed_share_template_protocols', $allowed_protocols );
+        $allowed_protocols       = \wp_allowed_protocols();
+        $additional_protocols    = [ 'sms', 'whatsapp', 'tg', 'fb-messenger', 'viber', 'line' ];
+        $allowed_protocols       = array_unique( array_merge( $allowed_protocols, $additional_protocols ) );
+        $allowed_protocols       = \apply_filters( 'mga_allowed_share_template_protocols', $allowed_protocols );
+        $allowed_protocols       = \apply_filters( 'mga_share_channel_allowed_schemes', $allowed_protocols );
+        $allowed_protocols       = array_filter(
+            array_map(
+                static function ( $protocol ) {
+                    if ( is_string( $protocol ) && '' !== $protocol ) {
+                        return strtolower( $protocol );
+                    }
+
+                    return null;
+                },
+                (array) $allowed_protocols
+            )
+        );
 
         $scheme = strtolower( (string) \wp_parse_url( $placeholders_stripped, PHP_URL_SCHEME ) );
 
@@ -938,58 +952,4 @@ class Settings {
         return 'generic';
     }
 
-    private function sanitize_share_channel_template( string $template ): string {
-        $sanitized = sanitize_text_field( $template );
-        $sanitized = trim( $sanitized );
-
-        if ( '' === $sanitized ) {
-            return '';
-        }
-
-        $placeholders_removed = preg_replace( '/%[a-z0-9_-]+%/i', '', $sanitized );
-
-        if ( null === $placeholders_removed ) {
-            $placeholders_removed = $sanitized;
-        }
-
-        $placeholders_removed = trim( $placeholders_removed );
-
-        if ( '' === $placeholders_removed ) {
-            return '';
-        }
-
-        $scheme = '';
-
-        if ( preg_match( '#^([a-z][a-z0-9+\-.]*):#i', $placeholders_removed, $matches ) ) {
-            $scheme = strtolower( $matches[1] );
-        }
-
-        if ( '' === $scheme ) {
-            return '';
-        }
-
-        $allowed_schemes = \apply_filters(
-            'mga_share_channel_allowed_schemes',
-            [ 'http', 'https', 'mailto', 'tel', 'sms' ]
-        );
-
-        $allowed_schemes = array_filter(
-            array_map(
-                static function ( $value ) {
-                    if ( is_string( $value ) && '' !== $value ) {
-                        return strtolower( $value );
-                    }
-
-                    return null;
-                },
-                (array) $allowed_schemes
-            )
-        );
-
-        if ( in_array( $scheme, $allowed_schemes, true ) ) {
-            return $sanitized;
-        }
-
-        return '';
-    }
 }
