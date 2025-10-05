@@ -343,6 +343,50 @@
         }
     }
 
+    let swiperModulesRegistered = false;
+
+    const registerSwiperModules = () => {
+        if (swiperModulesRegistered) {
+            return;
+        }
+
+        if (typeof Swiper !== 'function') {
+            return;
+        }
+
+        if (typeof Swiper.use !== 'function') {
+            swiperModulesRegistered = true;
+            return;
+        }
+
+        const moduleKeys = [
+            'Navigation',
+            'Autoplay',
+            'Thumbs',
+            'Zoom',
+            'Keyboard',
+            'A11y',
+            'EffectFade',
+            'EffectCube',
+            'EffectCoverflow',
+            'EffectFlip',
+        ];
+
+        const modules = moduleKeys.reduce((registered, key) => {
+            if (Swiper[key]) {
+                registered.push(Swiper[key]);
+            }
+
+            return registered;
+        }, []);
+
+        if (modules.length) {
+            Swiper.use(modules);
+        }
+
+        swiperModulesRegistered = true;
+    };
+
     function updateAutoplayButtonState(viewer, isRunning) {
         if (!viewer) {
             return;
@@ -1390,6 +1434,8 @@
          * instance uniquement et on trace l'information via le logger de debug.
          */
         function createSwiperInstance(container, config) {
+            registerSwiperModules();
+
             if (typeof Swiper !== 'function') {
                 const message = mga__( 'ERREUR : La dépendance Swiper est introuvable. Initialisation annulée.', 'lightbox-jlg' );
                 if (debug && typeof debug.log === 'function') {
