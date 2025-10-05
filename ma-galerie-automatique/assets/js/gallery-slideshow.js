@@ -2445,6 +2445,13 @@
             const viewer = getViewer();
             if (!viewer) return false;
 
+            const parsedStartIndex = parseInt(startIndex, 10);
+            const normalizedStartIndex = Number.isFinite(parsedStartIndex) ? parsedStartIndex : 0;
+            const sanitizedStartIndex = Math.min(
+                Math.max(normalizedStartIndex, 0),
+                Math.max(images.length - 1, 0),
+            );
+
             viewer.className = 'mga-viewer';
             viewer.classList.toggle('mga-has-caption', false);
             if (thumbsLayout === 'left') {
@@ -2559,7 +2566,7 @@
                 });
                 debug.log(mga__( 'Wrappers HTML remplis avec URLs optimisées.', 'lightbox-jlg' ));
 
-                initSwiper(viewer, images);
+                initSwiper(viewer, images, sanitizedStartIndex);
                 if (!mainSwiper) {
                     const cancelMessage = mga__( 'Visionneuse annulée : Swiper n’a pas pu être initialisé.', 'lightbox-jlg' );
                     if (debug && typeof debug.log === 'function') {
@@ -2574,14 +2581,17 @@
                 currentGalleryImages = Array.isArray(images) ? images : [];
 
                 if (typeof mainSwiper.slideToLoop === 'function') {
-                    mainSwiper.slideToLoop(startIndex, 0);
+                    mainSwiper.slideToLoop(sanitizedStartIndex, 0);
                 } else if (typeof mainSwiper.slideTo === 'function') {
-                    mainSwiper.slideTo(startIndex, 0);
+                    mainSwiper.slideTo(sanitizedStartIndex, 0);
                 }
-                if (settings.background_style === 'echo' && images[startIndex] && images[startIndex].highResUrl) {
-                    updateEchoBackground(viewer, images[startIndex].highResUrl);
+                if (thumbsSwiper && typeof thumbsSwiper.slideTo === 'function') {
+                    thumbsSwiper.slideTo(sanitizedStartIndex);
                 }
-                updateInfo(viewer, images, startIndex);
+                if (settings.background_style === 'echo' && images[sanitizedStartIndex] && images[sanitizedStartIndex].highResUrl) {
+                    updateEchoBackground(viewer, images[sanitizedStartIndex].highResUrl);
+                }
+                updateInfo(viewer, images, sanitizedStartIndex);
                 viewer.style.display = 'flex';
                 if (!lastFocusedElementBeforeViewer) {
                     lastFocusedElementBeforeViewer = document.activeElement;
@@ -2699,7 +2709,7 @@
             }
         }
 
-        function initSwiper(viewer, images) {
+        function initSwiper(viewer, images, startIndex = 0) {
             if (typeof cleanupAutoplayPreferenceListener === 'function') {
                 cleanupAutoplayPreferenceListener();
                 cleanupAutoplayPreferenceListener = null;
@@ -2809,6 +2819,7 @@
                 effect: resolvedEffect,
                 speed: resolvedSpeed,
                 cssMode: shouldUseCssMode,
+                initialSlide: Math.min(Math.max(parseInt(startIndex, 10) || 0, 0), Math.max(images.length - 1, 0)),
                 navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
                 on: {
                     init: function(swiper) {
