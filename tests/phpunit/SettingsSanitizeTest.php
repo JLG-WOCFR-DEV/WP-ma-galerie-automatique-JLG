@@ -15,29 +15,55 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
 
         foreach ( $expected_subset as $key => $expected_value ) {
             $this->assertArrayHasKey( $key, $result, sprintf( 'The %s key should exist in the sanitized settings.', $key ) );
-            if ( 'share_channels' === $key ) {
-                $actual_channels = $this->map_share_channels_by_key( $result[ $key ] );
 
-                foreach ( $expected_value as $channel_key => $channel_expectations ) {
+            if ( 'share_channels' === $key ) {
+                $actual_channels = [];
+
+                foreach ( (array) $result[ $key ] as $channel_key => $channel_settings ) {
+                    if ( ! is_array( $channel_settings ) ) {
+                        continue;
+                    }
+
+                    $normalized_key = '';
+
+                    if ( isset( $channel_settings['key'] ) && '' !== $channel_settings['key'] ) {
+                        $normalized_key = (string) $channel_settings['key'];
+                    } elseif ( is_string( $channel_key ) && '' !== $channel_key ) {
+                        $normalized_key = (string) $channel_key;
+                    }
+
+                    if ( '' === $normalized_key ) {
+                        continue;
+                    }
+
+                    $actual_channels[ $normalized_key ] = $channel_settings;
+                }
+
+                foreach ( $expected_value as $channel_key => $expected_channel_settings ) {
                     $this->assertArrayHasKey(
                         $channel_key,
                         $actual_channels,
-                        sprintf( 'The %s share channel should be present after sanitization.', $channel_key )
+                        sprintf( 'The %s share channel should exist after sanitization.', $channel_key )
                     );
 
-                    foreach ( $channel_expectations as $field_key => $field_value ) {
+                    foreach ( $expected_channel_settings as $setting_key => $expected_setting_value ) {
                         $this->assertArrayHasKey(
-                            $field_key,
+                            $setting_key,
                             $actual_channels[ $channel_key ],
-                            sprintf( 'The %s field should exist for the %s share channel.', $field_key, $channel_key )
-                        );
-                        $this->assertSame(
-                            $field_value,
-                            $actual_channels[ $channel_key ][ $field_key ],
                             sprintf(
-                                'The %s field for the %s share channel did not match the expected value.',
-                                $field_key,
+                                'The %s field should be present for the %s share channel after sanitization.',
+                                $setting_key,
                                 $channel_key
+                            )
+                        );
+
+                        $this->assertSame(
+                            $expected_setting_value,
+                            $actual_channels[ $channel_key ][ $setting_key ],
+                            sprintf(
+                                'The %s share channel %s field should match the expected sanitized value.',
+                                $channel_key,
+                                $setting_key
                             )
                         );
                     }
@@ -69,6 +95,16 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 }
 
                 $default_share_channels_by_key[ $channel['key'] ] = $channel;
+            }
+        }
+
+        $default_share_channels = [];
+
+        if ( isset( $defaults['share_channels'] ) && is_array( $defaults['share_channels'] ) ) {
+            foreach ( $defaults['share_channels'] as $channel ) {
+                if ( is_array( $channel ) && isset( $channel['key'] ) ) {
+                    $default_share_channels[ $channel['key'] ] = $channel;
+                }
             }
         }
 
@@ -249,23 +285,24 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                         ],
                         'twitter'   => [
                             'enabled'  => true,
-                            'template' => $default_share_channels_by_key['twitter']['template'],
+                            'template' => $default_share_channels['twitter']['template'],
                         ],
                         'linkedin'  => [
                             'enabled'  => false,
                             'template' => 'https://linked.in/share?u=%url%',
                         ],
                         'pinterest' => [
-                            'enabled'  => $default_share_channels_by_key['pinterest']['enabled'],
-                            'template' => $default_share_channels_by_key['pinterest']['template'],
+                            'enabled'  => $default_share_channels['pinterest']['enabled'],
+                            'template' => $default_share_channels['pinterest']['template'],
                         ],
                     ],
                 ],
             ],
-            'share_channel_template_rejects_javascript_scheme' => [
+            'share_channel_rejects_javascript_template' => [
                 [
                     'share_channels' => [
                         'facebook' => [
+                            'enabled'  => '1',
                             'template' => 'javascript:alert(1)',
                         ],
                     ],
@@ -274,7 +311,8 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 [
                     'share_channels' => [
                         'facebook' => [
-                            'template' => $default_share_channels_by_key['facebook']['template'],
+                            'enabled'  => $default_share_channels['facebook']['enabled'],
+                            'template' => $default_share_channels['facebook']['template'],
                         ],
                     ],
                 ],
