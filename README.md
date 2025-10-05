@@ -24,6 +24,8 @@ Lightbox - JLG est un plugin WordPress qui transforme les galeries d'images en d
 - **Sélecteurs CSS personnalisés** : complétez la liste par défaut lorsque votre thème encapsule le contenu dans des conteneurs non standards (ex. `.site-main > .article-body`). Collez-les dans le champ multi-lignes (un sélecteur par ligne), cliquez sur **Ajouter un sélecteur** ou appuyez sur la touche **Entrée** depuis un champ pour alimenter la liste dynamique.
 - **Analyse des archives** : autorise le scan des pages de liste (page de blog, catégories, étiquettes, résultats de recherche) pour charger la lightbox dès qu’une image liée est détectée.
 
+> ℹ️ **Mises à jour partielles** : lorsque WordPress n’envoie qu’une partie du formulaire (par exemple via l’API REST ou un formulaire personnalisé), les champs omis conservent désormais leur valeur précédente. La fonction de sanitation du plugin réutilise les valeurs déjà stockées avant de retomber sur les paramètres par défaut.
+
 ## Fonctionnalités
 La visionneuse plein écran pilotée par `assets/js/gallery-slideshow.js` et mise en forme par `assets/css/gallery-slideshow.css` offre les contrôles suivants :
 - **Compteur et légendes dynamiques** : chaque image affiche automatiquement sa légende ou, à défaut, son texte alternatif, accompagné du compteur « image actuelle / total ».
