@@ -451,7 +451,7 @@
         const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
         const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
         const closeOnBackdropClick = normalizeFlag(settings.close_on_backdrop, true);
-        const startOnClickedImage = normalizeFlag(settings.start_on_clicked_image, false);
+        const startOnClickedImage = normalizeFlag(settings.start_on_clicked_image, true);
         let shareCopyEnabled = normalizeFlag(settings.share_copy, true);
         let shareDownloadEnabled = normalizeFlag(settings.share_download, true);
         let shareChannels = normalizeShareChannels(settings.share_channels);

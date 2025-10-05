@@ -275,7 +275,7 @@ class Settings {
             'bg_opacity'         => 0.95,
             'loop'               => true,
             'autoplay_start'     => false,
-            'start_on_clicked_image' => false,
+            'start_on_clicked_image' => true,
             'background_style'   => 'echo',
             'z_index'            => 99999,
             'debug_mode'         => false,
