@@ -2820,6 +2820,19 @@
 
             const prefersReducedMotion = !!(prefersReducedMotionQuery && prefersReducedMotionQuery.matches);
 
+            if (debug && typeof debug.log === 'function') {
+                if (prefersReducedMotionQuery) {
+                    debug.log(
+                        mgaSprintf(
+                            mga__( 'Préférence de réduction des animations détectée : %s.', 'lightbox-jlg' ),
+                            prefersReducedMotion ? mga__( 'oui', 'lightbox-jlg' ) : mga__( 'non', 'lightbox-jlg' )
+                        )
+                    );
+                } else {
+                    debug.log(mga__( 'Impossible de déterminer la préférence de réduction des animations (matchMedia indisponible).', 'lightbox-jlg' ));
+                }
+            }
+
             let resolvedEffect = sanitizedEffect;
             let resolvedSpeed = sanitizedSpeed;
             let enableCssMode = false;
@@ -2838,6 +2851,20 @@
             }
 
             const shouldUseCssMode = enableCssMode && resolvedEffect === 'slide';
+
+            if (debug && typeof debug.log === 'function') {
+                debug.log(
+                    mgaSprintf(
+                        mga__( 'Effet retenu : %1$s (vitesse : %2$ims).', 'lightbox-jlg' ),
+                        resolvedEffect,
+                        resolvedSpeed
+                    )
+                );
+
+                if (shouldUseCssMode) {
+                    debug.log(mga__( 'Mode CSS activé pour limiter les animations.', 'lightbox-jlg' ));
+                }
+            }
 
             const handleAutoplayStart = () => {
                 debug.log(mga__( 'Autoplay DÉMARRÉ.', 'lightbox-jlg' ));
