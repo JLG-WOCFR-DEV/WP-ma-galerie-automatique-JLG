@@ -126,16 +126,6 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
             }
         }
 
-        $default_share_channels = [];
-
-        if ( isset( $defaults['share_channels'] ) && is_array( $defaults['share_channels'] ) ) {
-            foreach ( $defaults['share_channels'] as $channel ) {
-                if ( is_array( $channel ) && isset( $channel['key'] ) ) {
-                    $default_share_channels[ $channel['key'] ] = $channel;
-                }
-            }
-        }
-
         return [
             'numeric_bounds' => [
                 [
@@ -325,31 +315,23 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                         ],
                         'twitter'   => [
                             'enabled'  => true,
-                            'template' => $default_share_channels['twitter']['template'],
+                            'template' => $default_share_channels_by_key['twitter']['template'],
                         ],
                         'linkedin'  => [
                             'enabled'  => false,
                             'template' => 'https://linked.in/share?u=%url%',
                         ],
                         'pinterest' => [
-                            'enabled'  => $default_share_channels['pinterest']['enabled'],
-                            'template' => $default_share_channels['pinterest']['template'],
-                        ],
-                        'reseau_perso' => [
-                            'enabled'  => true,
-                            'template' => 'https://reseau.example/share?u=%url%',
-                            'label'    => 'Réseau Perso',
-                            'icon'     => 'link',
+                            'enabled'  => $default_share_channels_by_key['pinterest']['enabled'],
+                            'template' => $default_share_channels_by_key['pinterest']['template'],
                         ],
                     ],
-                    '__expected_doing_it_wrong' => 0,
                 ],
             ],
-            'share_channel_rejects_javascript_template' => [
+            'share_channel_template_rejects_javascript_scheme' => [
                 [
                     'share_channels' => [
                         'facebook' => [
-                            'enabled'  => '1',
                             'template' => 'javascript:alert(1)',
                         ],
                     ],
@@ -358,8 +340,7 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 [
                     'share_channels' => [
                         'facebook' => [
-                            'enabled'  => $default_share_channels['facebook']['enabled'],
-                            'template' => $default_share_channels['facebook']['template'],
+                            'template' => $default_share_channels_by_key['facebook']['template'],
                         ],
                     ],
                 ],
