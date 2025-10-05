@@ -32,9 +32,10 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
      * @return array[]
      */
     public function sanitize_settings_provider() {
-        $defaults          = $this->settings()->get_default_settings();
-        $all_post_types    = get_post_types( [], 'names' );
-        $default_tracked   = array_values( array_intersect( (array) $defaults['tracked_post_types'], $all_post_types ) );
+        $defaults               = $this->settings()->get_default_settings();
+        $default_share_channels = $this->map_share_channels_by_key( $defaults['share_channels'] ?? [] );
+        $all_post_types         = get_post_types( [], 'names' );
+        $default_tracked        = array_values( array_intersect( (array) $defaults['tracked_post_types'], $all_post_types ) );
 
         return [
             'numeric_bounds' => [
@@ -207,21 +208,40 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 ],
                 [
                     'share_channels' => [
-                        'facebook' => [
+                        'facebook'  => [
                             'enabled'  => false,
                             'template' => 'https://example.com/?u=%url%',
                         ],
-                        'twitter' => [
+                        'twitter'   => [
                             'enabled'  => true,
-                            'template' => $defaults['share_channels']['twitter']['template'],
+                            'template' => $default_share_channels['twitter']['template'],
                         ],
-                        'linkedin' => [
+                        'linkedin'  => [
                             'enabled'  => false,
                             'template' => 'https://linked.in/share?u=%url%',
                         ],
                         'pinterest' => [
-                            'enabled'  => $defaults['share_channels']['pinterest']['enabled'],
-                            'template' => $defaults['share_channels']['pinterest']['template'],
+                            'enabled'  => $default_share_channels['pinterest']['enabled'],
+                            'template' => $default_share_channels['pinterest']['template'],
+                        ],
+                    ],
+                ],
+            ],
+            'share_channel_template_with_javascript_scheme_is_rejected' => [
+                [
+                    'share_channels' => [
+                        'facebook' => [
+                            'enabled'  => '1',
+                            'template' => 'javascript:alert(%title%)',
+                        ],
+                    ],
+                ],
+                [],
+                [
+                    'share_channels' => [
+                        'facebook' => [
+                            'enabled'  => true,
+                            'template' => $default_share_channels['facebook']['template'],
                         ],
                     ],
                 ],

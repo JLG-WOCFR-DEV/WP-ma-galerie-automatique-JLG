@@ -693,7 +693,7 @@ class Settings {
                 $label = ucwords( str_replace( [ '-', '_' ], ' ', $sanitized_key ) );
             }
 
-            $template = '';
+            $template_candidates = [];
 
             if ( isset( $channel_candidate['template'] ) ) {
                 $template = $this->sanitize_share_channel_template( (string) $channel_candidate['template'] );
@@ -706,6 +706,8 @@ class Settings {
             if ( '' === $template && $defaults_for_key && isset( $defaults_for_key['template'] ) ) {
                 $template = $this->sanitize_share_channel_template( (string) $defaults_for_key['template'] );
             }
+
+            $template = $this->resolve_share_channel_template( $template_candidates );
 
             $enabled_default = $defaults_for_key['enabled'] ?? false;
 
