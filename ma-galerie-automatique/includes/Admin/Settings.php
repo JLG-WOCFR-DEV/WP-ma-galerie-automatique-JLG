@@ -696,15 +696,15 @@ class Settings {
             $template_candidates = [];
 
             if ( isset( $channel_candidate['template'] ) ) {
-                $template_candidates[] = $channel_candidate['template'];
+                $template = $this->sanitize_share_channel_template( (string) $channel_candidate['template'] );
             }
 
-            if ( $existing_for_key && isset( $existing_for_key['template'] ) ) {
-                $template_candidates[] = $existing_for_key['template'];
+            if ( '' === $template && $existing_for_key && isset( $existing_for_key['template'] ) ) {
+                $template = $this->sanitize_share_channel_template( (string) $existing_for_key['template'] );
             }
 
-            if ( $defaults_for_key && isset( $defaults_for_key['template'] ) ) {
-                $template_candidates[] = $defaults_for_key['template'];
+            if ( '' === $template && $defaults_for_key && isset( $defaults_for_key['template'] ) ) {
+                $template = $this->sanitize_share_channel_template( (string) $defaults_for_key['template'] );
             }
 
             $template = $this->resolve_share_channel_template( $template_candidates );
@@ -880,5 +880,60 @@ class Settings {
         }
 
         return 'generic';
+    }
+
+    private function sanitize_share_channel_template( string $template ): string {
+        $sanitized = sanitize_text_field( $template );
+        $sanitized = trim( $sanitized );
+
+        if ( '' === $sanitized ) {
+            return '';
+        }
+
+        $placeholders_removed = preg_replace( '/%[a-z0-9_-]+%/i', '', $sanitized );
+
+        if ( null === $placeholders_removed ) {
+            $placeholders_removed = $sanitized;
+        }
+
+        $placeholders_removed = trim( $placeholders_removed );
+
+        if ( '' === $placeholders_removed ) {
+            return '';
+        }
+
+        $scheme = '';
+
+        if ( preg_match( '#^([a-z][a-z0-9+\-.]*):#i', $placeholders_removed, $matches ) ) {
+            $scheme = strtolower( $matches[1] );
+        }
+
+        if ( '' === $scheme ) {
+            return '';
+        }
+
+        $allowed_schemes = \apply_filters(
+            'mga_share_channel_allowed_schemes',
+            [ 'http', 'https', 'mailto', 'tel', 'sms' ]
+        );
+
+        $allowed_schemes = array_filter(
+            array_map(
+                static function ( $value ) {
+                    if ( is_string( $value ) && '' !== $value ) {
+                        return strtolower( $value );
+                    }
+
+                    return null;
+                },
+                (array) $allowed_schemes
+            )
+        );
+
+        if ( in_array( $scheme, $allowed_schemes, true ) ) {
+            return $sanitized;
+        }
+
+        return '';
     }
 }
