@@ -220,26 +220,44 @@ class Detection {
         $this->update_post_linked_images_cache( $post_id, $has_linked_images );
     }
 
+    /**
+     * Resolve the list of tracked post types for the provided post.
+     *
+     * @return string[]
+     */
     private function resolve_tracked_post_types( WP_Post $post, ?array $settings = null ): array {
-        if ( null === $settings || ! is_array( $settings ) ) {
+        if ( ! is_array( $settings ) ) {
             $settings = $this->settings->get_sanitized_settings();
         }
 
         $tracked_post_types = [];
 
-        if ( isset( $settings['tracked_post_types'] ) && is_array( $settings['tracked_post_types'] ) ) {
+        if ( ! empty( $settings['tracked_post_types'] ) && is_array( $settings['tracked_post_types'] ) ) {
             $tracked_post_types = array_map( 'sanitize_key', $settings['tracked_post_types'] );
         }
 
         if ( empty( $tracked_post_types ) ) {
-            $tracked_post_types = (array) $this->settings->get_default_settings()['tracked_post_types'];
+            $defaults = $this->settings->get_default_settings();
+            $tracked_post_types = isset( $defaults['tracked_post_types'] ) ? (array) $defaults['tracked_post_types'] : [];
         }
+
+        $tracked_post_types = array_values( array_unique( $tracked_post_types ) );
 
         $all_registered_post_types = get_post_types( [], 'names' );
         $tracked_post_types        = array_values( array_intersect( $tracked_post_types, $all_registered_post_types ) );
 
         $tracked_post_types = apply_filters( 'mga_tracked_post_types', $tracked_post_types, $post );
-        $tracked_post_types = array_values( array_filter( (array) $tracked_post_types ) );
+
+        $tracked_post_types = array_values(
+            array_filter(
+                array_map(
+                    static function ( $post_type ) {
+                        return is_string( $post_type ) ? sanitize_key( $post_type ) : '';
+                    },
+                    (array) $tracked_post_types
+                )
+            )
+        );
 
         return $tracked_post_types;
     }

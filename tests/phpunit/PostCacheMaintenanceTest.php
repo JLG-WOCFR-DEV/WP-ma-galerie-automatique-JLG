@@ -178,7 +178,27 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
         $post = get_post( $post_id );
         $this->assertInstanceOf( WP_Post::class, $post );
 
-        $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, $post );
+        $captured_lists = [];
+
+        $capture_filter = function ( $post_types, $filtered_post ) use ( &$captured_lists, $post ) {
+            $this->assertInstanceOf( WP_Post::class, $filtered_post, 'Tracked post type resolution should receive a post instance.' );
+            $this->assertSame( $post->ID, $filtered_post->ID, 'Tracked post type resolution should target the same post instance.' );
+
+            $captured_lists[] = $post_types;
+
+            return $post_types;
+        };
+
+        add_filter( 'mga_tracked_post_types', $capture_filter, 10, 2 );
+
+        try {
+            $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, $post );
+
+            $this->go_to( get_permalink( $post_id ) );
+            $enqueue_result = $this->detection()->should_enqueue_assets( $post_id );
+        } finally {
+            remove_filter( 'mga_tracked_post_types', $capture_filter, 10 );
+        }
 
         $this->assertSame(
             '1',
@@ -186,11 +206,27 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
             'The cache refresh should track default post types when settings are missing.'
         );
 
-        $this->go_to( get_permalink( $post_id ) );
-
         $this->assertTrue(
-            $this->detection()->should_enqueue_assets( $post_id ),
+            $enqueue_result,
             'The enqueue logic should use the same default tracked post types as the cache refresh.'
+        );
+
+        $this->assertCount(
+            2,
+            $captured_lists,
+            'Cache refresh and enqueue code paths should both resolve tracked post types.'
+        );
+
+        $this->assertSame(
+            $captured_lists[0],
+            $captured_lists[1],
+            'Cache refresh and enqueue logic should share the same resolved tracked post types.'
+        );
+
+        $this->assertContains(
+            'post',
+            $captured_lists[0],
+            'The default tracked post types should include the "post" type.'
         );
     }
 
@@ -203,8 +239,13 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
             ]
         );
 
-        $filter = static function ( $post_types, $post ) {
-            $post_types[] = 'mga_book';
+        $captured_lists = [];
+
+        $filter = function ( $post_types, $post ) use ( &$captured_lists ) {
+            $this->assertInstanceOf( WP_Post::class, $post, 'Tracked post type resolution should receive the post instance.' );
+
+            $post_types[]     = 'mga_book';
+            $captured_lists[] = $post_types;
 
             return $post_types;
         };
@@ -231,17 +272,36 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
 
             $this->detection()->refresh_post_linked_images_cache_on_save( $book_id, $book_post );
 
+            $this->go_to( get_permalink( $book_id ) );
+            $enqueue_result = $this->detection()->should_enqueue_assets( $book_id );
+
+            $this->assertTrue(
+                $enqueue_result,
+                'The enqueue logic should respect the same filtered tracked post types as the cache refresh.'
+            );
+
             $this->assertSame(
                 '1',
                 get_post_meta( $book_id, '_mga_has_linked_images', true ),
                 'Filtered tracked post types should trigger cache refreshes for custom post types.'
             );
 
-            $this->go_to( get_permalink( $book_id ) );
+            $this->assertCount(
+                2,
+                $captured_lists,
+                'Cache refresh and enqueue code paths should both resolve filtered tracked post types.'
+            );
 
-            $this->assertTrue(
-                $this->detection()->should_enqueue_assets( $book_id ),
-                'The enqueue logic should respect the same filtered tracked post types as the cache refresh.'
+            $this->assertSame(
+                $captured_lists[0],
+                $captured_lists[1],
+                'Cache refresh and enqueue logic should share the filtered tracked post types.'
+            );
+
+            $this->assertContains(
+                'mga_book',
+                $captured_lists[0],
+                'The filter should append the custom post type to the tracked list.'
             );
         } finally {
             remove_filter( 'mga_tracked_post_types', $filter, 10 );
