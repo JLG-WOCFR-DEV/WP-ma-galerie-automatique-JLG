@@ -411,6 +411,118 @@ describe('thumbnail accessibility controls', () => {
     });
 });
 
+describe('thumbnail layout selection', () => {
+    const originalMatchMedia = window.matchMedia;
+    let baseSettings;
+    let instances;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = '<main></main>';
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        const factory = createSwiperMockFactory();
+        instances = factory.instances;
+        global.Swiper = function(...args) {
+            const created = factory.SwiperMock(...args);
+            if (created.slides.length === 0 && created.el) {
+                created.slides = Array.from(created.el.querySelectorAll('.swiper-slide'));
+            }
+            return created;
+        };
+
+        baseSettings = {
+            allowBodyFallback: true,
+            loop: false,
+            background_style: 'echo',
+            autoplay_start: false,
+            delay: 4,
+            share_channels: {
+                facebook: {
+                    enabled: true,
+                    template: 'https://www.facebook.com/sharer/sharer.php?u=%url%',
+                },
+                twitter: {
+                    enabled: true,
+                    template: 'https://twitter.com/intent/tweet?url=%url%&text=%text%',
+                },
+            },
+            share_copy: true,
+            share_download: true,
+        };
+    });
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        window.matchMedia = originalMatchMedia;
+    });
+
+    function openViewerWithLayout(layout) {
+        window.mga_settings = {
+            ...baseSettings,
+            thumbs_layout: layout,
+        };
+
+        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        const { __testExports: testExports } = module;
+        const viewer = testExports.getViewer();
+
+        testExports.openViewer([
+            {
+                highResUrl: 'https://example.com/high-1.jpg',
+                thumbUrl: 'https://example.com/thumb-1.jpg',
+                caption: 'Image 1',
+            },
+            {
+                highResUrl: 'https://example.com/high-2.jpg',
+                thumbUrl: 'https://example.com/thumb-2.jpg',
+                caption: 'Image 2',
+            },
+        ], 0);
+
+        return viewer;
+    }
+
+    it('applies a sidebar layout when configured', () => {
+        const viewer = openViewerWithLayout('left');
+
+        expect(viewer.classList.contains('mga-thumbs-left')).toBe(true);
+
+        const thumbsContainer = viewer.querySelector('.mga-thumbs-swiper');
+        expect(thumbsContainer).not.toBeNull();
+        expect(instances.thumbs).toBeTruthy();
+        expect(instances.thumbs.params.direction).toBe('vertical');
+        expect(instances.thumbs.params.breakpoints).toEqual(
+            expect.objectContaining({
+                0: expect.objectContaining({ direction: 'horizontal' }),
+                769: expect.objectContaining({ direction: 'vertical' }),
+            }),
+        );
+    });
+
+    it('hides the thumbnail swiper when requested', () => {
+        const viewer = openViewerWithLayout('hidden');
+
+        expect(viewer.classList.contains('mga-thumbs-hidden')).toBe(true);
+        expect(viewer.querySelector('.mga-thumbs-swiper')).toBeNull();
+        expect(instances.thumbs).toBeNull();
+    });
+});
+
 describe('download button integration', () => {
     const originalMatchMedia = window.matchMedia;
     const originalNavigatorShare = navigator.share;
