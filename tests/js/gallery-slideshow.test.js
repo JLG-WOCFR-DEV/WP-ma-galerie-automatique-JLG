@@ -277,6 +277,15 @@ describe('start_on_clicked_image behaviour', () => {
         expect(instances.main.params.initialSlide).toBe(1);
     });
 
+    it('honore la variante camelCase de la configuration', () => {
+        bootstrap({ startOnClickedImage: true });
+        const links = document.querySelectorAll('a');
+        links[1].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+        expect(instances.main).toBeTruthy();
+        expect(instances.main.params.initialSlide).toBe(1);
+    });
+
     it('revient au début lorsque l’option est désactivée', () => {
         bootstrap({ start_on_clicked_image: false });
         const links = document.querySelectorAll('a');

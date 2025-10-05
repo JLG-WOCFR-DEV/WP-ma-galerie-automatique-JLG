@@ -44,6 +44,16 @@
         : fallbackSprintf;
 
     const SVG_NS = 'http://www.w3.org/2000/svg';
+    const scheduleFrame = typeof window.requestAnimationFrame === 'function'
+        ? window.requestAnimationFrame.bind(window)
+        : (callback) => window.setTimeout(callback, 0);
+    const cancelFrame = typeof window.cancelAnimationFrame === 'function'
+        ? window.cancelAnimationFrame.bind(window)
+        : (id) => {
+            if (typeof window.clearTimeout === 'function') {
+                window.clearTimeout(id);
+            }
+        };
 
     const SHARE_ICON_LIBRARY = {
         facebook: {
@@ -451,7 +461,11 @@
         const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
         const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
         const closeOnBackdropClick = normalizeFlag(settings.close_on_backdrop, true);
-        const startOnClickedImage = normalizeFlag(settings.start_on_clicked_image, false);
+        const startOnClickedImageSetting =
+            Object.prototype.hasOwnProperty.call(settings, 'start_on_clicked_image')
+                ? settings.start_on_clicked_image
+                : settings.startOnClickedImage;
+        const startOnClickedImage = normalizeFlag(startOnClickedImageSetting, false);
         let shareCopyEnabled = normalizeFlag(settings.share_copy, true);
         let shareDownloadEnabled = normalizeFlag(settings.share_download, true);
         let shareChannels = normalizeShareChannels(settings.share_channels);
@@ -522,6 +536,7 @@
         let cleanupAutoplayPreferenceListener = null;
         let autoplayWasRunningBeforePreferenceChange = false;
         const preloadedUrls = new Set();
+        const pendingHeaderOffsetUpdates = new WeakMap();
         let resizeTimeout;
         let isResizeListenerAttached = false;
         let initialBodyOverflow = null;
@@ -3135,6 +3150,36 @@
             });
         }
 
+        function scheduleHeaderOffsetUpdate(viewer) {
+            if (!viewer || typeof pendingHeaderOffsetUpdates === 'undefined') {
+                return;
+            }
+
+            const previousFrame = pendingHeaderOffsetUpdates.get(viewer);
+
+            if (typeof previousFrame !== 'undefined') {
+                cancelFrame(previousFrame);
+            }
+
+            const frameId = scheduleFrame(() => {
+                pendingHeaderOffsetUpdates.delete(viewer);
+
+                const header = viewer.querySelector('.mga-header');
+
+                if (!header) {
+                    return;
+                }
+
+                const headerHeight = header.offsetHeight;
+
+                if (headerHeight > 0) {
+                    viewer.style.setProperty('--mga-header-offset', `${Math.ceil(headerHeight)}px`);
+                }
+            });
+
+            pendingHeaderOffsetUpdates.set(viewer, frameId);
+        }
+
         function updateInfo(viewer, images, index) {
             if (!viewer || !images[index]) {
                 return;
@@ -3164,6 +3209,8 @@
             if (liveRegion && liveRegion.textContent !== announcementText) {
                 liveRegion.textContent = announcementText;
             }
+
+            scheduleHeaderOffsetUpdate(viewer);
         }
 
         document.body.addEventListener('click', function(e) {

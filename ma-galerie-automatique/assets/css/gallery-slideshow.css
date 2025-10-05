@@ -14,6 +14,7 @@
     justify-content: center;
     align-items: center;
     overflow: hidden;
+    --mga-header-offset: 60px;
 }
 
 .mga-screen-reader-text {
@@ -41,8 +42,10 @@
     left: 0;
     width: 100%;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    column-gap: 15px;
+    row-gap: 6px;
     padding: calc(15px + env(safe-area-inset-top, 0px)) 15px 15px 15px;
     box-sizing: border-box;
     color: #fff;
@@ -50,12 +53,21 @@
     z-index: 20;
 }
 
-.mga-counter { font-size: 16px; font-variant-numeric: tabular-nums; }
+.mga-counter {
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+    flex: 1 1 auto;
+    order: 0;
+}
+
 .mga-caption-container {
     color: #fff;
     text-align: center;
     z-index: 10;
     padding: 5px 20px;
+    flex: 1 0 100%;
+    order: 2;
+    margin-top: 4px;
 }
 .mga-caption {
     margin: 0;
@@ -69,6 +81,10 @@
     display: flex;
     align-items: center;
     gap: var(--mga-toolbar-gap);
+    margin-left: auto;
+    flex: 0 1 auto;
+    order: 1;
+    justify-content: flex-end;
 }
 
 .mga-toolbar-button { position: relative; background: transparent; border: none; color: var(--mga-accent-color, #fff); cursor: pointer; padding: 10px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.2s ease, box-shadow 0.2s ease; line-height: 0; }
@@ -282,45 +298,40 @@
     .mga-header {
         height: auto;
         padding: calc(10px + env(safe-area-inset-top, 0px)) 10px 10px 10px;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        row-gap: 8px;
         column-gap: 8px;
+        row-gap: 8px;
     }
     .mga-counter {
-        flex: 1 1 150px;
+        flex: 1 1 auto;
         order: 0;
         text-align: left;
     }
     .mga-toolbar {
         order: 1;
-        flex: 1 1 100%;
+        flex: 0 1 auto;
         display: flex;
         flex-wrap: wrap;
         justify-content: flex-end;
         --mga-toolbar-gap: clamp(6px, 1.5vw, 9px);
         gap: var(--mga-toolbar-gap);
-        width: 100%;
     }
     .mga-toolbar-button { flex: 0 1 44px; }
     .mga-toolbar-button .mga-icon { width: 20px; height: 20px; }
 
     .mga-caption-container {
         width: 100%;
-        padding: 0 15px calc(8px + env(safe-area-inset-bottom, 0px)) 15px;
-        position: absolute;
-        top: 60px;
-        left: 0;
+        padding: 0 12px calc(8px + env(safe-area-inset-bottom, 0px)) 12px;
+        order: 2;
     }
     .mga-caption {
         white-space: normal;
     }
     /* Correction : on cible bien .mga-main-swiper pour l'affichage mobile en mode portrait */
     .mga-viewer.mga-has-caption .mga-main-swiper {
-        margin-top: calc(110px + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+        margin-top: calc(var(--mga-header-offset, 110px) + env(safe-area-inset-bottom, 0px));
     }
     .mga-viewer:not(.mga-has-caption) .mga-main-swiper {
-        margin-top: calc(60px + env(safe-area-inset-top, 0px));
+        margin-top: var(--mga-header-offset, 60px);
     }
     .mga-main-swiper {
         max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 130px + env(safe-area-inset-bottom, 0px)));
@@ -329,10 +340,10 @@
         max-height: calc(100vh - (130px + env(safe-area-inset-bottom, 0px)));
     }
     .mga-viewer.mga-hide-thumbs-mobile.mga-has-caption .mga-main-swiper {
-        margin-top: calc(110px + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+        margin-top: calc(var(--mga-header-offset, 110px) + env(safe-area-inset-bottom, 0px));
     }
     .mga-viewer.mga-hide-thumbs-mobile:not(.mga-has-caption) .mga-main-swiper {
-        margin-top: calc(60px + env(safe-area-inset-top, 0px));
+        margin-top: var(--mga-header-offset, 60px);
     }
     .mga-thumbs-swiper {
         height: calc(var(--mga-thumb-size-mobile, 70px) + env(safe-area-inset-bottom, 0px));
