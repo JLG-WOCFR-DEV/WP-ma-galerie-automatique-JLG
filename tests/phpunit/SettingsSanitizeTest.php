@@ -15,7 +15,14 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
 
         foreach ( $expected_subset as $key => $expected_value ) {
             $this->assertArrayHasKey( $key, $result, sprintf( 'The %s key should exist in the sanitized settings.', $key ) );
-            $this->assertSame( $expected_value, $result[ $key ], sprintf( 'The %s key did not match the expected sanitized value.', $key ) );
+
+            $actual_value = $result[ $key ];
+
+            if ( 'share_channels' === $key ) {
+                $actual_value = $this->normalize_share_channels_for_assertion( $actual_value );
+            }
+
+            $this->assertSame( $expected_value, $actual_value, sprintf( 'The %s key did not match the expected sanitized value.', $key ) );
         }
     }
 
@@ -219,6 +226,27 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     ],
                 ],
             ],
+            'share_channel_javascript_scheme_is_rejected' => [
+                [
+                    'share_channels' => [
+                        [
+                            'key'      => 'custom',
+                            'label'    => 'Lien personnalisé',
+                            'template' => 'javascript:alert(1)',
+                            'enabled'  => '1',
+                        ],
+                    ],
+                ],
+                [],
+                [
+                    'share_channels' => [
+                        'custom' => [
+                            'enabled'  => true,
+                            'template' => '',
+                        ],
+                    ],
+                ],
+            ],
             'partial_updates_preserve_existing_values' => [
                 [
                     'thumb_size_mobile' => 60,
@@ -245,6 +273,37 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 ],
             ],
         ];
+    }
+
+    private function normalize_share_channels_for_assertion( $channels ): array {
+        if ( ! is_array( $channels ) ) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ( $channels as $channel ) {
+            if ( ! is_array( $channel ) ) {
+                continue;
+            }
+
+            if ( empty( $channel['key'] ) ) {
+                continue;
+            }
+
+            $key = sanitize_key( (string) $channel['key'] );
+
+            if ( '' === $key ) {
+                continue;
+            }
+
+            $normalized[ $key ] = [
+                'template' => isset( $channel['template'] ) ? (string) $channel['template'] : '',
+                'enabled'  => ! empty( $channel['enabled'] ),
+            ];
+        }
+
+        return $normalized;
     }
 
     private function settings(): \MaGalerieAutomatique\Admin\Settings {

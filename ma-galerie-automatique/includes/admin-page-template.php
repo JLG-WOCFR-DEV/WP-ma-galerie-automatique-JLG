@@ -423,6 +423,7 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                                                     placeholder="<?php echo esc_attr__( 'https://exemple.com/?u=%url%', 'lightbox-jlg' ); ?>"
                                                 />
                                                 <p class="description"><?php echo esc_html__( 'Placez %url%, %text% ou %title% pour injecter les informations de l’image.', 'lightbox-jlg' ); ?></p>
+                                                <p class="description"><?php echo esc_html__( 'Utilisez uniquement des schémas autorisés (http, https, mailto, sms, tel, etc.). Les valeurs non autorisées seront ignorées.', 'lightbox-jlg' ); ?></p>
                                             </div>
                                             <div class="mga-share-repeater__field">
                                                 <label data-share-id-suffix="icon"><?php echo esc_html__( 'Icône', 'lightbox-jlg' ); ?></label>
@@ -489,6 +490,7 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                                             <label data-share-id-suffix="template"><?php echo esc_html__( 'Modèle d’URL', 'lightbox-jlg' ); ?></label>
                                             <input type="text" class="regular-text" value="" data-share-field="template" data-share-id-suffix="template" placeholder="<?php echo esc_attr__( 'https://exemple.com/?u=%url%', 'lightbox-jlg' ); ?>" />
                                             <p class="description"><?php echo esc_html__( 'Placez %url%, %text% ou %title% pour injecter les informations de l’image.', 'lightbox-jlg' ); ?></p>
+                                            <p class="description"><?php echo esc_html__( 'Utilisez uniquement des schémas autorisés (http, https, mailto, sms, tel, etc.). Les valeurs non autorisées seront ignorées.', 'lightbox-jlg' ); ?></p>
                                         </div>
                                         <div class="mga-share-repeater__field">
                                             <label data-share-id-suffix="icon"><?php echo esc_html__( 'Icône', 'lightbox-jlg' ); ?></label>

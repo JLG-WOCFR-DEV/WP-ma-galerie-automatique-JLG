@@ -696,15 +696,15 @@ class Settings {
             $template = '';
 
             if ( isset( $channel_candidate['template'] ) ) {
-                $template = sanitize_text_field( (string) $channel_candidate['template'] );
+                $template = $this->sanitize_share_channel_template( (string) $channel_candidate['template'] );
             }
 
             if ( '' === $template && $existing_for_key && isset( $existing_for_key['template'] ) ) {
-                $template = sanitize_text_field( (string) $existing_for_key['template'] );
+                $template = $this->sanitize_share_channel_template( (string) $existing_for_key['template'] );
             }
 
             if ( '' === $template && $defaults_for_key && isset( $defaults_for_key['template'] ) ) {
-                $template = sanitize_text_field( (string) $defaults_for_key['template'] );
+                $template = $this->sanitize_share_channel_template( (string) $defaults_for_key['template'] );
             }
 
             $enabled_default = $defaults_for_key['enabled'] ?? false;
@@ -807,6 +807,42 @@ class Settings {
 
     private function is_list( array $array ): bool {
         return array_keys( $array ) === range( 0, count( $array ) - 1 );
+    }
+
+    private function sanitize_share_channel_template( string $template ): string {
+        $sanitized = sanitize_text_field( $template );
+        $sanitized = trim( $sanitized );
+
+        if ( '' === $sanitized ) {
+            return '';
+        }
+
+        $normalized_without_placeholders = preg_replace( '/%[a-z0-9_]+%/i', '', $sanitized );
+
+        if ( null === $normalized_without_placeholders ) {
+            $normalized_without_placeholders = $sanitized;
+        }
+
+        $normalized_without_placeholders = trim( $normalized_without_placeholders );
+
+        if ( '' === $normalized_without_placeholders ) {
+            return '';
+        }
+
+        $scheme = wp_parse_url( $normalized_without_placeholders, PHP_URL_SCHEME );
+        $scheme = is_string( $scheme ) ? strtolower( $scheme ) : '';
+
+        if ( '' === $scheme ) {
+            return '';
+        }
+
+        $allowed_protocols = array_map( 'strtolower', wp_allowed_protocols() );
+
+        if ( ! in_array( $scheme, $allowed_protocols, true ) ) {
+            return '';
+        }
+
+        return $sanitized;
     }
 
     private function sanitize_share_channel_icon( string $icon, $fallback = '' ): string {
