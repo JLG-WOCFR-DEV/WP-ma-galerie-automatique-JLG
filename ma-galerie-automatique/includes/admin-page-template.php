@@ -423,6 +423,7 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                                                     placeholder="<?php echo esc_attr__( 'https://exemple.com/?u=%url%', 'lightbox-jlg' ); ?>"
                                                 />
                                                 <p class="description"><?php echo esc_html__( 'Placez %url%, %text% ou %title% pour injecter les informations de l’image.', 'lightbox-jlg' ); ?></p>
+                                                <p class="description"><?php echo esc_html__( 'Seules les URL avec un schéma autorisé (http, https, mailto, sms, tel, …) sont acceptées. Les schémas bloqués comme « javascript: » sont remis à zéro.', 'lightbox-jlg' ); ?></p>
                                             </div>
                                             <div class="mga-share-repeater__field">
                                                 <label data-share-id-suffix="icon"><?php echo esc_html__( 'Icône', 'lightbox-jlg' ); ?></label>
