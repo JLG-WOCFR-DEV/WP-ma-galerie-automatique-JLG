@@ -353,7 +353,7 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                             return $options;
                         };
                         ?>
-                        <p class="description"><?php echo esc_html__( 'Activez les réseaux à proposer dans la modale de partage et ajustez leurs URL gabarits. Utilisez %url% pour l’URL finale, %text% pour la légende et %title% pour le titre du document.', 'lightbox-jlg' ); ?></p>
+                        <p class="description"><?php echo esc_html__( 'Activez les réseaux à proposer dans la modale de partage et ajustez leurs URL gabarits. Utilisez %url% pour l’URL finale, %text% pour la légende et %title% pour le titre du document. Les schémas d’URL doivent commencer par http, https, mailto, sms… ; les valeurs interdites sont ignorées.', 'lightbox-jlg' ); ?></p>
                         <div class="mga-share-repeater" data-share-repeater>
                             <div class="mga-share-repeater__list" data-share-repeater-list>
                                 <?php foreach ( $share_channels as $index => $channel ) :

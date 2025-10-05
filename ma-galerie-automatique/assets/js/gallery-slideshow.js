@@ -343,6 +343,50 @@
         }
     }
 
+    let swiperModulesRegistered = false;
+
+    const registerSwiperModules = () => {
+        if (swiperModulesRegistered) {
+            return;
+        }
+
+        if (typeof Swiper !== 'function') {
+            return;
+        }
+
+        if (typeof Swiper.use !== 'function') {
+            swiperModulesRegistered = true;
+            return;
+        }
+
+        const moduleKeys = [
+            'Navigation',
+            'Autoplay',
+            'Thumbs',
+            'Zoom',
+            'Keyboard',
+            'A11y',
+            'EffectFade',
+            'EffectCube',
+            'EffectCoverflow',
+            'EffectFlip',
+        ];
+
+        const modules = moduleKeys.reduce((registered, key) => {
+            if (Swiper[key]) {
+                registered.push(Swiper[key]);
+            }
+
+            return registered;
+        }, []);
+
+        if (modules.length) {
+            Swiper.use(modules);
+        }
+
+        swiperModulesRegistered = true;
+    };
+
     function updateAutoplayButtonState(viewer, isRunning) {
         if (!viewer) {
             return;
@@ -1390,6 +1434,8 @@
          * instance uniquement et on trace l'information via le logger de debug.
          */
         function createSwiperInstance(container, config) {
+            registerSwiperModules();
+
             if (typeof Swiper !== 'function') {
                 const message = mga__( 'ERREUR : La dépendance Swiper est introuvable. Initialisation annulée.', 'lightbox-jlg' );
                 if (debug && typeof debug.log === 'function') {
@@ -2445,6 +2491,13 @@
             const viewer = getViewer();
             if (!viewer) return false;
 
+            const parsedStartIndex = parseInt(startIndex, 10);
+            const normalizedStartIndex = Number.isFinite(parsedStartIndex) ? parsedStartIndex : 0;
+            const sanitizedStartIndex = Math.min(
+                Math.max(normalizedStartIndex, 0),
+                Math.max(images.length - 1, 0),
+            );
+
             viewer.className = 'mga-viewer';
             viewer.classList.toggle('mga-has-caption', false);
             if (thumbsLayout === 'left') {
@@ -2559,7 +2612,7 @@
                 });
                 debug.log(mga__( 'Wrappers HTML remplis avec URLs optimisées.', 'lightbox-jlg' ));
 
-                initSwiper(viewer, images);
+                initSwiper(viewer, images, sanitizedStartIndex);
                 if (!mainSwiper) {
                     const cancelMessage = mga__( 'Visionneuse annulée : Swiper n’a pas pu être initialisé.', 'lightbox-jlg' );
                     if (debug && typeof debug.log === 'function') {
@@ -2574,14 +2627,17 @@
                 currentGalleryImages = Array.isArray(images) ? images : [];
 
                 if (typeof mainSwiper.slideToLoop === 'function') {
-                    mainSwiper.slideToLoop(startIndex, 0);
+                    mainSwiper.slideToLoop(sanitizedStartIndex, 0);
                 } else if (typeof mainSwiper.slideTo === 'function') {
-                    mainSwiper.slideTo(startIndex, 0);
+                    mainSwiper.slideTo(sanitizedStartIndex, 0);
                 }
-                if (settings.background_style === 'echo' && images[startIndex] && images[startIndex].highResUrl) {
-                    updateEchoBackground(viewer, images[startIndex].highResUrl);
+                if (thumbsSwiper && typeof thumbsSwiper.slideTo === 'function') {
+                    thumbsSwiper.slideTo(sanitizedStartIndex);
                 }
-                updateInfo(viewer, images, startIndex);
+                if (settings.background_style === 'echo' && images[sanitizedStartIndex] && images[sanitizedStartIndex].highResUrl) {
+                    updateEchoBackground(viewer, images[sanitizedStartIndex].highResUrl);
+                }
+                updateInfo(viewer, images, sanitizedStartIndex);
                 viewer.style.display = 'flex';
                 if (!lastFocusedElementBeforeViewer) {
                     lastFocusedElementBeforeViewer = document.activeElement;
@@ -2699,7 +2755,7 @@
             }
         }
 
-        function initSwiper(viewer, images) {
+        function initSwiper(viewer, images, startIndex = 0) {
             if (typeof cleanupAutoplayPreferenceListener === 'function') {
                 cleanupAutoplayPreferenceListener();
                 cleanupAutoplayPreferenceListener = null;
@@ -2764,6 +2820,19 @@
 
             const prefersReducedMotion = !!(prefersReducedMotionQuery && prefersReducedMotionQuery.matches);
 
+            if (debug && typeof debug.log === 'function') {
+                if (prefersReducedMotionQuery) {
+                    debug.log(
+                        mgaSprintf(
+                            mga__( 'Préférence de réduction des animations détectée : %s.', 'lightbox-jlg' ),
+                            prefersReducedMotion ? mga__( 'oui', 'lightbox-jlg' ) : mga__( 'non', 'lightbox-jlg' )
+                        )
+                    );
+                } else {
+                    debug.log(mga__( 'Impossible de déterminer la préférence de réduction des animations (matchMedia indisponible).', 'lightbox-jlg' ));
+                }
+            }
+
             let resolvedEffect = sanitizedEffect;
             let resolvedSpeed = sanitizedSpeed;
             let enableCssMode = false;
@@ -2782,6 +2851,20 @@
             }
 
             const shouldUseCssMode = enableCssMode && resolvedEffect === 'slide';
+
+            if (debug && typeof debug.log === 'function') {
+                debug.log(
+                    mgaSprintf(
+                        mga__( 'Effet retenu : %1$s (vitesse : %2$ims).', 'lightbox-jlg' ),
+                        resolvedEffect,
+                        resolvedSpeed
+                    )
+                );
+
+                if (shouldUseCssMode) {
+                    debug.log(mga__( 'Mode CSS activé pour limiter les animations.', 'lightbox-jlg' ));
+                }
+            }
 
             const handleAutoplayStart = () => {
                 debug.log(mga__( 'Autoplay DÉMARRÉ.', 'lightbox-jlg' ));
@@ -2809,6 +2892,7 @@
                 effect: resolvedEffect,
                 speed: resolvedSpeed,
                 cssMode: shouldUseCssMode,
+                initialSlide: Math.min(Math.max(parseInt(startIndex, 10) || 0, 0), Math.max(images.length - 1, 0)),
                 navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
                 on: {
                     init: function(swiper) {

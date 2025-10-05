@@ -693,7 +693,10 @@ class Settings {
                 $label = ucwords( str_replace( [ '-', '_' ], ' ', $sanitized_key ) );
             }
 
-            $template = '';
+            $template_candidates = [];
+            $template            = '';
+
+            $candidate_template_sanitized = '';
 
             if ( isset( $channel_candidate['template'] ) ) {
                 $template = $this->sanitize_share_channel_template( (string) $channel_candidate['template'] );
@@ -741,6 +744,53 @@ class Settings {
         }
 
         return array_values( $sanitized );
+    }
+
+    private function sanitize_share_channel_template( string $template ): string {
+        $normalized_template = sanitize_text_field( $template );
+        $normalized_template = trim( $normalized_template );
+
+        if ( '' === $normalized_template ) {
+            return '';
+        }
+
+        $placeholders_stripped = preg_replace( '/%[^%]+%/', '', $normalized_template );
+
+        if ( null === $placeholders_stripped ) {
+            $placeholders_stripped = $normalized_template;
+        }
+
+        $placeholders_stripped = trim( $placeholders_stripped );
+
+        if ( '' === $placeholders_stripped ) {
+            return '';
+        }
+
+        $allowed_protocols       = \wp_allowed_protocols();
+        $additional_protocols    = [ 'sms', 'whatsapp', 'tg', 'fb-messenger', 'viber', 'line' ];
+        $allowed_protocols       = array_unique( array_merge( $allowed_protocols, $additional_protocols ) );
+        $allowed_protocols       = \apply_filters( 'mga_allowed_share_template_protocols', $allowed_protocols );
+        $allowed_protocols       = \apply_filters( 'mga_share_channel_allowed_schemes', $allowed_protocols );
+        $allowed_protocols       = array_filter(
+            array_map(
+                static function ( $protocol ) {
+                    if ( is_string( $protocol ) && '' !== $protocol ) {
+                        return strtolower( $protocol );
+                    }
+
+                    return null;
+                },
+                (array) $allowed_protocols
+            )
+        );
+
+        $scheme = strtolower( (string) \wp_parse_url( $placeholders_stripped, PHP_URL_SCHEME ) );
+
+        if ( '' === $scheme || ! in_array( $scheme, $allowed_protocols, true ) ) {
+            return '';
+        }
+
+        return $normalized_template;
     }
 
     private function index_share_channels_by_key( array $channels ): array {
@@ -807,6 +857,57 @@ class Settings {
 
     private function is_list( array $array ): bool {
         return array_keys( $array ) === range( 0, count( $array ) - 1 );
+    }
+
+    /**
+     * @param array<int, mixed> $candidates
+     */
+    private function resolve_share_channel_template( array $candidates ): string {
+        foreach ( $candidates as $candidate ) {
+            if ( ! is_scalar( $candidate ) ) {
+                continue;
+            }
+
+            $sanitized = sanitize_text_field( (string) $candidate );
+
+            if ( '' === $sanitized ) {
+                continue;
+            }
+
+            if ( $this->is_share_channel_template_allowed( $sanitized ) ) {
+                return $sanitized;
+            }
+        }
+
+        return '';
+    }
+
+    private function is_share_channel_template_allowed( string $template ): bool {
+        if ( '' === $template ) {
+            return false;
+        }
+
+        $normalized = preg_replace( '/%[^%]*%/', '', $template );
+
+        if ( ! is_string( $normalized ) ) {
+            $normalized = $template;
+        }
+
+        $normalized = trim( $normalized );
+
+        if ( '' === $normalized ) {
+            return false;
+        }
+
+        if ( ! preg_match( '#^([a-z][a-z0-9+\-.]*):#i', $normalized, $matches ) ) {
+            return false;
+        }
+
+        $scheme = strtolower( $matches[1] );
+
+        $allowed_protocols = wp_allowed_protocols();
+
+        return in_array( $scheme, $allowed_protocols, true );
     }
 
     private function sanitize_share_channel_icon( string $icon, $fallback = '' ): string {

@@ -700,4 +700,55 @@ describe('download button integration', () => {
         const updatedShareButton = viewer.querySelector('#mga-share');
         expect(updatedShareButton).toBeNull();
     });
+
+    it('restores the share control when valid custom share templates are provided', () => {
+        expect(shareButton).not.toBeNull();
+
+        Object.defineProperty(navigator, 'share', {
+            configurable: true,
+            writable: true,
+            value: undefined,
+        });
+
+        window.dispatchEvent(new CustomEvent('mga:share-preferences-change', {
+            detail: {
+                share_channels: {},
+                share_copy: false,
+                share_download: false,
+            },
+        }));
+
+        let refreshedShareButton = viewer.querySelector('#mga-share');
+        expect(refreshedShareButton).toBeNull();
+
+        window.dispatchEvent(new CustomEvent('mga:share-preferences-change', {
+            detail: {
+                share_channels: {
+                    reseau_perso: {
+                        enabled: true,
+                        template: 'https://reseau.example/share?u=%url%',
+                        label: 'Réseau Perso',
+                        icon: 'link',
+                    },
+                },
+                share_copy: false,
+                share_download: false,
+            },
+        }));
+
+        refreshedShareButton = viewer.querySelector('#mga-share');
+        expect(refreshedShareButton).not.toBeNull();
+
+        refreshedShareButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        const shareModal = document.getElementById('mga-share-modal');
+        expect(shareModal).not.toBeNull();
+        expect(shareModal?.classList.contains('is-visible')).toBe(true);
+
+        const shareOptions = shareModal?.querySelectorAll('.mga-share-option') || [];
+        expect(shareOptions.length).toBeGreaterThan(0);
+
+        const customOption = Array.from(shareOptions).find((option) => option.getAttribute('data-share-key') === 'reseau_perso');
+        expect(customOption).toBeTruthy();
+    });
 });
