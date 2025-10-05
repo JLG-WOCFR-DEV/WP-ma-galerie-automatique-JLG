@@ -31,22 +31,8 @@ class Detection {
             return false;
         }
 
-        $settings          = $this->settings->get_sanitized_settings();
-        $tracked_post_types = [];
-
-        if ( isset( $settings['tracked_post_types'] ) && is_array( $settings['tracked_post_types'] ) ) {
-            $tracked_post_types = array_map( 'sanitize_key', $settings['tracked_post_types'] );
-        }
-
-        if ( empty( $tracked_post_types ) ) {
-            $tracked_post_types = (array) $this->settings->get_default_settings()['tracked_post_types'];
-        }
-
-        $all_registered_post_types = get_post_types( [], 'names' );
-        $tracked_post_types        = array_values( array_intersect( $tracked_post_types, $all_registered_post_types ) );
-
-        $tracked_post_types = apply_filters( 'mga_tracked_post_types', $tracked_post_types, $post );
-        $tracked_post_types = array_values( array_filter( (array) $tracked_post_types ) );
+        $settings           = $this->settings->get_sanitized_settings();
+        $tracked_post_types = $this->resolve_tracked_post_types( $post, $settings );
 
         $load_on_archives = ! empty( $settings['load_on_archives'] );
 
@@ -223,7 +209,22 @@ class Detection {
             return;
         }
 
-        $settings = $this->settings->get_sanitized_settings();
+        $settings           = $this->settings->get_sanitized_settings();
+        $tracked_post_types = $this->resolve_tracked_post_types( $post, $settings );
+
+        if ( ! empty( $tracked_post_types ) && ! in_array( $post->post_type, $tracked_post_types, true ) ) {
+            return;
+        }
+
+        $has_linked_images = $this->detect_post_linked_images( $post );
+        $this->update_post_linked_images_cache( $post_id, $has_linked_images );
+    }
+
+    private function resolve_tracked_post_types( WP_Post $post, ?array $settings = null ): array {
+        if ( null === $settings || ! is_array( $settings ) ) {
+            $settings = $this->settings->get_sanitized_settings();
+        }
+
         $tracked_post_types = [];
 
         if ( isset( $settings['tracked_post_types'] ) && is_array( $settings['tracked_post_types'] ) ) {
@@ -240,12 +241,7 @@ class Detection {
         $tracked_post_types = apply_filters( 'mga_tracked_post_types', $tracked_post_types, $post );
         $tracked_post_types = array_values( array_filter( (array) $tracked_post_types ) );
 
-        if ( ! empty( $tracked_post_types ) && ! in_array( $post->post_type, $tracked_post_types, true ) ) {
-            return;
-        }
-
-        $has_linked_images = $this->detect_post_linked_images( $post );
-        $this->update_post_linked_images_cache( $post_id, $has_linked_images );
+        return $tracked_post_types;
     }
 
     public function blocks_contain_linked_media( array $blocks, array $allowed_block_names, ?array &$visited_block_ids = null ): bool {
