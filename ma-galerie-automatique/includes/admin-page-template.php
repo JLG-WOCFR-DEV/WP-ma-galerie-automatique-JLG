@@ -248,6 +248,14 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                             </div>
 
                             <div class="mga-toggle-list__item">
+                                <label for="mga_start_on_clicked_image">
+                                    <input name="mga_settings[start_on_clicked_image]" type="checkbox" id="mga_start_on_clicked_image" value="1" <?php checked( ! empty( $settings['start_on_clicked_image'] ), 1 ); ?> />
+                                    <span><?php echo esc_html__( 'Démarrer sur l’image cliquée', 'lightbox-jlg' ); ?></span>
+                                </label>
+                                <p class="description"><?php echo esc_html__( 'Affiche directement la photo sélectionnée au lieu de revenir au début de l’article.', 'lightbox-jlg' ); ?></p>
+                            </div>
+
+                            <div class="mga-toggle-list__item">
                                 <label for="mga_allow_body_fallback">
                                     <input name="mga_settings[allowBodyFallback]" type="checkbox" id="mga_allow_body_fallback" value="1" <?php checked( ! empty( $settings['allowBodyFallback'] ), 1 ); ?> />
                                     <span><?php echo esc_html__( 'Autoriser le repli sur &lt;body&gt;', 'lightbox-jlg' ); ?></span>

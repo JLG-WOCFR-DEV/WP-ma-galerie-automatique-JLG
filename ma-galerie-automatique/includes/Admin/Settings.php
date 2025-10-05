@@ -275,6 +275,7 @@ class Settings {
             'bg_opacity'         => 0.95,
             'loop'               => true,
             'autoplay_start'     => false,
+            'start_on_clicked_image' => false,
             'background_style'   => 'echo',
             'z_index'            => 99999,
             'debug_mode'         => false,
@@ -414,6 +415,7 @@ class Settings {
         $general_toggle_keys = [
             'loop',
             'autoplay_start',
+            'start_on_clicked_image',
             'debug_mode',
             'allowBodyFallback',
             'load_on_archives',

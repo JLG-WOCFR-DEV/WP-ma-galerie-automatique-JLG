@@ -227,6 +227,7 @@ class Plugin {
             'accentColor'      => $accent_color,
             'backgroundStyle'  => isset( $settings['background_style'] ) ? (string) $settings['background_style'] : 'echo',
             'autoplay'         => ! empty( $settings['autoplay_start'] ),
+            'startOnClickedImage' => ! empty( $settings['start_on_clicked_image'] ),
             'loop'             => isset( $settings['loop'] ) ? (bool) $settings['loop'] : true,
             'delay'            => isset( $settings['delay'] ) ? (int) $settings['delay'] : 4,
             'speed'            => isset( $settings['speed'] ) ? (int) $settings['speed'] : 600,

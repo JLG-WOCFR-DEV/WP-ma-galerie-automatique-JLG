@@ -451,6 +451,7 @@
         const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
         const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
         const closeOnBackdropClick = normalizeFlag(settings.close_on_backdrop, true);
+        const startOnClickedImage = normalizeFlag(settings.start_on_clicked_image, false);
         let shareCopyEnabled = normalizeFlag(settings.share_copy, true);
         let shareDownloadEnabled = normalizeFlag(settings.share_download, true);
         let shareChannels = normalizeShareChannels(settings.share_channels);
@@ -2465,20 +2466,27 @@
                 debug.log(mgaSprintf(mga__( '%d images valides préparées pour la galerie.', 'lightbox-jlg' ), galleryData.length));
                 debug.table(galleryData);
 
-                const startIndex = galleryData.findIndex(img => img.triggerIndex === clickedTriggerIndex);
+                if (!galleryData.length) {
+                    debug.log(mga__( 'ERREUR : Aucune image valide détectée pour cette galerie.', 'lightbox-jlg' ), true);
+                    return;
+                }
 
-                if (startIndex !== -1) {
-                    const previouslyFocusedElement = document.activeElement;
-                    lastFocusedElementBeforeViewer = previouslyFocusedElement;
-                    const viewerOpened = openViewer(galleryData, startIndex);
-                    if (viewerOpened) {
-                        e.preventDefault();
-                    } else {
-                        lastFocusedElementBeforeViewer = null;
-                    }
-                } else {
+                const clickedImageIndex = galleryData.findIndex(img => img.triggerIndex === clickedTriggerIndex);
+
+                if (clickedImageIndex === -1) {
                     debug.log(mga__( "ERREUR : L'image cliquée n'a pas été trouvée dans la galerie construite.", 'lightbox-jlg' ), true);
                     debug.log(mgaSprintf(mga__( 'URL cliquée recherchée : %s', 'lightbox-jlg' ), clickedHighResUrl), true);
+                }
+
+                const startIndex = startOnClickedImage && clickedImageIndex !== -1 ? clickedImageIndex : 0;
+
+                const previouslyFocusedElement = document.activeElement;
+                lastFocusedElementBeforeViewer = previouslyFocusedElement;
+                const viewerOpened = openViewer(galleryData, startIndex);
+                if (viewerOpened) {
+                    e.preventDefault();
+                } else {
+                    lastFocusedElementBeforeViewer = null;
                 }
             }
         });
