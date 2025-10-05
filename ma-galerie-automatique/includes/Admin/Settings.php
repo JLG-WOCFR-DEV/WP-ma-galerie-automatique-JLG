@@ -693,7 +693,7 @@ class Settings {
                 $label = ucwords( str_replace( [ '-', '_' ], ' ', $sanitized_key ) );
             }
 
-            $template = '';
+            $template_candidates = [];
 
             if ( isset( $channel_candidate['template'] ) ) {
                 $template = $this->sanitize_share_channel_template( (string) $channel_candidate['template'] );
@@ -706,6 +706,8 @@ class Settings {
             if ( '' === $template && $defaults_for_key && isset( $defaults_for_key['template'] ) ) {
                 $template = $this->sanitize_share_channel_template( (string) $defaults_for_key['template'] );
             }
+
+            $template = $this->resolve_share_channel_template( $template_candidates );
 
             $enabled_default = $defaults_for_key['enabled'] ?? false;
 
@@ -807,6 +809,57 @@ class Settings {
 
     private function is_list( array $array ): bool {
         return array_keys( $array ) === range( 0, count( $array ) - 1 );
+    }
+
+    /**
+     * @param array<int, mixed> $candidates
+     */
+    private function resolve_share_channel_template( array $candidates ): string {
+        foreach ( $candidates as $candidate ) {
+            if ( ! is_scalar( $candidate ) ) {
+                continue;
+            }
+
+            $sanitized = sanitize_text_field( (string) $candidate );
+
+            if ( '' === $sanitized ) {
+                continue;
+            }
+
+            if ( $this->is_share_channel_template_allowed( $sanitized ) ) {
+                return $sanitized;
+            }
+        }
+
+        return '';
+    }
+
+    private function is_share_channel_template_allowed( string $template ): bool {
+        if ( '' === $template ) {
+            return false;
+        }
+
+        $normalized = preg_replace( '/%[^%]*%/', '', $template );
+
+        if ( ! is_string( $normalized ) ) {
+            $normalized = $template;
+        }
+
+        $normalized = trim( $normalized );
+
+        if ( '' === $normalized ) {
+            return false;
+        }
+
+        if ( ! preg_match( '#^([a-z][a-z0-9+\-.]*):#i', $normalized, $matches ) ) {
+            return false;
+        }
+
+        $scheme = strtolower( $matches[1] );
+
+        $allowed_protocols = wp_allowed_protocols();
+
+        return in_array( $scheme, $allowed_protocols, true );
     }
 
     private function sanitize_share_channel_icon( string $icon, $fallback = '' ): string {

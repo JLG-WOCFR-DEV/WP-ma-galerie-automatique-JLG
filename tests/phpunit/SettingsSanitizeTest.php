@@ -15,6 +15,37 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
 
         foreach ( $expected_subset as $key => $expected_value ) {
             $this->assertArrayHasKey( $key, $result, sprintf( 'The %s key should exist in the sanitized settings.', $key ) );
+            if ( 'share_channels' === $key ) {
+                $actual_channels = $this->map_share_channels_by_key( $result[ $key ] );
+
+                foreach ( $expected_value as $channel_key => $channel_expectations ) {
+                    $this->assertArrayHasKey(
+                        $channel_key,
+                        $actual_channels,
+                        sprintf( 'The %s share channel should be present after sanitization.', $channel_key )
+                    );
+
+                    foreach ( $channel_expectations as $field_key => $field_value ) {
+                        $this->assertArrayHasKey(
+                            $field_key,
+                            $actual_channels[ $channel_key ],
+                            sprintf( 'The %s field should exist for the %s share channel.', $field_key, $channel_key )
+                        );
+                        $this->assertSame(
+                            $field_value,
+                            $actual_channels[ $channel_key ][ $field_key ],
+                            sprintf(
+                                'The %s field for the %s share channel did not match the expected value.',
+                                $field_key,
+                                $channel_key
+                            )
+                        );
+                    }
+                }
+
+                continue;
+            }
+
             $this->assertSame( $expected_value, $result[ $key ], sprintf( 'The %s key did not match the expected sanitized value.', $key ) );
         }
     }
@@ -212,15 +243,15 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 ],
                 [
                     'share_channels' => [
-                        'facebook' => [
+                        'facebook'  => [
                             'enabled'  => false,
                             'template' => 'https://example.com/?u=%url%',
                         ],
-                        'twitter' => [
+                        'twitter'   => [
                             'enabled'  => true,
                             'template' => $default_share_channels_by_key['twitter']['template'],
                         ],
-                        'linkedin' => [
+                        'linkedin'  => [
                             'enabled'  => false,
                             'template' => 'https://linked.in/share?u=%url%',
                         ],
@@ -274,6 +305,32 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 ],
             ],
         ];
+    }
+
+    private function map_share_channels_by_key( array $channels ): array {
+        $mapped = [];
+
+        foreach ( $channels as $index => $channel ) {
+            if ( ! is_array( $channel ) ) {
+                continue;
+            }
+
+            $channel_key = '';
+
+            if ( ! empty( $channel['key'] ) && is_scalar( $channel['key'] ) ) {
+                $channel_key = (string) $channel['key'];
+            } elseif ( is_string( $index ) && '' !== $index ) {
+                $channel_key = $index;
+            }
+
+            if ( '' === $channel_key ) {
+                continue;
+            }
+
+            $mapped[ $channel_key ] = $channel;
+        }
+
+        return $mapped;
     }
 
     private function settings(): \MaGalerieAutomatique\Admin\Settings {
