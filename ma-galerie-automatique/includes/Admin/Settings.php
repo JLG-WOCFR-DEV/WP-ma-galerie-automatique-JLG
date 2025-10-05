@@ -696,15 +696,18 @@ class Settings {
             $template = '';
 
             if ( isset( $channel_candidate['template'] ) ) {
-                $template = sanitize_text_field( (string) $channel_candidate['template'] );
+                $candidate_template = sanitize_text_field( (string) $channel_candidate['template'] );
+                $template           = $this->sanitize_share_channel_template( $candidate_template );
             }
 
             if ( '' === $template && $existing_for_key && isset( $existing_for_key['template'] ) ) {
-                $template = sanitize_text_field( (string) $existing_for_key['template'] );
+                $existing_template = sanitize_text_field( (string) $existing_for_key['template'] );
+                $template          = $this->sanitize_share_channel_template( $existing_template );
             }
 
             if ( '' === $template && $defaults_for_key && isset( $defaults_for_key['template'] ) ) {
-                $template = sanitize_text_field( (string) $defaults_for_key['template'] );
+                $default_template = sanitize_text_field( (string) $defaults_for_key['template'] );
+                $template         = $this->sanitize_share_channel_template( $default_template );
             }
 
             $enabled_default = $defaults_for_key['enabled'] ?? false;
@@ -741,6 +744,39 @@ class Settings {
         }
 
         return array_values( $sanitized );
+    }
+
+    private function sanitize_share_channel_template( string $template ): string {
+        $normalized_template = trim( $template );
+
+        if ( '' === $normalized_template ) {
+            return '';
+        }
+
+        $placeholders_stripped = preg_replace( '/%[^%]+%/', '', $normalized_template );
+
+        if ( null === $placeholders_stripped ) {
+            $placeholders_stripped = $normalized_template;
+        }
+
+        $placeholders_stripped = trim( $placeholders_stripped );
+
+        if ( '' === $placeholders_stripped ) {
+            return '';
+        }
+
+        $allowed_protocols = \wp_allowed_protocols();
+        $additional_protocols = [ 'sms', 'whatsapp', 'tg', 'fb-messenger', 'viber', 'line' ];
+        $allowed_protocols = array_unique( array_merge( $allowed_protocols, $additional_protocols ) );
+        $allowed_protocols = \apply_filters( 'mga_allowed_share_template_protocols', $allowed_protocols );
+
+        $scheme = strtolower( (string) \wp_parse_url( $placeholders_stripped, PHP_URL_SCHEME ) );
+
+        if ( '' === $scheme || ! in_array( $scheme, $allowed_protocols, true ) ) {
+            return '';
+        }
+
+        return $normalized_template;
     }
 
     private function index_share_channels_by_key( array $channels ): array {
