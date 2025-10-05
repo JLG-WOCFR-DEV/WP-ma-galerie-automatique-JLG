@@ -310,7 +310,9 @@ class Settings {
          * Partial updates (e.g. when a settings form only submits a subset of fields)
          * must respect the previously saved values instead of reverting to defaults
          * for every missing key. We therefore keep a sanitized version of the
-         * existing settings as a fallback before we reach for the defaults.
+         * existing settings as a fallback before we reach for the defaults and
+         * let the resolver closures reuse these stored values whenever the
+         * incoming payload omits a field.
          */
 
         if ( null === $existing_settings ) {
@@ -321,67 +323,79 @@ class Settings {
             $existing_settings = [];
         }
 
-        if ( isset( $input['delay'] ) ) {
-            $delay           = (int) $input['delay'];
-            $bounded_delay   = max( 1, min( 30, $delay ) );
-            $output['delay'] = $bounded_delay;
-        } elseif ( isset( $existing_settings['delay'] ) ) {
-            $delay           = (int) $existing_settings['delay'];
-            $output['delay'] = max( 1, min( 30, $delay ) );
-        } else {
-            $output['delay'] = $defaults['delay'];
-        }
+        $resolve_bounded_int = function ( string $key, int $min, int $max ) use ( $input, $existing_settings, $defaults ): int {
+            $candidate = $defaults[ $key ] ?? $min;
 
-        if ( isset( $input['speed'] ) ) {
-            $speed           = (int) $input['speed'];
-            $bounded_speed   = max( 100, min( 5000, $speed ) );
-            $output['speed'] = $bounded_speed;
-        } elseif ( isset( $existing_settings['speed'] ) ) {
-            $speed           = (int) $existing_settings['speed'];
-            $output['speed'] = max( 100, min( 5000, $speed ) );
-        } else {
-            $output['speed'] = $defaults['speed'];
-        }
+            if ( isset( $input[ $key ] ) ) {
+                $candidate = $input[ $key ];
+            } elseif ( isset( $existing_settings[ $key ] ) ) {
+                $candidate = $existing_settings[ $key ];
+            }
 
-        if ( isset( $input['thumb_size'] ) ) {
-            $thumb_size           = (int) $input['thumb_size'];
-            $bounded_thumb_size   = max( 50, min( 150, $thumb_size ) );
-            $output['thumb_size'] = $bounded_thumb_size;
-        } elseif ( isset( $existing_settings['thumb_size'] ) ) {
-            $thumb_size           = (int) $existing_settings['thumb_size'];
-            $output['thumb_size'] = max( 50, min( 150, $thumb_size ) );
-        } else {
-            $output['thumb_size'] = $defaults['thumb_size'];
-        }
+            $candidate = (int) $candidate;
 
-        if ( isset( $input['thumb_size_mobile'] ) ) {
-            $thumb_size_mobile           = (int) $input['thumb_size_mobile'];
-            $bounded_thumb_size_mobile   = max( 40, min( 100, $thumb_size_mobile ) );
-            $output['thumb_size_mobile'] = $bounded_thumb_size_mobile;
-        } elseif ( isset( $existing_settings['thumb_size_mobile'] ) ) {
-            $thumb_size_mobile           = (int) $existing_settings['thumb_size_mobile'];
-            $output['thumb_size_mobile'] = max( 40, min( 100, $thumb_size_mobile ) );
-        } else {
-            $output['thumb_size_mobile'] = $defaults['thumb_size_mobile'];
-        }
+            return max( $min, min( $max, $candidate ) );
+        };
 
-        if ( isset( $input['accent_color'] ) ) {
-            $sanitized_accent       = sanitize_hex_color( $input['accent_color'] );
-            $output['accent_color'] = $sanitized_accent ? $sanitized_accent : $defaults['accent_color'];
-        } elseif ( isset( $existing_settings['accent_color'] ) ) {
-            $sanitized_accent       = sanitize_hex_color( $existing_settings['accent_color'] );
-            $output['accent_color'] = $sanitized_accent ? $sanitized_accent : $defaults['accent_color'];
-        } else {
-            $output['accent_color'] = $defaults['accent_color'];
-        }
+        $resolve_min_int = function ( string $key, int $min ) use ( $input, $existing_settings, $defaults ): int {
+            $candidate = $defaults[ $key ] ?? $min;
 
-        if ( isset( $input['bg_opacity'] ) ) {
-            $output['bg_opacity'] = max( min( (float) $input['bg_opacity'], 1 ), 0 );
-        } elseif ( isset( $existing_settings['bg_opacity'] ) ) {
-            $output['bg_opacity'] = max( min( (float) $existing_settings['bg_opacity'], 1 ), 0 );
-        } else {
-            $output['bg_opacity'] = $defaults['bg_opacity'];
-        }
+            if ( isset( $input[ $key ] ) ) {
+                $candidate = $input[ $key ];
+            } elseif ( isset( $existing_settings[ $key ] ) ) {
+                $candidate = $existing_settings[ $key ];
+            }
+
+            return max( $min, (int) $candidate );
+        };
+
+        $resolve_bounded_float = function ( string $key, float $min, float $max ) use ( $input, $existing_settings, $defaults ): float {
+            $candidate = $defaults[ $key ] ?? $min;
+
+            if ( isset( $input[ $key ] ) ) {
+                $candidate = $input[ $key ];
+            } elseif ( isset( $existing_settings[ $key ] ) ) {
+                $candidate = $existing_settings[ $key ];
+            }
+
+            $candidate = (float) $candidate;
+
+            if ( $candidate < $min ) {
+                return $min;
+            }
+
+            if ( $candidate > $max ) {
+                return $max;
+            }
+
+            return $candidate;
+        };
+
+        $resolve_hex_color = function ( string $key ) use ( $input, $existing_settings, $defaults ): string {
+            $candidate = null;
+
+            if ( array_key_exists( $key, $input ) ) {
+                $candidate = sanitize_hex_color( $input[ $key ] );
+            } elseif ( isset( $existing_settings[ $key ] ) ) {
+                $candidate = sanitize_hex_color( $existing_settings[ $key ] );
+            }
+
+            if ( $candidate ) {
+                return $candidate;
+            }
+
+            $default_color = $defaults[ $key ] ?? '';
+            $sanitized_default = $default_color ? sanitize_hex_color( $default_color ) : null;
+
+            return $sanitized_default ? $sanitized_default : '#ffffff';
+        };
+
+        $output['delay']             = $resolve_bounded_int( 'delay', 1, 30 );
+        $output['speed']             = $resolve_bounded_int( 'speed', 100, 5000 );
+        $output['thumb_size']        = $resolve_bounded_int( 'thumb_size', 50, 150 );
+        $output['thumb_size_mobile'] = $resolve_bounded_int( 'thumb_size_mobile', 40, 100 );
+        $output['accent_color']      = $resolve_hex_color( 'accent_color' );
+        $output['bg_opacity']        = $resolve_bounded_float( 'bg_opacity', 0, 1 );
 
         $resolve_checkbox_value = function ( string $key ) use ( $input, $existing_settings, $defaults ) {
             if ( is_array( $input ) && array_key_exists( $key, $input ) ) {
@@ -479,15 +493,7 @@ class Settings {
             $output['easing'] = $defaults['easing'];
         }
 
-        if ( isset( $input['z_index'] ) ) {
-            $raw_z_index       = (int) $input['z_index'];
-            $output['z_index'] = max( 0, $raw_z_index );
-        } elseif ( isset( $existing_settings['z_index'] ) ) {
-            $raw_z_index       = (int) $existing_settings['z_index'];
-            $output['z_index'] = max( 0, $raw_z_index );
-        } else {
-            $output['z_index'] = $defaults['z_index'];
-        }
+        $output['z_index'] = $resolve_min_int( 'z_index', 0 );
 
         $sanitize_selectors = static function ( $selectors ) {
             $sanitized = [];

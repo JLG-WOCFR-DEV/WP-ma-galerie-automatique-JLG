@@ -202,6 +202,7 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'thumb_size_mobile' => 60,
                 ],
                 [
+                    'speed'             => 750,
                     'delay'             => 8,
                     'thumb_size'        => 120,
                     'thumb_size_mobile' => 55,
@@ -212,6 +213,7 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 ],
                 [
                     'delay'            => 8,
+                    'speed'            => 750,
                     'thumb_size'       => 120,
                     'thumb_size_mobile'=> 60,
                     'accent_color'     => '#123456',
