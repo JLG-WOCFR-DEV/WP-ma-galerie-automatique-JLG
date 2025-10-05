@@ -188,6 +188,105 @@ function createSwiperMockFactory() {
     return { SwiperMock, instances };
 }
 
+describe('start_on_clicked_image behaviour', () => {
+    const originalMatchMedia = window.matchMedia;
+    let instances;
+
+    function bootstrap(overrides = {}) {
+        jest.resetModules();
+
+        document.body.innerHTML = `
+            <main>
+                <a href="https://example.com/high-1.jpg" data-mga-gallery="set">
+                    <img src="https://example.com/thumb-1.jpg" alt="Première" />
+                </a>
+                <a href="https://example.com/high-2.jpg" data-mga-gallery="set">
+                    <img src="https://example.com/thumb-2.jpg" alt="Deuxième" />
+                </a>
+            </main>
+        `;
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        const factory = createSwiperMockFactory();
+        instances = factory.instances;
+        global.Swiper = function(...args) {
+            const created = factory.SwiperMock(...args);
+            if (created.slides.length === 0 && created.el) {
+                created.slides = Array.from(created.el.querySelectorAll('.swiper-slide'));
+            }
+            return created;
+        };
+
+        window.mga_settings = Object.assign({
+            allowBodyFallback: true,
+            loop: false,
+            background_style: 'echo',
+            autoplay_start: false,
+            delay: 4,
+            thumbs_layout: 'bottom',
+            groupAttribute: 'data-mga-gallery',
+            share_channels: {
+                facebook: {
+                    enabled: true,
+                    template: 'https://www.facebook.com/sharer/sharer.php?u=%url%',
+                },
+                twitter: {
+                    enabled: true,
+                    template: 'https://twitter.com/intent/tweet?url=%url%&text=%text%',
+                },
+            },
+            share_copy: true,
+            share_download: true,
+        }, overrides);
+
+        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        return module.__testExports;
+    }
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        document.body.innerHTML = '';
+
+        if (typeof originalMatchMedia === 'undefined') {
+            delete window.matchMedia;
+        } else {
+            window.matchMedia = originalMatchMedia;
+        }
+    });
+
+    it('ouvre la visionneuse sur l’image cliquée lorsque l’option est active', () => {
+        bootstrap({ start_on_clicked_image: true });
+        const links = document.querySelectorAll('a');
+        links[1].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+        expect(instances.main).toBeTruthy();
+        expect(instances.main.params.initialSlide).toBe(1);
+    });
+
+    it('revient au début lorsque l’option est désactivée', () => {
+        bootstrap({ start_on_clicked_image: false });
+        const links = document.querySelectorAll('a');
+        links[1].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+        expect(instances.main).toBeTruthy();
+        expect(instances.main.params.initialSlide).toBe(0);
+    });
+});
+
 describe('autoplay accessibility handlers', () => {
     let testExports;
     let playPauseButton;
