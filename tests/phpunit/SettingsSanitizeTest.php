@@ -98,6 +98,7 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'show_share'      => '1',
                     'share_copy'      => '0',
                     'share_download'  => '',
+                    'thumbs_layout'   => 'left',
                 ],
                 [],
                 [
@@ -108,6 +109,27 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'show_thumbs_mobile' => $defaults['show_thumbs_mobile'],
                     'share_copy'      => false,
                     'share_download'  => false,
+                    'thumbs_layout'   => 'left',
+                ],
+            ],
+            'thumbs_layout_existing_value_is_preserved' => [
+                [],
+                [
+                    'thumbs_layout' => 'hidden',
+                ],
+                [
+                    'thumbs_layout' => 'hidden',
+                ],
+            ],
+            'thumbs_layout_invalid_values_fall_back_to_default' => [
+                [
+                    'thumbs_layout' => 'diagonal',
+                ],
+                [
+                    'thumbs_layout' => 'left',
+                ],
+                [
+                    'thumbs_layout' => $defaults['thumbs_layout'],
                 ],
             ],
             'show_thumbs_mobile_toggle' => [
