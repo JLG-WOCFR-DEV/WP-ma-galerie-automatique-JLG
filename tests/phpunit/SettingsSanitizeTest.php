@@ -82,9 +82,21 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
      * @return array[]
      */
     public function sanitize_settings_provider() {
-        $defaults          = $this->settings()->get_default_settings();
-        $all_post_types    = get_post_types( [], 'names' );
-        $default_tracked   = array_values( array_intersect( (array) $defaults['tracked_post_types'], $all_post_types ) );
+        $defaults        = $this->settings()->get_default_settings();
+        $all_post_types  = get_post_types( [], 'names' );
+        $default_tracked = array_values( array_intersect( (array) $defaults['tracked_post_types'], $all_post_types ) );
+
+        $default_share_channels_by_key = [];
+
+        if ( isset( $defaults['share_channels'] ) && is_array( $defaults['share_channels'] ) ) {
+            foreach ( $defaults['share_channels'] as $channel ) {
+                if ( ! is_array( $channel ) || empty( $channel['key'] ) ) {
+                    continue;
+                }
+
+                $default_share_channels_by_key[ $channel['key'] ] = $channel;
+            }
+        }
 
         $default_share_channels = [];
 
@@ -267,15 +279,15 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 ],
                 [
                     'share_channels' => [
-                        'facebook' => [
+                        'facebook'  => [
                             'enabled'  => false,
                             'template' => 'https://example.com/?u=%url%',
                         ],
-                        'twitter' => [
+                        'twitter'   => [
                             'enabled'  => true,
                             'template' => $default_share_channels['twitter']['template'],
                         ],
-                        'linkedin' => [
+                        'linkedin'  => [
                             'enabled'  => false,
                             'template' => 'https://linked.in/share?u=%url%',
                         ],
@@ -331,6 +343,32 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 ],
             ],
         ];
+    }
+
+    private function map_share_channels_by_key( array $channels ): array {
+        $mapped = [];
+
+        foreach ( $channels as $index => $channel ) {
+            if ( ! is_array( $channel ) ) {
+                continue;
+            }
+
+            $channel_key = '';
+
+            if ( ! empty( $channel['key'] ) && is_scalar( $channel['key'] ) ) {
+                $channel_key = (string) $channel['key'];
+            } elseif ( is_string( $index ) && '' !== $index ) {
+                $channel_key = $index;
+            }
+
+            if ( '' === $channel_key ) {
+                continue;
+            }
+
+            $mapped[ $channel_key ] = $channel;
+        }
+
+        return $mapped;
     }
 
     private function settings(): \MaGalerieAutomatique\Admin\Settings {

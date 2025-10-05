@@ -693,7 +693,7 @@ class Settings {
                 $label = ucwords( str_replace( [ '-', '_' ], ' ', $sanitized_key ) );
             }
 
-            $template = '';
+            $template_candidates = [];
 
             if ( isset( $channel_candidate['template'] ) ) {
                 $candidate_template = sanitize_text_field( (string) $channel_candidate['template'] );
@@ -709,6 +709,8 @@ class Settings {
                 $default_template = sanitize_text_field( (string) $defaults_for_key['template'] );
                 $template         = $this->sanitize_share_channel_template( $default_template );
             }
+
+            $template = $this->resolve_share_channel_template( $template_candidates );
 
             $enabled_default = $defaults_for_key['enabled'] ?? false;
 
@@ -845,6 +847,57 @@ class Settings {
         return array_keys( $array ) === range( 0, count( $array ) - 1 );
     }
 
+    /**
+     * @param array<int, mixed> $candidates
+     */
+    private function resolve_share_channel_template( array $candidates ): string {
+        foreach ( $candidates as $candidate ) {
+            if ( ! is_scalar( $candidate ) ) {
+                continue;
+            }
+
+            $sanitized = sanitize_text_field( (string) $candidate );
+
+            if ( '' === $sanitized ) {
+                continue;
+            }
+
+            if ( $this->is_share_channel_template_allowed( $sanitized ) ) {
+                return $sanitized;
+            }
+        }
+
+        return '';
+    }
+
+    private function is_share_channel_template_allowed( string $template ): bool {
+        if ( '' === $template ) {
+            return false;
+        }
+
+        $normalized = preg_replace( '/%[^%]*%/', '', $template );
+
+        if ( ! is_string( $normalized ) ) {
+            $normalized = $template;
+        }
+
+        $normalized = trim( $normalized );
+
+        if ( '' === $normalized ) {
+            return false;
+        }
+
+        if ( ! preg_match( '#^([a-z][a-z0-9+\-.]*):#i', $normalized, $matches ) ) {
+            return false;
+        }
+
+        $scheme = strtolower( $matches[1] );
+
+        $allowed_protocols = wp_allowed_protocols();
+
+        return in_array( $scheme, $allowed_protocols, true );
+    }
+
     private function sanitize_share_channel_icon( string $icon, $fallback = '' ): string {
         $normalized = strtolower( trim( $icon ) );
         $normalized = preg_replace( '/[^a-z0-9_-]/', '', $normalized );
@@ -863,5 +916,60 @@ class Settings {
         }
 
         return 'generic';
+    }
+
+    private function sanitize_share_channel_template( string $template ): string {
+        $sanitized = sanitize_text_field( $template );
+        $sanitized = trim( $sanitized );
+
+        if ( '' === $sanitized ) {
+            return '';
+        }
+
+        $placeholders_removed = preg_replace( '/%[a-z0-9_-]+%/i', '', $sanitized );
+
+        if ( null === $placeholders_removed ) {
+            $placeholders_removed = $sanitized;
+        }
+
+        $placeholders_removed = trim( $placeholders_removed );
+
+        if ( '' === $placeholders_removed ) {
+            return '';
+        }
+
+        $scheme = '';
+
+        if ( preg_match( '#^([a-z][a-z0-9+\-.]*):#i', $placeholders_removed, $matches ) ) {
+            $scheme = strtolower( $matches[1] );
+        }
+
+        if ( '' === $scheme ) {
+            return '';
+        }
+
+        $allowed_schemes = \apply_filters(
+            'mga_share_channel_allowed_schemes',
+            [ 'http', 'https', 'mailto', 'tel', 'sms' ]
+        );
+
+        $allowed_schemes = array_filter(
+            array_map(
+                static function ( $value ) {
+                    if ( is_string( $value ) && '' !== $value ) {
+                        return strtolower( $value );
+                    }
+
+                    return null;
+                },
+                (array) $allowed_schemes
+            )
+        );
+
+        if ( in_array( $scheme, $allowed_schemes, true ) ) {
+            return $sanitized;
+        }
+
+        return '';
     }
 }
