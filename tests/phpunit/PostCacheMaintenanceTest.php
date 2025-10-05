@@ -166,6 +166,89 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
         );
     }
 
+    public function test_default_tracked_post_types_are_shared_between_cache_and_enqueue() {
+        delete_option( 'mga_settings' );
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+            ]
+        );
+
+        $post = get_post( $post_id );
+        $this->assertInstanceOf( WP_Post::class, $post );
+
+        $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, $post );
+
+        $this->assertSame(
+            '1',
+            get_post_meta( $post_id, '_mga_has_linked_images', true ),
+            'The cache refresh should track default post types when settings are missing.'
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $this->assertTrue(
+            $this->detection()->should_enqueue_assets( $post_id ),
+            'The enqueue logic should use the same default tracked post types as the cache refresh.'
+        );
+    }
+
+    public function test_filtered_tracked_post_types_are_shared_between_cache_and_enqueue() {
+        register_post_type(
+            'mga_book',
+            [
+                'public' => true,
+                'label'  => 'Book',
+            ]
+        );
+
+        $filter = static function ( $post_types, $post ) {
+            $post_types[] = 'mga_book';
+
+            return $post_types;
+        };
+
+        add_filter( 'mga_tracked_post_types', $filter, 10, 2 );
+
+        try {
+            update_option(
+                'mga_settings',
+                [
+                    'tracked_post_types' => [ 'post' ],
+                ]
+            );
+
+            $book_id = self::factory()->post->create(
+                [
+                    'post_type'    => 'mga_book',
+                    'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+                ]
+            );
+
+            $book_post = get_post( $book_id );
+            $this->assertInstanceOf( WP_Post::class, $book_post );
+
+            $this->detection()->refresh_post_linked_images_cache_on_save( $book_id, $book_post );
+
+            $this->assertSame(
+                '1',
+                get_post_meta( $book_id, '_mga_has_linked_images', true ),
+                'Filtered tracked post types should trigger cache refreshes for custom post types.'
+            );
+
+            $this->go_to( get_permalink( $book_id ) );
+
+            $this->assertTrue(
+                $this->detection()->should_enqueue_assets( $book_id ),
+                'The enqueue logic should respect the same filtered tracked post types as the cache refresh.'
+            );
+        } finally {
+            remove_filter( 'mga_tracked_post_types', $filter, 10 );
+            unregister_post_type( 'mga_book' );
+        }
+    }
+
     /**
      * Invalid settings should fall back to defaults without emitting warnings.
      */
