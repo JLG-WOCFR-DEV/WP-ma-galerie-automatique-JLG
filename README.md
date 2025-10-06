@@ -85,6 +85,11 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 - **Gestion des traductions optimisée** : le fallback `.mo` encodé en base64 déclenche des lectures/écritures disque à chaque chargement et n’intègre pas les hooks `switch_locale`. Un service d’internationalisation dédié, couplé à l’API `WP_Filesystem`, alignerait le fonctionnement sur les pratiques des solutions professionnelles (WPML, Polylang).【F:ma-galerie-automatique/includes/Plugin.php†L66-L119】
 - **Monétisation et différenciation** : proposer une feuille de route Freemium (packs de modèles de lightbox, intégrations WooCommerce ou Elementor) clarifierait le positionnement face aux références commerciales et offrirait un cadre d’évolution durable.
 
+### Améliorations complémentaires proposées
+- **Images responsives optimisées** : exploiter `srcset`/`sizes` pour choisir automatiquement la bonne résolution dans la lightbox et en arrière-plan limiterait la consommation de bande passante sur mobile tout en préservant la netteté sur les écrans haute densité.
+- **Statistiques d’usage intégrées** : exposer des hooks et un tableau de bord basique (clics, partages, lecture automatique) aiderait les administrateurs à identifier les contenus qui performent et à ajuster leurs réglages de diffusion.
+- **Mode accessibilité renforcé** : proposer un preset de réglages « haute accessibilité » (contrastes élevés, animations réduites, focus visuels persistants) faciliterait la mise en conformité immédiate pour les sites soumis au RGAA/WCAG.
+
 ### Feuille de route suggérée
 1. **Phase performance** : implémenter le chargement conditionnel des assets et un cache de détection basé sur les IDs de blocs pour se rapprocher des temps de réponse des suites pro.
 2. **Phase expérience éditeur** : enrichir le bloc Gutenberg avec prévisualisation temps réel, contrôles de colonnes et presets partage/toolbar directement importables.
