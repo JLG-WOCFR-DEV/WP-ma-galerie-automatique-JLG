@@ -23,6 +23,10 @@ class Detection {
 
         $force_enqueue = apply_filters( 'mga_force_enqueue', false, $post );
 
+        if ( $this->is_excluded_request_context() && ! $force_enqueue ) {
+            return false;
+        }
+
         if ( ! $post instanceof WP_Post ) {
             return (bool) $force_enqueue;
         }
@@ -71,6 +75,26 @@ class Detection {
         $this->request_detection_cache[ $post->ID ] = $has_linked_images;
 
         return $has_linked_images;
+    }
+
+    private function is_excluded_request_context(): bool {
+        if ( function_exists( 'wp_is_serving_rest_request' ) && wp_is_serving_rest_request() ) {
+            return true;
+        }
+
+        if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+            return true;
+        }
+
+        if ( function_exists( 'is_feed' ) && is_feed() ) {
+            return true;
+        }
+
+        if ( function_exists( 'is_embed' ) && is_embed() ) {
+            return true;
+        }
+
+        return false;
     }
 
     public function get_cached_post_linked_images( WP_Post $post ): ?bool {

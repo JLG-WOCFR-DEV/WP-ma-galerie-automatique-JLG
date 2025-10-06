@@ -7,6 +7,12 @@ class DetectionSettingsPurgeTest extends WP_UnitTestCase {
         parent::setUp();
 
         update_option( 'mga_settings', [] );
+
+        $plugin = mga_plugin();
+
+        if ( $plugin instanceof \MaGalerieAutomatique\Plugin ) {
+            $plugin->settings()->invalidate_settings_cache();
+        }
     }
 
     public function test_detection_setting_change_purges_cache() {
