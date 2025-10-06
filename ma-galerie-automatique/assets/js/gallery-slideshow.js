@@ -2730,19 +2730,51 @@
 
                 currentGalleryImages = Array.isArray(images) ? images : [];
 
-                if (typeof mainSwiper.slideToLoop === 'function') {
-                    mainSwiper.slideToLoop(sanitizedStartIndex, 0);
-                } else if (typeof mainSwiper.slideTo === 'function') {
-                    mainSwiper.slideTo(sanitizedStartIndex, 0);
+                const finalizeInitialState = () => {
+                    if (!mainSwiper || mainSwiper.destroyed) {
+                        return;
+                    }
+
+                    if (typeof mainSwiper.slideToLoop === 'function') {
+                        mainSwiper.slideToLoop(sanitizedStartIndex, 0);
+                    } else if (typeof mainSwiper.slideTo === 'function') {
+                        mainSwiper.slideTo(sanitizedStartIndex, 0);
+                    }
+
+                    if (thumbsSwiper && typeof thumbsSwiper.slideTo === 'function') {
+                        thumbsSwiper.slideTo(sanitizedStartIndex);
+                    }
+
+                    if (
+                        settings.background_style === 'echo' &&
+                        images[sanitizedStartIndex] &&
+                        images[sanitizedStartIndex].highResUrl
+                    ) {
+                        updateEchoBackground(viewer, images[sanitizedStartIndex].highResUrl);
+                    }
+
+                    updateInfo(viewer, images, sanitizedStartIndex);
+                };
+
+                const requiresVisibleContainerForInitialSlide = Boolean(
+                    mainSwiper &&
+                    mainSwiper.params &&
+                    mainSwiper.params.cssMode
+                );
+
+                if (requiresVisibleContainerForInitialSlide) {
+                    viewer.style.display = 'flex';
+                    const schedule = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
+                        ? window.requestAnimationFrame.bind(window)
+                        : (callback) => setTimeout(callback, 0);
+
+                    schedule(() => {
+                        finalizeInitialState();
+                    });
+                } else {
+                    finalizeInitialState();
+                    viewer.style.display = 'flex';
                 }
-                if (thumbsSwiper && typeof thumbsSwiper.slideTo === 'function') {
-                    thumbsSwiper.slideTo(sanitizedStartIndex);
-                }
-                if (settings.background_style === 'echo' && images[sanitizedStartIndex] && images[sanitizedStartIndex].highResUrl) {
-                    updateEchoBackground(viewer, images[sanitizedStartIndex].highResUrl);
-                }
-                updateInfo(viewer, images, sanitizedStartIndex);
-                viewer.style.display = 'flex';
                 if (!lastFocusedElementBeforeViewer) {
                     lastFocusedElementBeforeViewer = document.activeElement;
                 }

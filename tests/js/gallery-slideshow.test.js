@@ -192,7 +192,7 @@ describe('start_on_clicked_image behaviour', () => {
     const originalMatchMedia = window.matchMedia;
     let instances;
 
-    function bootstrap(overrides = {}) {
+    function bootstrap(overrides = {}, options = {}) {
         jest.resetModules();
 
         document.body.innerHTML = `
@@ -211,8 +211,10 @@ describe('start_on_clicked_image behaviour', () => {
             configurable: true,
         });
 
+        const matchMediaMatches = Boolean(options.prefersReducedMotion);
+
         window.matchMedia = jest.fn().mockReturnValue({
-            matches: false,
+            matches: matchMediaMatches,
             addEventListener: jest.fn(),
             removeEventListener: jest.fn(),
             addListener: jest.fn(),
@@ -293,6 +295,33 @@ describe('start_on_clicked_image behaviour', () => {
 
         expect(instances.main).toBeTruthy();
         expect(instances.main.params.initialSlide).toBe(0);
+    });
+
+    it('respecte l’image cliquée lorsque le mode CSS est nécessaire', () => {
+        const originalRaf = window.requestAnimationFrame;
+
+        try {
+            window.requestAnimationFrame = jest.fn((cb) => {
+                if (typeof cb === 'function') {
+                    cb();
+                }
+                return 1;
+            });
+
+            bootstrap({ start_on_clicked_image: true }, { prefersReducedMotion: true });
+            const links = document.querySelectorAll('a');
+            links[1].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+            expect(instances.main).toBeTruthy();
+            expect(instances.main.params.cssMode).toBe(true);
+            expect(instances.main.slideToLoop).toHaveBeenCalledWith(1, 0);
+        } finally {
+            if (typeof originalRaf === 'function') {
+                window.requestAnimationFrame = originalRaf;
+            } else {
+                delete window.requestAnimationFrame;
+            }
+        }
     });
 });
 
