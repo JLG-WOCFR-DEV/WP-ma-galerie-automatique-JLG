@@ -13,6 +13,21 @@ class Detection {
 
     private array $request_detection_cache = [];
 
+    /**
+     * Stores the last detection snapshot so we can reuse the computed signature
+     * when persisting the cache.
+     *
+     * @var array<string,mixed>|null
+     */
+    private ?array $latest_detection_snapshot = null;
+
+    /**
+     * Runtime cache of reusable block signatures keyed by block ID.
+     *
+     * @var array<int,string|null>
+     */
+    private array $reusable_block_signature_cache = [];
+
     public function __construct( Plugin $plugin, Settings $settings ) {
         $this->plugin  = $plugin;
         $this->settings = $settings;
@@ -104,7 +119,27 @@ class Detection {
             return null;
         }
 
-        return in_array( $cached_value, [ 1, '1' ], true );
+        if ( is_array( $cached_value ) ) {
+            $normalized = $this->normalize_cached_detection_value( $cached_value, $post );
+
+            if ( null === $normalized ) {
+                return null;
+            }
+
+            $this->latest_detection_snapshot = $normalized;
+
+            return (bool) $normalized['has_linked_images'];
+        }
+
+        if ( in_array( $cached_value, [ 1, '1' ], true ) ) {
+            return true;
+        }
+
+        if ( in_array( $cached_value, [ 0, '0' ], true ) ) {
+            return false;
+        }
+
+        return null;
     }
 
     public function update_post_linked_images_cache( int $post_id, bool $has_linked_images ): void {
@@ -114,12 +149,21 @@ class Detection {
             return;
         }
 
-        if ( $this->post_contains_reusable_block( $post ) ) {
-            delete_post_meta( $post_id, '_mga_has_linked_images' );
-            return;
+        $snapshot = $this->latest_detection_snapshot;
+
+        if ( ! is_array( $snapshot ) || empty( $snapshot['signature'] ) ) {
+            $snapshot = $this->build_detection_snapshot( $post, $has_linked_images );
         }
 
-        update_post_meta( $post_id, '_mga_has_linked_images', $has_linked_images ? 1 : 0 );
+        $payload = [
+            'has_linked_images' => (bool) $has_linked_images,
+            'signature'         => $snapshot['signature'],
+            'content_hash'      => $snapshot['content_hash'],
+            'reusable'          => $snapshot['reusable'],
+            'generated_at'      => isset( $snapshot['generated_at'] ) ? absint( $snapshot['generated_at'] ) : time(),
+        ];
+
+        update_post_meta( $post_id, '_mga_has_linked_images', $payload );
     }
 
     public function parse_blocks_from_content( string $content ): array {
@@ -164,6 +208,8 @@ class Detection {
     }
 
     public function detect_post_linked_images( WP_Post $post ): bool {
+        $this->latest_detection_snapshot = null;
+
         $parsed_blocks = [];
 
         if ( has_blocks( $post ) ) {
@@ -199,29 +245,31 @@ class Detection {
 
         $allowed_block_names = array_values( array_filter( $allowed_block_names ) );
 
+        $has_linked_images = false;
+
         if ( ! empty( $parsed_blocks ) ) {
-            if ( $this->blocks_include_reusable_block( $parsed_blocks ) ) {
-                delete_post_meta( $post->ID, '_mga_has_linked_images' );
-            }
-
             if ( $this->blocks_contain_linked_media( $parsed_blocks, $allowed_block_names ) ) {
-                return true;
+                $has_linked_images = true;
             }
         }
 
-        if ( $this->post_has_eligible_images( $post ) ) {
-            return true;
+        if ( ! $has_linked_images && $this->post_has_eligible_images( $post ) ) {
+            $has_linked_images = true;
         }
 
-        $content = $post->post_content;
+        if ( ! $has_linked_images ) {
+            $content = $post->post_content;
 
-        if ( empty( $content ) ) {
-            return false;
+            if ( ! empty( $content ) ) {
+                $pattern = '#<a\\b[^>]*href=["\\\']([^"\\\']+\\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\\?[^"\\\']*)?(?:\\#[^"\\\']*)?["\\\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
+
+                $has_linked_images = (bool) preg_match( $pattern, $content );
+            }
         }
 
-        $pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?(?:\\#[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
+        $this->latest_detection_snapshot = $this->build_detection_snapshot( $post, $has_linked_images );
 
-        return (bool) preg_match( $pattern, $content );
+        return $has_linked_images;
     }
 
     public function refresh_post_linked_images_cache_on_save( $post_id, $post ): void {
@@ -741,5 +789,113 @@ class Detection {
         $pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?(?:\\#[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
 
         return (bool) preg_match( $pattern, $content );
+    }
+
+    private function normalize_cached_detection_value( array $cached_value, WP_Post $post ): ?array {
+        if ( ! array_key_exists( 'has_linked_images', $cached_value ) ) {
+            return null;
+        }
+
+        $has_linked_images = (bool) $cached_value['has_linked_images'];
+        $cached_signature   = isset( $cached_value['signature'] ) ? (string) $cached_value['signature'] : '';
+
+        if ( '' === $cached_signature ) {
+            return null;
+        }
+
+        $snapshot = $this->build_detection_snapshot( $post, $has_linked_images );
+
+        if ( $cached_signature !== $snapshot['signature'] ) {
+            return null;
+        }
+
+        $snapshot['generated_at'] = isset( $cached_value['generated_at'] ) ? absint( $cached_value['generated_at'] ) : time();
+
+        return $snapshot;
+    }
+
+    private function build_detection_snapshot( WP_Post $post, bool $has_linked_images ): array {
+        $content_hash = sha1( (string) $post->post_content );
+        $reusable     = $this->collect_reusable_block_references_from_content( $post );
+
+        if ( ! empty( $reusable ) ) {
+            ksort( $reusable );
+        }
+
+        $signature_parts = [ $content_hash ];
+
+        foreach ( $reusable as $ref => $value ) {
+            $signature_parts[] = $ref . ':' . $value;
+        }
+
+        $signature = sha1( implode( '|', $signature_parts ) );
+
+        return [
+            'has_linked_images' => $has_linked_images,
+            'signature'         => $signature,
+            'content_hash'      => $content_hash,
+            'reusable'          => $reusable,
+        ];
+    }
+
+    private function collect_reusable_block_references_from_content( WP_Post $post ): array {
+        $content = (string) $post->post_content;
+
+        if ( '' === $content ) {
+            return [];
+        }
+
+        $pattern = '/"ref"\s*:\s*(\d+)/';
+        preg_match_all( $pattern, $content, $matches );
+
+        if ( empty( $matches[1] ) ) {
+            return [];
+        }
+
+        $ids        = array_unique( array_map( 'absint', (array) $matches[1] ) );
+        $signatures = [];
+
+        foreach ( $ids as $ref_id ) {
+            if ( ! $ref_id ) {
+                continue;
+            }
+
+            $signature = $this->resolve_reusable_block_signature( $ref_id );
+
+            if ( null !== $signature ) {
+                $signatures[ $ref_id ] = $signature;
+            }
+        }
+
+        return $signatures;
+    }
+
+    private function resolve_reusable_block_signature( int $ref_id ): ?string {
+        if ( array_key_exists( $ref_id, $this->reusable_block_signature_cache ) ) {
+            return $this->reusable_block_signature_cache[ $ref_id ];
+        }
+
+        $reusable = get_post( $ref_id );
+
+        if ( ! ( $reusable instanceof WP_Post ) || 'wp_block' !== $reusable->post_type ) {
+            $this->reusable_block_signature_cache[ $ref_id ] = null;
+
+            return null;
+        }
+
+        $modified_gmt = $reusable->post_modified_gmt ?: $reusable->post_modified;
+        $signature    = sha1( (string) $reusable->post_content );
+
+        $timestamp = '';
+
+        if ( $modified_gmt ) {
+            $timestamp = (string) strtotime( $modified_gmt );
+        }
+
+        $payload = $timestamp . '|' . $signature;
+
+        $this->reusable_block_signature_cache[ $ref_id ] = $payload;
+
+        return $payload;
     }
 }

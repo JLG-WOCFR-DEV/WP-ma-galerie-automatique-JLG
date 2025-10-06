@@ -34,11 +34,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
 
         $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
 
-        $this->assertSame(
-            '1',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Tracked posts should store a positive cache flag when linked media is detected.'
-        );
+        $this->assertCacheSnapshotMatches( $post_id, true, 'Tracked posts should store a positive cache flag when linked media is detected.' );
     }
 
     /**
@@ -60,11 +56,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
 
         $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
 
-        $this->assertSame(
-            '0',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Tracked posts without linked media should store a zero cache flag.'
-        );
+        $this->assertCacheSnapshotMatches( $post_id, false, 'Tracked posts without linked media should store a zero cache flag.' );
     }
 
     /**
@@ -124,11 +116,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
 
         $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
 
-        $this->assertSame(
-            '',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Reusable blocks without linked media should clear the cached flag.'
-        );
+        $this->assertCacheSnapshotMatches( $post_id, false, 'Reusable blocks without linked media should clear the cached flag.' );
     }
 
     /**
@@ -159,11 +147,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
 
         $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
 
-        $this->assertSame(
-            '1',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Reusable blocks containing linked media should update the cache flag to one.'
-        );
+        $this->assertCacheSnapshotMatches( $post_id, true, 'Reusable blocks containing linked media should update the cache flag to one.' );
     }
 
     public function test_default_tracked_post_types_are_shared_between_cache_and_enqueue() {
@@ -200,11 +184,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
             remove_filter( 'mga_tracked_post_types', $capture_filter, 10 );
         }
 
-        $this->assertSame(
-            '1',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'The cache refresh should track default post types when settings are missing.'
-        );
+        $this->assertCacheSnapshotMatches( $post_id, true, 'The cache refresh should track default post types when settings are missing.' );
 
         $this->assertTrue(
             $enqueue_result,
@@ -280,11 +260,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
                 'The enqueue logic should respect the same filtered tracked post types as the cache refresh.'
             );
 
-            $this->assertSame(
-                '1',
-                get_post_meta( $book_id, '_mga_has_linked_images', true ),
-                'Filtered tracked post types should trigger cache refreshes for custom post types.'
-            );
+        $this->assertCacheSnapshotMatches( $book_id, true, 'Filtered tracked post types should trigger cache refreshes for custom post types.' );
 
             $this->assertCount(
                 2,
@@ -345,11 +321,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
             'Invalid settings should not trigger PHP warnings.'
         );
 
-        $this->assertSame(
-            '1',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Invalid settings should fall back to defaults and detect linked images on tracked post types.'
-        );
+        $this->assertCacheSnapshotMatches( $post_id, true, 'Invalid settings should fall back to defaults and detect linked images on tracked post types.' );
     }
 
     /**
@@ -387,11 +359,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
 
         $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, $post );
 
-        $this->assertSame(
-            '',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Posts referencing reusable blocks should not persist cached flags after detection.'
-        );
+        $this->assertCacheSnapshotMatches( $post_id, false, 'Posts referencing reusable blocks should not persist cached flags after detection.' );
 
         wp_update_post(
             [
@@ -425,11 +393,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
 
         remove_filter( 'mga_linked_image_blocks', $marker_filter );
 
-        $this->assertSame(
-            '',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Posts referencing reusable blocks should continue to avoid caching after block updates.'
-        );
+        $this->assertCacheSnapshotMatches( $post_id, false, 'Posts referencing reusable blocks should continue to avoid caching after block updates.' );
     }
 
     public function test_detection_setting_update_purges_cached_meta() {
@@ -444,11 +408,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
 
         update_post_meta( $post_id, '_mga_has_linked_images', '1' );
 
-        $this->assertSame(
-            '1',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Sanity check: the cached meta flag should exist before updating the settings.'
-        );
+        $this->assertCacheSnapshotMatches( $post_id, true, 'Sanity check: the cached meta flag should exist before updating the settings.' );
 
         update_option(
             'mga_settings',
@@ -457,11 +417,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
             ]
         );
 
-        $this->assertSame(
-            '',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Updating detection-related settings should clear cached detection results.'
-        );
+        $this->assertCacheSnapshotMatches( $post_id, false, 'Updating detection-related settings should clear cached detection results.' );
     }
 
     public function test_unrelated_setting_update_preserves_cached_meta() {
@@ -484,11 +440,17 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
             ]
         );
 
-        $this->assertSame(
-            '1',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Updating unrelated settings should keep the cached detection results intact.'
-        );
+        $this->assertCacheSnapshotMatches( $post_id, true, 'Updating unrelated settings should keep the cached detection results intact.' );
+    }
+
+    private function assertCacheSnapshotMatches( int $post_id, bool $expected, string $message = '' ): void {
+        $meta = get_post_meta( $post_id, '_mga_has_linked_images', true );
+
+        $this->assertIsArray( $meta, 'Cache entries should now be stored as structured arrays.' );
+        $this->assertArrayHasKey( 'has_linked_images', $meta, 'Cache entries must include a boolean flag.' );
+        $this->assertSame( $expected, (bool) $meta['has_linked_images'], $message ?: 'Unexpected cache flag state.' );
+        $this->assertArrayHasKey( 'signature', $meta, 'Cache entries must provide a signature for invalidation.' );
+        $this->assertNotEmpty( $meta['signature'], 'Cache entries should expose a non-empty signature.' );
     }
 
     private function detection(): \MaGalerieAutomatique\Content\Detection {

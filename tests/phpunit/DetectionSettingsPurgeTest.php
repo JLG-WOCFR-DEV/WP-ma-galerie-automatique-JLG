@@ -65,11 +65,7 @@ class DetectionSettingsPurgeTest extends WP_UnitTestCase {
 
         $plugin->maybe_purge_detection_cache( $old_settings, $new_settings, 'mga_settings' );
 
-        $this->assertSame(
-            '0',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Cache should survive when detection settings remain unchanged.'
-        );
+        $this->assertCacheSnapshot( $post_id, false, 'Cache should survive when detection settings remain unchanged.' );
     }
 
     public function test_normalized_selector_equivalence_does_not_trigger_purge() {
@@ -95,10 +91,16 @@ class DetectionSettingsPurgeTest extends WP_UnitTestCase {
 
         $plugin->maybe_purge_detection_cache( $old_settings, $new_settings, 'mga_settings' );
 
-        $this->assertSame(
-            '1',
-            get_post_meta( $post_id, '_mga_has_linked_images', true ),
-            'Cache should persist when detection settings normalize to the same snapshot.'
-        );
+        $this->assertCacheSnapshot( $post_id, true, 'Cache should persist when detection settings normalize to the same snapshot.' );
+    }
+
+    private function assertCacheSnapshot( int $post_id, bool $expected, string $message ): void {
+        $meta = get_post_meta( $post_id, '_mga_has_linked_images', true );
+
+        $this->assertIsArray( $meta, 'Cache entries should be structured arrays after normalization.' );
+        $this->assertArrayHasKey( 'has_linked_images', $meta );
+        $this->assertSame( $expected, (bool) $meta['has_linked_images'], $message );
+        $this->assertArrayHasKey( 'signature', $meta );
+        $this->assertNotEmpty( $meta['signature'], 'Cache entries must include a non-empty signature.' );
     }
 }
