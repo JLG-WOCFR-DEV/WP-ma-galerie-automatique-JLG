@@ -102,6 +102,8 @@ Le modèle de la page d’administration se trouve dans `includes/admin-page-tem
 ### Tests E2E
 Les scénarios Playwright (par exemple `tests/e2e/gallery-viewer.spec.ts`) génèrent leurs propres images de test afin d’éviter de versionner des médias binaires. Pour vérifier la lightbox avec vos visuels, déposez simplement les fichiers dans `tests/e2e/assets/` (non suivi par Git). Les formats `png`, `jpg`, `jpeg`, `gif`, `webp` ou `avif` sont pris en charge ; prévoyez au minimum deux images.
 
+- ✅ **Test vital : démarrage sur l’image cliquée** — Le scénario `starts the viewer at the clicked image` vérifie que la visionneuse s’ouvre directement sur la miniature sélectionnée au lieu de revenir au début de la galerie. Cette option est essentielle à l’expérience utilisateur et doit rester fonctionnelle à chaque mise à jour.
+
 ## Hooks et personnalisation
 
 Ces filtres permettent d’adapter le comportement du plugin selon vos besoins.

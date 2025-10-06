@@ -272,6 +272,33 @@ test.describe('Gallery viewer', () => {
         }
     });
 
+    test('starts the viewer at the clicked image', async ({ page, requestUtils }) => {
+        const { post, uploads, cleanup } = await createPublishedGalleryPost(
+            requestUtils,
+            'Gallery viewer respects clicked image',
+            { minimumImages: 3 },
+        );
+
+        try {
+            await page.goto(post.link);
+
+            const secondTrigger = page.locator(`a[href="${uploads[1].source_url}"]`).first();
+            await expect(secondTrigger.locator('img')).toBeVisible();
+
+            await secondTrigger.click();
+
+            const viewer = page.locator('#mga-viewer');
+            await expect(viewer).toBeVisible();
+            await expect(page.locator('#mga-counter')).toHaveText(`2 / ${uploads.length}`);
+            await expect(page.locator('#mga-main-wrapper .swiper-slide-active img')).toHaveAttribute(
+                'src',
+                uploads[1].source_url,
+            );
+        } finally {
+            await cleanup();
+        }
+    });
+
     test('closes the viewer when clicking the background overlay', async ({ page, requestUtils }) => {
         const { post, uploads, cleanup } = await createPublishedGalleryPost(
             requestUtils,
