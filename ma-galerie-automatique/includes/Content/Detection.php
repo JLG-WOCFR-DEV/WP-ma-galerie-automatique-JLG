@@ -14,6 +14,13 @@ class Detection {
     private array $request_detection_cache = [];
 
     /**
+     * Cache the result of archive-wide detection for the current main query.
+     *
+     * @var array{query_id:int,result:bool}|null
+     */
+    private ?array $archive_detection_cache = null;
+
+    /**
      * Stores the last detection snapshot so we can reuse the computed signature
      * when persisting the cache.
      *
@@ -42,34 +49,49 @@ class Detection {
             return false;
         }
 
-        if ( ! $post instanceof WP_Post ) {
-            return (bool) $force_enqueue;
-        }
-
-        if ( post_password_required( $post ) ) {
-            return false;
-        }
-
         $settings           = $this->settings->get_sanitized_settings();
-        $tracked_post_types = $this->resolve_tracked_post_types( $post, $settings );
-
         $load_on_archives = ! empty( $settings['load_on_archives'] );
 
-        if ( ! is_singular() && ! $force_enqueue && ! $load_on_archives ) {
-            return false;
+        if ( ! is_singular() ) {
+            if ( $force_enqueue ) {
+                return true;
+            }
+
+            if ( ! $load_on_archives ) {
+                return false;
+            }
+
+            return $this->archive_requires_assets( $settings );
         }
 
         if ( $force_enqueue ) {
             return true;
         }
 
+        if ( ! $post instanceof WP_Post ) {
+            return false;
+        }
+
+        return $this->evaluate_post_for_assets( $post, $settings );
+    }
+
+    private function evaluate_post_for_assets( WP_Post $post, array $settings ): bool {
+        if ( post_password_required( $post ) ) {
+            $this->request_detection_cache[ $post->ID ] = false;
+            return false;
+        }
+
+        $tracked_post_types = $this->resolve_tracked_post_types( $post, $settings );
+
         if ( ! empty( $tracked_post_types ) && ! in_array( $post->post_type, $tracked_post_types, true ) ) {
+            $this->request_detection_cache[ $post->ID ] = false;
             return false;
         }
 
         $content = (string) $post->post_content;
 
         if ( '' === trim( $content ) ) {
+            $this->request_detection_cache[ $post->ID ] = false;
             return false;
         }
 
@@ -90,6 +112,41 @@ class Detection {
         $this->request_detection_cache[ $post->ID ] = $has_linked_images;
 
         return $has_linked_images;
+    }
+
+    private function archive_requires_assets( array $settings ): bool {
+        global $wp_query;
+
+        if ( ! isset( $wp_query ) || ! $wp_query instanceof \WP_Query ) {
+            return false;
+        }
+
+        $query_id = function_exists( 'spl_object_id' ) ? spl_object_id( $wp_query ) : null;
+
+        if ( is_array( $this->archive_detection_cache ) && $this->archive_detection_cache['query_id'] === $query_id ) {
+            return (bool) $this->archive_detection_cache['result'];
+        }
+
+        $posts = is_array( $wp_query->posts ) ? $wp_query->posts : [];
+        $result = false;
+
+        foreach ( $posts as $post ) {
+            if ( ! $post instanceof WP_Post ) {
+                continue;
+            }
+
+            if ( $this->evaluate_post_for_assets( $post, $settings ) ) {
+                $result = true;
+                break;
+            }
+        }
+
+        $this->archive_detection_cache = [
+            'query_id' => (int) $query_id,
+            'result'   => $result,
+        ];
+
+        return $result;
     }
 
     private function is_excluded_request_context(): bool {
