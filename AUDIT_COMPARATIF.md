@@ -6,6 +6,15 @@ etc.). Les recommandations sont classées par thématique demandée.
 
 ## 1. Options et pilotage produit
 
+### Tableau comparatif rapide
+
+| Parcours produit | Lightbox – JLG | Envira Gallery (Pro) | FooGallery (Pro) | Modula (Pro) | Opportunités d'amélioration |
+| --- | --- | --- | --- | --- | --- |
+| Profils d'affichage | Réglages 100 % globaux | Templates par galerie + add-ons | Presets par galerie + rôles utilisateur | Recettes + rôles d'édition | Introduire des presets stockés en base avec ciblage par type de contenu/bloc. |
+| Détection de médias | Regex sur liens image | Analyse DOM + métadonnées EXIF | Analyse DOM + filtres contenu dynamique | Analyse DOM + import Lightroom | Passer à un parseur DOM et gérer les médias enrichis (vidéo/audio/HTML). |
+| Bundles front | Chargement unique Swiper + visionneuse | Modules par fonctionnalité | Bundles différenciés (Core/Zoom/Video) | Bundles différenciés (Core/Effets) | Découper les scripts en modules optionnels + compatibilité `wp_register_*`. |
+| Analytics intégrées | Aucune | Add-on statistiques (vues, ventes) | Rapports clics + intégration GA | Statistiques basiques + webhooks | Proposer un module de suivi (opt-in) avec export CSV/webhook. |
+
 ### Points solides
 - Les réglages globaux couvrent les paramètres essentiels d’un diaporama
   (vitesse, effets, couleur d’accent, arrière-plan, options de partage) et sont
@@ -35,7 +44,26 @@ etc.). Les recommandations sont classées par thématique demandée.
   ouvertures, clics sur partage/téléchargement et durée moyenne, avec export CSV
   ou webhook, attendu par les agences.
 
+### Améliorations prioritaires (roadmap suggérée)
+
+1. **Presets et ciblage contextuel** (impact UX/UI + différenciation marketing).
+2. **Pilotage des assets** (impact performance + compatibilité thèmes/page builders).
+3. **Détection DOM enrichie** (impact couverture fonctionnelle + support contenus mixtes).
+4. **Statistiques & reporting** (impact agences + upsell éventuel vers une version premium).
+5. **Générateur de thèmes** (impact image de marque + concurrence directe).
+
 ## 2. UX/UI de la visionneuse
+
+### Benchmark ergonomique
+
+- **Envira Gallery** : propose `deep linking`, formulaires de contact dans la
+  lightbox et intégration WooCommerce. L'URL reflète la diapositive, utile pour
+  le SEO et le support.
+- **FooGallery** : offre des palettes de contrôles configurables (formes,
+  icônes SVG, positions). Les presets sont visibles en prévisualisation directe
+  dans l'admin.
+- **Modula** : mise en avant de transitions avancées (Ken Burns, tilt, zoom) et
+  d'une barre latérale pour les métadonnées (EXIF, call-to-action).
 
 ### Points solides
 - La visionneuse est construite comme un vrai « dialog » avec focus trap,
@@ -58,7 +86,24 @@ etc.). Les recommandations sont classées par thématique demandée.
   (Ken Burns, parallaxe) avec un aperçu en direct et gestion automatique du
   fallback lorsque `prefers-reduced-motion` est actif.
 
+### Quick wins supplémentaires
+
+- **Mode compact** : autoriser le masquage automatique de la barre d'outils au
+  bout de quelques secondes (réaffichée au mouvement) pour maximiser l'espace
+  visuel.
+- **CTA personnalisables** : permettre l'ajout de boutons secondaires (« Réserver
+  une séance », « Ajouter au panier ») connectés à des URLs configurables.
+
 ## 3. Navigation mobile
+
+### Benchmark mobile
+
+- **Envira Gallery** : gestures « swipe down to close » et zoom par pincement,
+  combinés à une option de vibrations sur changement de diapositive.
+- **FooGallery** : propose un mode plein écran automatique sur mobile et une
+  barre flottante qui se replie en icône unique.
+- **Modula** : inclut un préchargement adaptatif basé sur la bande passante
+  détectée via `navigator.connection`.
 
 ### Points solides
 - Le CSS adapte la disposition des miniatures, redimensionne les flèches et
@@ -76,6 +121,14 @@ etc.). Les recommandations sont classées par thématique demandée.
   beaucoup de place.【F:ma-galerie-automatique/assets/css/gallery-slideshow.css†L297-L368】
 - **Préchargement adaptatif** : couplez le préchargement aux conditions réseau
   (`navigator.connection`) pour éviter les téléchargements lourds sur mobile.
+
+### Compléments proposés
+
+- **Préférences utilisateur** : stocker dans `localStorage` le dernier niveau de
+  zoom ou le mode sombre/clair afin de respecter les préférences récurrentes.
+- **Accessibilité gestuelle** : exposer les gestes principaux via `aria-label`
+  et documentation dans la modale d'aide afin d'aligner l'expérience tactile et
+  clavier.
 
 ## 4. Accessibilité
 
@@ -97,7 +150,25 @@ etc.). Les recommandations sont classées par thématique demandée.
   focus sur la vignette active pour éviter la perte de contexte dans les longues
   galeries.
 
+### Pistes additionnelles
+
+- **Mode narration** : ajouter une option qui lit automatiquement les légendes à
+  voix haute (Web Speech API lorsque disponible) pour se démarquer des
+  concurrents.
+- **Thèmes haute visibilité** : proposer un preset dédié forte luminosité
+  (couleurs à contraste élevé + bordures épaisses) pour répondre aux demandes
+  d'accessibilité renforcée des marchés publics.
+
 ## 5. Apparence dans WordPress (éditeur inclus)
+
+### Comparaison éditeur
+
+- **Envira Gallery** : prévisualisation interactive directe dans Gutenberg avec
+  un bouton « Launch Lightbox ».
+- **FooGallery** : panneau latéral riche (onglets Layout, Style, Effets) avec
+  rendu dynamique via React.
+- **Modula** : glisser-déposer des images dans l'aperçu, réglages contextuels et
+  sauvegarde en direct.
 
 ### Points solides
 - Le bloc Gutenberg sérialise les réglages globaux pour proposer une prévisualisation
@@ -117,7 +188,26 @@ etc.). Les recommandations sont classées par thématique demandée.
   d’outils avec les médias sélectionnés dans le bloc Galerie natif pour éviter la
   dissonance entre éditeur et frontend.
 
+### Roadmap éditeur suggérée
+
+1. Prévisualisation interactive dans Gutenberg (mode sandbox).
+2. Options locales par bloc avec schéma JSON pour validation.
+3. Synchronisation bidirectionnelle avec les galeries WP natives (hooks sur
+   `core/gallery`).
+
 ---
-Ces évolutions rapprocheraient Lightbox – JLG des standards premium tout en
-préservant ses points forts actuels (partage modulaire, outillage debug,
-intégration Gutenberg).
+
+## Synthèse des écarts et plan d'action
+
+| Priorité | Axe | Livrable clé | Bénéfice principal |
+| --- | --- | --- | --- |
+| 🔥 | Expérience produit | Presets + ciblage contextuel | Parité avec Envira/FooGallery sur la personnalisation par page |
+| 🔥 | Performance | Découpage des assets + lazy modules | Amélioration des scores Core Web Vitals et compatibilité thèmes |
+| 🔥 | UX visionneuse | Deep linking + gestes mobiles | Attentes standard des utilisateurs pro et SEO social |
+| ⚡ | Accessibilité | Annonces ARIA + thèmes haute visibilité | Conformité WCAG AA et marchés publics |
+| ⚡ | Analytics | Module opt-in avec export | Arguments commerciaux pour agences/pros |
+| ✅ | Gouvernance | Roadmap éditeur Gutenberg | Adoption facilitée par les créateurs de sites |
+
+En mettant en œuvre ces évolutions progressives, Lightbox – JLG se rapprochera
+des suites professionnelles tout en conservant sa légèreté et son approche
+modulaire.
