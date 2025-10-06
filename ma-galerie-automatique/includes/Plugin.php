@@ -247,6 +247,8 @@ class Plugin {
     public function maybe_purge_detection_cache( $old_value, $value, string $option ): void {
         unset( $option );
 
+        $this->settings->invalidate_settings_cache();
+
         if ( ! is_array( $old_value ) ) {
             $old_value = [];
         }

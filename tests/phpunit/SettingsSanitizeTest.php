@@ -3,6 +3,18 @@
  * @group settings
  */
 class SettingsSanitizeTest extends WP_UnitTestCase {
+    public function setUp(): void {
+        parent::setUp();
+
+        update_option( 'mga_settings', [] );
+
+        $plugin = mga_plugin();
+
+        if ( $plugin instanceof \MaGalerieAutomatique\Plugin ) {
+            $plugin->settings()->invalidate_settings_cache();
+        }
+    }
+
     /**
      * @dataProvider sanitize_settings_provider
      *

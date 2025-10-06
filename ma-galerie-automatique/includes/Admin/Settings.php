@@ -7,8 +7,14 @@ use MaGalerieAutomatique\Plugin;
 class Settings {
     private Plugin $plugin;
 
+    private array $sanitized_settings_cache = [];
+
     public function __construct( Plugin $plugin ) {
         $this->plugin = $plugin;
+
+        if ( function_exists( 'add_action' ) ) {
+            add_action( 'switch_blog', [ $this, 'handle_switch_blog' ], 10, 2 );
+        }
     }
 
     private function normalize_checkbox_value( $value, $default = false ): bool {
@@ -620,9 +626,45 @@ class Settings {
     }
 
     public function get_sanitized_settings(): array {
-        $saved_settings = get_option( 'mga_settings', [] );
+        $cache_key = $this->get_settings_cache_key();
 
-        return $this->sanitize_settings( $saved_settings, $saved_settings );
+        if ( array_key_exists( $cache_key, $this->sanitized_settings_cache ) ) {
+            return $this->sanitized_settings_cache[ $cache_key ];
+        }
+
+        $saved_settings = get_option( 'mga_settings', [] );
+        $sanitized      = $this->sanitize_settings( $saved_settings, $saved_settings );
+
+        $this->sanitized_settings_cache[ $cache_key ] = $sanitized;
+
+        return $sanitized;
+    }
+
+    public function invalidate_settings_cache( ?int $blog_id = null ): void {
+        if ( null === $blog_id ) {
+            $this->sanitized_settings_cache = [];
+            return;
+        }
+
+        unset( $this->sanitized_settings_cache[ $blog_id ] );
+    }
+
+    public function handle_switch_blog( $new_blog_id, $old_blog_id ): void {
+        unset( $new_blog_id, $old_blog_id );
+
+        $this->invalidate_settings_cache();
+    }
+
+    private function get_settings_cache_key(): int {
+        if ( function_exists( 'get_current_blog_id' ) ) {
+            $blog_id = get_current_blog_id();
+
+            if ( is_numeric( $blog_id ) ) {
+                return (int) $blog_id;
+            }
+        }
+
+        return 0;
     }
 
     private function sanitize_share_channels_array( $raw_channels, array $existing_channels, array $default_channels, bool $use_defaults_as_fallback = true ): array {

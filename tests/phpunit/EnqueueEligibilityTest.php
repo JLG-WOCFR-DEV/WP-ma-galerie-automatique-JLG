@@ -13,6 +13,12 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
     public function setUp(): void {
         parent::setUp();
         update_option( 'mga_settings', [] );
+
+        $plugin = mga_plugin();
+
+        if ( $plugin instanceof \MaGalerieAutomatique\Plugin ) {
+            $plugin->settings()->invalidate_settings_cache();
+        }
     }
 
     public function tearDown(): void {
@@ -23,6 +29,43 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
         $this->registered_post_types = [];
 
         parent::tearDown();
+    }
+
+    public function test_feed_and_rest_requests_skip_enqueue_unless_forced() {
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+        $this->assertTrue( $this->detection()->should_enqueue_assets( $post_id ) );
+
+        $this->go_to( get_feed_link( 'rss2' ) );
+        global $wp_query;
+
+        if ( $wp_query ) {
+            $wp_query->is_feed = true;
+        }
+
+        $this->assertFalse( $this->detection()->should_enqueue_assets( $post_id ), 'Feed requests should not enqueue assets by default.' );
+
+        $server          = rest_get_server();
+        $reflection      = new ReflectionObject( $server );
+        $serving_property = $reflection->getProperty( 'serving' );
+        $serving_property->setAccessible( true );
+        $previous_serving = $serving_property->getValue( $server );
+        $serving_property->setValue( $server, true );
+
+        try {
+            $this->assertFalse( $this->detection()->should_enqueue_assets( $post_id ), 'REST responses should avoid unnecessary detection by default.' );
+
+            add_filter( 'mga_force_enqueue', '__return_true' );
+            $this->assertTrue( $this->detection()->should_enqueue_assets( $post_id ), 'Force enqueue should still override REST guards when required.' );
+        } finally {
+            remove_filter( 'mga_force_enqueue', '__return_true' );
+            $serving_property->setValue( $server, $previous_serving );
+        }
     }
 
     /**

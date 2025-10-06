@@ -373,22 +373,27 @@ describe('autoplay accessibility handlers', () => {
     it('updates aria attributes when handlers are invoked', () => {
         expect(playPauseButton.getAttribute('aria-pressed')).toBe('false');
         expect(playPauseButton.getAttribute('aria-label')).toBe('Lancer le diaporama');
+        expect(playPauseButton.getAttribute('title')).toBe('Lancer le diaporama');
 
         autoplayHandlers.autoplayStart();
         expect(playPauseButton.getAttribute('aria-pressed')).toBe('true');
         expect(playPauseButton.getAttribute('aria-label')).toBe('Mettre le diaporama en pause');
+        expect(playPauseButton.getAttribute('title')).toBe('Mettre le diaporama en pause');
 
         autoplayHandlers.autoplayStop();
         expect(playPauseButton.getAttribute('aria-pressed')).toBe('false');
         expect(playPauseButton.getAttribute('aria-label')).toBe('Lancer le diaporama');
+        expect(playPauseButton.getAttribute('title')).toBe('Lancer le diaporama');
 
         playPauseButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         expect(playPauseButton.getAttribute('aria-pressed')).toBe('true');
         expect(playPauseButton.getAttribute('aria-label')).toBe('Mettre le diaporama en pause');
+        expect(playPauseButton.getAttribute('title')).toBe('Mettre le diaporama en pause');
 
         playPauseButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         expect(playPauseButton.getAttribute('aria-pressed')).toBe('false');
         expect(playPauseButton.getAttribute('aria-label')).toBe('Lancer le diaporama');
+        expect(playPauseButton.getAttribute('title')).toBe('Lancer le diaporama');
     });
 });
 
@@ -501,21 +506,55 @@ describe('thumbnail accessibility controls', () => {
         expect(first.getAttribute('aria-label')).toBe('Afficher la diapositive 1 : Image 1');
     });
 
-    it('relies on native keyboard activation without custom keydown handlers', () => {
+    it('wires roving tabindex keyboard navigation for thumbnails', () => {
         const controls = viewer.querySelectorAll('.mga-thumbs-swiper .swiper-slide .mga-thumb-button');
-        const secondControl = controls[1];
+        expect(thumbKeydownRegistrations).toHaveLength(controls.length);
 
-        expect(thumbKeydownRegistrations).toHaveLength(0);
+        const [firstControl, secondControl] = controls;
 
-        secondControl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(firstControl.getAttribute('aria-current')).toBe('true');
+        expect(firstControl.getAttribute('tabindex')).toBe('0');
+        expect(secondControl.getAttribute('tabindex')).toBe('-1');
 
-        expect(mainInstance).toBeTruthy();
-        expect(thumbsInstance).toBeTruthy();
+        const firstListenerEntry = thumbKeydownRegistrations.find((entry) => entry.target === firstControl);
+        const secondListenerEntry = thumbKeydownRegistrations.find((entry) => entry.target === secondControl);
+
+        expect(firstListenerEntry).toBeTruthy();
+        expect(secondListenerEntry).toBeTruthy();
+
+        mainInstance.slideToLoop.mockClear();
+        if (thumbsInstance && typeof thumbsInstance.slideTo === 'function') {
+            thumbsInstance.slideTo.mockClear();
+        }
+
+        const arrowRightEvent = { key: 'ArrowRight', preventDefault: jest.fn() };
+        firstListenerEntry.listener.call(firstControl, arrowRightEvent);
+        expect(arrowRightEvent.preventDefault).toHaveBeenCalled();
+
         expect(mainInstance.slideToLoop).toHaveBeenCalledWith(1);
-        expect(mainInstance.slideTo).not.toHaveBeenCalled();
         if (thumbsInstance && typeof thumbsInstance.slideTo === 'function') {
             expect(thumbsInstance.slideTo).toHaveBeenCalledWith(1);
         }
+        expect(secondControl.getAttribute('aria-current')).toBe('true');
+        expect(secondControl.getAttribute('tabindex')).toBe('0');
+        expect(firstControl.getAttribute('tabindex')).toBe('-1');
+
+        mainInstance.slideToLoop.mockClear();
+        if (thumbsInstance && typeof thumbsInstance.slideTo === 'function') {
+            thumbsInstance.slideTo.mockClear();
+        }
+
+        const arrowLeftEvent = { key: 'ArrowLeft', preventDefault: jest.fn() };
+        secondListenerEntry.listener.call(secondControl, arrowLeftEvent);
+        expect(arrowLeftEvent.preventDefault).toHaveBeenCalled();
+
+        expect(mainInstance.slideToLoop).toHaveBeenCalledWith(0);
+        if (thumbsInstance && typeof thumbsInstance.slideTo === 'function') {
+            expect(thumbsInstance.slideTo).toHaveBeenCalledWith(0);
+        }
+        expect(firstControl.getAttribute('aria-current')).toBe('true');
+        expect(firstControl.getAttribute('tabindex')).toBe('0');
+        expect(secondControl.getAttribute('tabindex')).toBe('-1');
     });
 });
 

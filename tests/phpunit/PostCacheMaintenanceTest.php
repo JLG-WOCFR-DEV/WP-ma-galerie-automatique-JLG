@@ -503,5 +503,11 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
 
         global $wpdb;
         $wpdb->delete( $wpdb->postmeta, [ 'meta_key' => '_mga_has_linked_images' ] );
+
+        $plugin = mga_plugin();
+
+        if ( $plugin instanceof \MaGalerieAutomatique\Plugin ) {
+            $plugin->settings()->invalidate_settings_cache();
+        }
     }
 }

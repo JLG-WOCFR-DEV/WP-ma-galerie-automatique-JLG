@@ -8,6 +8,12 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
 
         update_option( 'mga_settings', [] );
 
+        $plugin = mga_plugin();
+
+        if ( $plugin instanceof \MaGalerieAutomatique\Plugin ) {
+            $plugin->settings()->invalidate_settings_cache();
+        }
+
         // Prime the dependency containers so get_data() calls operate on known instances.
         wp_styles();
         wp_scripts();
