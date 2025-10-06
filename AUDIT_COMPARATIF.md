@@ -86,6 +86,40 @@ etc.). Les recommandations sont classées par thématique demandée.
   (Ken Burns, parallaxe) avec un aperçu en direct et gestion automatique du
   fallback lorsque `prefers-reduced-motion` est actif.
 
+#### Design system & identité visuelle
+- **Palettes et styles prêts à l’emploi** : la visionneuse repose sur un unique
+  dégradé sombre et une teinte d’accent globale, sans variation typographique ni
+  densité différente entre headers, légendes et actions.【F:ma-galerie-automatique/assets/css/gallery-slideshow.css†L43-L114】
+  Inspirez-vous des thèmes « Modern », « Metro » ou « Darkroom » fournis par Envira
+  et FooGallery pour proposer des presets complets (clairs/sombres, minimalistes,
+  bordures carrées vs. pill, typo display) sélectionnables depuis l’admin.
+- **Pack d’icônes et tailles configurables** : les boutons utilisent un seul SVG
+  monochrome et un cercle de 44 px défini en dur.【F:ma-galerie-automatique/assets/css/gallery-slideshow.css†L90-L151】
+  Ajoutez des jeux d’icônes (outline, filled, duotone) et des options de taille
+  pour se rapprocher des galeries pro qui offrent des contrôles adaptés au ton du
+  site.
+- **Cohérence admin/front** : côté réglages, seules la couleur d’accent, l’opacité
+  du fond et le style d’arrière-plan sont personnalisables, sans aperçu temps
+  réel ni sélection de famille de polices ou de coins arrondis.【F:ma-galerie-automatique/includes/admin-page-template.php†L119-L214】
+  Un configurateur visuel (preview live + synchronisation avec le bloc) aiderait
+  les utilisateurs non designers à composer un thème professionnel.
+- **Effets de profondeur maîtrisés** : les options actuelles se limitent à trois
+  arrières-plans (écho flouté, texture, blur temps réel).【F:ma-galerie-automatique/includes/admin-page-template.php†L200-L214】
+  Proposez des variantes premium (verre dépoli coloré, panneaux translucides,
+  overlays photo) avec réglages granulaires (grain, vignette, gradient multi-stop)
+  pour rivaliser avec les skins « Pro » des concurrents.
+
+#### Micro-interactions & feedback
+- **Animations contextuelles** : l’interface n’exploite que quelques transitions
+  génériques (fade/scale, hover) et un spinner circulaire uniforme.【F:ma-galerie-automatique/assets/css/gallery-slideshow.css†L90-L147】【F:ma-galerie-automatique/assets/css/gallery-slideshow.css†L115-L126】
+  Ajoutez des micro-interactions spécifiques (rebond léger sur changement
+  d’image, highlight progressif des miniatures, animation d’apparition des
+  légendes) inspirées des lightbox premium pour renforcer la sensation haut de
+  gamme.
+- **Feedback utilisateur enrichi** : combinez les transitions avec des sons
+  discrets, vibrations (mobile) et indicateurs contextuels (pills « Copié » ou
+  « Ajouté aux favoris ») pour aligner l’expérience sur les standards pro.
+
 ### Quick wins supplémentaires
 
 - **Mode compact** : autoriser le masquage automatique de la barre d'outils au
