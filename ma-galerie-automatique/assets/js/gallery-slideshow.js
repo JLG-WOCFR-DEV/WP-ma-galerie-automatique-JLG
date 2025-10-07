@@ -807,6 +807,7 @@
             shareButton.setAttribute('aria-label', mga__( 'Partager l’image', 'lightbox-jlg' ));
             shareButton.setAttribute('aria-haspopup', 'dialog');
             shareButton.setAttribute('aria-expanded', 'false');
+            shareButton.setAttribute('aria-controls', 'mga-share-modal');
 
             const shareIcon = createSvgElement('svg', {
                 class: 'mga-icon mga-share-icon',
@@ -881,6 +882,9 @@
             description.textContent = mga__( 'Choisissez une option de partage :', 'lightbox-jlg' );
             body.appendChild(description);
 
+            modalContainer.setAttribute('aria-labelledby', title.id);
+            modalContainer.setAttribute('aria-describedby', description.id);
+
             const list = document.createElement('ul');
             list.className = 'mga-share-modal__list';
             list.setAttribute('data-mga-share-list', 'true');
@@ -892,7 +896,6 @@
             feedback.setAttribute('aria-live', 'polite');
             body.appendChild(feedback);
 
-            dialog.setAttribute('aria-describedby', description.id);
             viewer.appendChild(modalContainer);
 
             const onOverlayClick = (event) => {
