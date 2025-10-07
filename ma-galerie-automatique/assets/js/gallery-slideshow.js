@@ -460,6 +460,7 @@
         const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
         const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
         const closeOnBackdropClick = normalizeFlag(settings.close_on_backdrop, true);
+        const loopEnabled = normalizeFlag(settings.loop, true);
         const startOnClickedImageSetting =
             Object.prototype.hasOwnProperty.call(settings, 'start_on_clicked_image')
                 ? settings.start_on_clicked_image
@@ -1531,6 +1532,32 @@
         }
 
         // --- FONCTIONS UTILITAIRES ---
+
+        function slideToIndex(swiper, targetIndex, speed) {
+            if (!swiper || swiper.destroyed) {
+                return;
+            }
+
+            const args = [targetIndex];
+
+            if (typeof speed !== 'undefined') {
+                args.push(speed);
+            }
+
+            if (
+                swiper.params &&
+                swiper.params.loop &&
+                typeof swiper.slideToLoop === 'function'
+            ) {
+                swiper.slideToLoop.apply(swiper, args);
+                return;
+            }
+
+            if (typeof swiper.slideTo === 'function') {
+                swiper.slideTo.apply(swiper, args);
+            }
+        }
+
         let focusSupportsOptionsCache = null;
 
         function detectFocusOptionsSupport() {
@@ -2941,6 +2968,17 @@
 
                 const startIndex = startOnClickedImage && clickedImageIndex !== -1 ? clickedImageIndex : 0;
 
+                if (debug && typeof debug.log === 'function') {
+                    debug.log(
+                        mgaSprintf(
+                            mga__( 'Index initial demandé via clic : %1$d (option active : %2$s, trouvé : %3$d).', 'lightbox-jlg' ),
+                            startIndex,
+                            startOnClickedImage ? mga__( 'oui', 'lightbox-jlg' ) : mga__( 'non', 'lightbox-jlg' ),
+                            clickedImageIndex
+                        )
+                    );
+                }
+
                 const previouslyFocusedElement = document.activeElement instanceof Element
                     ? document.activeElement
                     : null;
@@ -3001,11 +3039,7 @@
                         currentGalleryImages = galleryData;
                         currentGalleryId = targetGalleryId;
                         if (mainSwiper && !mainSwiper.destroyed) {
-                            if (typeof mainSwiper.slideToLoop === 'function') {
-                                mainSwiper.slideToLoop(clampedIndex, 0);
-                            } else if (typeof mainSwiper.slideTo === 'function') {
-                                mainSwiper.slideTo(clampedIndex, 0);
-                            }
+                            slideToIndex(mainSwiper, clampedIndex, 0);
                         }
                         updateInfo(viewer, galleryData, clampedIndex);
                     }
@@ -3130,11 +3164,7 @@
 
                 function handleThumbNavigation(targetIndex) {
                     if (mainSwiper && !mainSwiper.destroyed) {
-                        if (typeof mainSwiper.slideToLoop === 'function') {
-                            mainSwiper.slideToLoop(targetIndex);
-                        } else if (typeof mainSwiper.slideTo === 'function') {
-                            mainSwiper.slideTo(targetIndex);
-                        }
+                        slideToIndex(mainSwiper, targetIndex);
                     }
 
                     if (thumbsSwiper && !thumbsSwiper.destroyed && typeof thumbsSwiper.slideTo === 'function') {
@@ -3267,11 +3297,7 @@
                         return;
                     }
 
-                    if (typeof mainSwiper.slideToLoop === 'function') {
-                        mainSwiper.slideToLoop(sanitizedStartIndex, 0);
-                    } else if (typeof mainSwiper.slideTo === 'function') {
-                        mainSwiper.slideTo(sanitizedStartIndex, 0);
-                    }
+                    slideToIndex(mainSwiper, sanitizedStartIndex, 0);
 
                     if (thumbsSwiper && typeof thumbsSwiper.slideTo === 'function') {
                         thumbsSwiper.slideTo(sanitizedStartIndex);
@@ -3536,7 +3562,7 @@
                 resolvedSpeed = Math.min(resolvedSpeed, 300);
             }
 
-            const shouldUseCssMode = enableCssMode && resolvedEffect === 'slide';
+            const shouldUseCssMode = enableCssMode && resolvedEffect === 'slide' && !loopEnabled;
 
             if (debug && typeof debug.log === 'function') {
                 debug.log(
@@ -3549,7 +3575,25 @@
 
                 if (shouldUseCssMode) {
                     debug.log(mga__( 'Mode CSS activé pour limiter les animations.', 'lightbox-jlg' ));
+                } else if (enableCssMode && resolvedEffect === 'slide' && loopEnabled) {
+                    debug.log(mga__( 'Mode CSS non activé car incompatible avec le mode boucle.', 'lightbox-jlg' ));
                 }
+            }
+
+            const sanitizedInitialSlide = Math.min(
+                Math.max(parseInt(startIndex, 10) || 0, 0),
+                Math.max(images.length - 1, 0)
+            );
+
+            if (debug && typeof debug.log === 'function') {
+                debug.log(
+                    mgaSprintf(
+                        mga__( 'Index initial normalisé : %1$d (boucle : %2$s, CSS mode : %3$s).', 'lightbox-jlg' ),
+                        sanitizedInitialSlide,
+                        loopEnabled ? mga__( 'oui', 'lightbox-jlg' ) : mga__( 'non', 'lightbox-jlg' ),
+                        shouldUseCssMode ? mga__( 'oui', 'lightbox-jlg' ) : mga__( 'non', 'lightbox-jlg' )
+                    )
+                );
             }
 
             const handleAutoplayStart = () => {
@@ -3574,11 +3618,11 @@
             const mainSwiperConfig = {
                 zoom: showZoom,
                 spaceBetween: 10,
-                loop: !!settings.loop,
+                loop: loopEnabled,
                 effect: resolvedEffect,
                 speed: resolvedSpeed,
                 cssMode: shouldUseCssMode,
-                initialSlide: Math.min(Math.max(parseInt(startIndex, 10) || 0, 0), Math.max(images.length - 1, 0)),
+                initialSlide: sanitizedInitialSlide,
                 navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
                 on: {
                     init: function(swiper) {
