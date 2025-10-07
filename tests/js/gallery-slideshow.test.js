@@ -314,7 +314,8 @@ describe('start_on_clicked_image behaviour', () => {
 
             expect(instances.main).toBeTruthy();
             expect(instances.main.params.cssMode).toBe(true);
-            expect(instances.main.slideToLoop).toHaveBeenCalledWith(1, 0);
+            expect(instances.main.slideToLoop).not.toHaveBeenCalled();
+            expect(instances.main.slideTo).toHaveBeenCalledWith(1, 0);
         } finally {
             if (typeof originalRaf === 'function') {
                 window.requestAnimationFrame = originalRaf;
@@ -322,6 +323,16 @@ describe('start_on_clicked_image behaviour', () => {
                 delete window.requestAnimationFrame;
             }
         }
+    });
+
+    it('garde les interactions standards lorsque la boucle est active malgré la réduction des animations', () => {
+        bootstrap({ start_on_clicked_image: true, loop: true }, { prefersReducedMotion: true });
+        const links = document.querySelectorAll('a');
+        links[1].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+        expect(instances.main).toBeTruthy();
+        expect(instances.main.params.cssMode).toBe(false);
+        expect(instances.main.slideToLoop).toHaveBeenCalledWith(1, 0);
     });
 });
 
@@ -552,6 +563,7 @@ describe('thumbnail accessibility controls', () => {
         expect(secondListenerEntry).toBeTruthy();
 
         mainInstance.slideToLoop.mockClear();
+        mainInstance.slideTo.mockClear();
         if (thumbsInstance && typeof thumbsInstance.slideTo === 'function') {
             thumbsInstance.slideTo.mockClear();
         }
@@ -560,7 +572,8 @@ describe('thumbnail accessibility controls', () => {
         firstListenerEntry.listener.call(firstControl, arrowRightEvent);
         expect(arrowRightEvent.preventDefault).toHaveBeenCalled();
 
-        expect(mainInstance.slideToLoop).toHaveBeenCalledWith(1);
+        expect(mainInstance.slideToLoop).not.toHaveBeenCalled();
+        expect(mainInstance.slideTo).toHaveBeenCalledWith(1);
         if (thumbsInstance && typeof thumbsInstance.slideTo === 'function') {
             expect(thumbsInstance.slideTo).toHaveBeenCalledWith(1);
         }
@@ -569,6 +582,7 @@ describe('thumbnail accessibility controls', () => {
         expect(firstControl.getAttribute('tabindex')).toBe('-1');
 
         mainInstance.slideToLoop.mockClear();
+        mainInstance.slideTo.mockClear();
         if (thumbsInstance && typeof thumbsInstance.slideTo === 'function') {
             thumbsInstance.slideTo.mockClear();
         }
@@ -577,7 +591,8 @@ describe('thumbnail accessibility controls', () => {
         secondListenerEntry.listener.call(secondControl, arrowLeftEvent);
         expect(arrowLeftEvent.preventDefault).toHaveBeenCalled();
 
-        expect(mainInstance.slideToLoop).toHaveBeenCalledWith(0);
+        expect(mainInstance.slideToLoop).not.toHaveBeenCalled();
+        expect(mainInstance.slideTo).toHaveBeenCalledWith(0);
         if (thumbsInstance && typeof thumbsInstance.slideTo === 'function') {
             expect(thumbsInstance.slideTo).toHaveBeenCalledWith(0);
         }
