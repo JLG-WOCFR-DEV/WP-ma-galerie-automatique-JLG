@@ -390,22 +390,47 @@
     }
     /* Correction : on cible bien .mga-main-swiper pour l'affichage mobile en mode portrait */
     .mga-viewer.mga-has-caption .mga-main-swiper {
-        margin-top: calc(var(--mga-header-offset, 110px) + env(safe-area-inset-bottom, 0px));
+        margin-top: calc(
+            var(--mga-header-offset, 110px) +
+            env(safe-area-inset-top, 0px)
+        );
     }
     .mga-viewer:not(.mga-has-caption) .mga-main-swiper {
-        margin-top: var(--mga-header-offset, 60px);
+        margin-top: calc(
+            var(--mga-header-offset, 60px) +
+            env(safe-area-inset-top, 0px)
+        );
     }
     .mga-main-swiper {
-        max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 130px + env(safe-area-inset-bottom, 0px)));
+        max-height: calc(
+            100vh - (
+                var(--mga-thumb-size-mobile, 70px) +
+                130px +
+                env(safe-area-inset-top, 0px) +
+                env(safe-area-inset-bottom, 0px)
+            )
+        );
     }
     .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper {
-        max-height: calc(100vh - (130px + env(safe-area-inset-bottom, 0px)));
+        max-height: calc(
+            100vh - (
+                130px +
+                env(safe-area-inset-top, 0px) +
+                env(safe-area-inset-bottom, 0px)
+            )
+        );
     }
     .mga-viewer.mga-hide-thumbs-mobile.mga-has-caption .mga-main-swiper {
-        margin-top: calc(var(--mga-header-offset, 110px) + env(safe-area-inset-bottom, 0px));
+        margin-top: calc(
+            var(--mga-header-offset, 110px) +
+            env(safe-area-inset-top, 0px)
+        );
     }
     .mga-viewer.mga-hide-thumbs-mobile:not(.mga-has-caption) .mga-main-swiper {
-        margin-top: var(--mga-header-offset, 60px);
+        margin-top: calc(
+            var(--mga-header-offset, 60px) +
+            env(safe-area-inset-top, 0px)
+        );
     }
     .mga-thumbs-swiper {
         height: calc(var(--mga-thumb-size-mobile, 70px) + env(safe-area-inset-bottom, 0px));
@@ -453,10 +478,23 @@
         white-space: normal;
     }
     .mga-main-swiper {
-        max-height: calc(100vh - (var(--mga-thumb-size-mobile, 70px) + 80px + env(safe-area-inset-bottom, 0px)));
+        max-height: calc(
+            100vh - (
+                var(--mga-thumb-size-mobile, 70px) +
+                80px +
+                env(safe-area-inset-top, 0px) +
+                env(safe-area-inset-bottom, 0px)
+            )
+        );
     }
     .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper {
-        max-height: calc(100vh - (80px + env(safe-area-inset-bottom, 0px)));
+        max-height: calc(
+            100vh - (
+                80px +
+                env(safe-area-inset-top, 0px) +
+                env(safe-area-inset-bottom, 0px)
+            )
+        );
     }
     .mga-main-swiper .swiper-button-next,
     .mga-main-swiper .swiper-button-prev {
