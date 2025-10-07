@@ -96,3 +96,10 @@ msgstr "Afficher l’option « Copier le lien »"
 
 msgid "Afficher l’option « Téléchargement rapide »"
 msgstr "Afficher l’option « Téléchargement rapide »"
+
+msgid "Afficher le bouton « S’abonner »"
+msgstr "Afficher le bouton « S’abonner »"
+
+msgid "Masquez complètement le bouton d’abonnement si vous ne souhaitez pas le proposer."
+msgstr "Masquez complètement le bouton d’abonnement si vous ne souhaitez pas le proposer."
+

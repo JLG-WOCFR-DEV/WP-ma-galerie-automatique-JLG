@@ -167,7 +167,7 @@
 }
 @media (min-width: 768px) {
     .mga-cta-container {
-        justify-content: flex-start;
+        justify-content: center;
     }
 }
 

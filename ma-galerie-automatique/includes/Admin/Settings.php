@@ -288,6 +288,7 @@ class Settings {
             'show_zoom'          => true,
             'show_download'      => true,
             'show_share'         => true,
+            'show_cta'           => true,
             'show_fullscreen'    => true,
             'close_on_backdrop'  => true,
             'show_thumbs_mobile' => true,
@@ -426,6 +427,7 @@ class Settings {
             'allowBodyFallback',
             'load_on_archives',
             'close_on_backdrop',
+            'show_cta',
         ];
 
         foreach ( $general_toggle_keys as $checkbox_key ) {

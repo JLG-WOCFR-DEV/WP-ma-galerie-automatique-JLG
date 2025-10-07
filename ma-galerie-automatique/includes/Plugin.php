@@ -239,6 +239,7 @@ class Plugin {
             'showZoom'         => ! empty( $settings['show_zoom'] ),
             'showDownload'     => ! empty( $settings['show_download'] ),
             'showShare'        => ! empty( $settings['show_share'] ),
+            'showCta'          => ! empty( $settings['show_cta'] ),
             'showFullscreen'   => ! empty( $settings['show_fullscreen'] ),
             'noteText'         => __( 'Lightbox active', 'lightbox-jlg' ),
         ];

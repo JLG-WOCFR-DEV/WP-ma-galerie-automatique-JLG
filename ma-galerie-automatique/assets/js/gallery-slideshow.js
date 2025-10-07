@@ -324,11 +324,24 @@
         const bgContainer = viewer.querySelector('.mga-echo-bg');
         if (!bgContainer) return;
 
+        const sanitizedUrl = typeof imageUrl === 'string' ? imageUrl.trim() : '';
+
+        if (!sanitizedUrl) {
+            const oldImg = bgContainer.querySelector('.mga-visible');
+            if (oldImg) {
+                oldImg.classList.remove('mga-visible');
+                setTimeout(() => { if (oldImg.parentElement) { oldImg.parentElement.removeChild(oldImg); } }, 400);
+            }
+            viewer.classList.remove('mga-has-texture');
+            return;
+        }
+
         const newImg = document.createElement('img');
         newImg.className = 'mga-echo-bg__image';
         newImg.alt = '';
         newImg.setAttribute('aria-hidden', 'true');
         newImg.setAttribute('role', 'presentation');
+        newImg.decoding = 'async';
         let hasLoaded = false;
 
         const handleLoad = () => {
@@ -339,14 +352,18 @@
             const oldImg = bgContainer.querySelector('.mga-visible');
             if (oldImg) {
                 oldImg.classList.remove('mga-visible');
-                setTimeout(() => { if(oldImg.parentElement) oldImg.parentElement.removeChild(oldImg); }, 400);
+                setTimeout(() => { if (oldImg.parentElement) { oldImg.parentElement.removeChild(oldImg); } }, 400);
             }
             bgContainer.appendChild(newImg);
             setTimeout(() => newImg.classList.add('mga-visible'), 10);
+            viewer.classList.remove('mga-has-texture');
         };
 
         newImg.onload = handleLoad;
-        newImg.src = imageUrl;
+        newImg.onerror = () => {
+            viewer.classList.remove('mga-has-texture');
+        };
+        newImg.src = sanitizedUrl;
 
         if (newImg.complete) {
             setTimeout(() => handleLoad());
@@ -459,6 +476,7 @@
         let showShare = normalizeFlag(settings.show_share, true);
         const showFullscreen = normalizeFlag(settings.show_fullscreen, true);
         const showThumbsMobile = normalizeFlag(settings.show_thumbs_mobile, true);
+        let showCtas = normalizeFlag(settings.show_cta, true);
         const closeOnBackdropClick = normalizeFlag(settings.close_on_backdrop, true);
         const loopEnabled = normalizeFlag(settings.loop, true);
         const startOnClickedImageSetting =
@@ -3965,21 +3983,22 @@
                 feedbackElement.removeAttribute('data-mga-state');
             }
 
-            const ctaList = Array.isArray(imageData.ctas)
+            const rawCtas = Array.isArray(imageData.ctas)
                 ? imageData.ctas
                 : (Array.isArray(imageData.ctaButtons) ? imageData.ctaButtons : []);
+            const effectiveCtas = showCtas ? rawCtas : [];
 
             if (ctaContainer) {
                 while (ctaContainer.firstChild) {
                     ctaContainer.removeChild(ctaContainer.firstChild);
                 }
 
-                if (ctaList.length) {
+                if (effectiveCtas.length) {
                     ctaContainer.removeAttribute('hidden');
                     ctaContainer.setAttribute('role', 'group');
                     ctaContainer.setAttribute('aria-label', mga__( 'Actions personnalisées', 'lightbox-jlg' ));
 
-                    ctaList.forEach((cta, ctaIndex) => {
+                    effectiveCtas.forEach((cta, ctaIndex) => {
                         if (!cta || typeof cta !== 'object') {
                             return;
                         }
@@ -4017,7 +4036,7 @@
                 }
             }
 
-            viewer.classList.toggle('mga-has-cta', ctaList.length > 0);
+            viewer.classList.toggle('mga-has-cta', showCtas && effectiveCtas.length > 0);
 
             scheduleHeaderOffsetUpdate(viewer);
 
@@ -4188,6 +4207,12 @@
                 showShare = normalizeFlag(detail.showShare, showShare);
             }
 
+            if (Object.prototype.hasOwnProperty.call(detail, 'show_cta')) {
+                showCtas = normalizeFlag(detail.show_cta, showCtas);
+            } else if (Object.prototype.hasOwnProperty.call(detail, 'showCta')) {
+                showCtas = normalizeFlag(detail.showCta, showCtas);
+            }
+
             if (Object.prototype.hasOwnProperty.call(detail, 'share_copy')) {
                 shareCopyEnabled = normalizeFlag(detail.share_copy, shareCopyEnabled);
             } else if (Object.prototype.hasOwnProperty.call(detail, 'shareCopy')) {
@@ -4207,6 +4232,14 @@
             }
 
             syncShareControl();
+
+            const viewer = document.getElementById('mga-viewer');
+            if (viewer && currentGalleryImages && currentGalleryImages.length) {
+                const activeIndex = mainSwiper && !mainSwiper.destroyed
+                    ? mainSwiper.realIndex
+                    : 0;
+                updateInfo(viewer, currentGalleryImages, activeIndex);
+            }
         };
 
         const SHARE_PREFERENCES_EVENT = 'mga:share-preferences-change';
