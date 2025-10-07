@@ -28,6 +28,17 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
             <?php echo esc_html__( 'Réglages', 'lightbox-jlg' ); ?>
         </a>
         <a
+            href="#share"
+            class="nav-tab"
+            id="mga-tab-link-share"
+            role="tab"
+            aria-controls="share"
+            aria-selected="false"
+            tabindex="-1"
+        >
+            <?php echo esc_html__( 'Partage', 'lightbox-jlg' ); ?>
+        </a>
+        <a
             href="#tutorial"
             class="nav-tab"
             id="mga-tab-link-tutorial"
@@ -333,13 +344,189 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row">
+                        <label for="mga-content-selectors-textarea">
+                            <?php echo esc_html__( 'Sélecteurs CSS personnalisés', 'lightbox-jlg' ); ?>
+                        </label>
+                    </th>
+                    <td>
+                        <?php
+                        $configured_selectors = array_filter(
+                            array_map(
+                                static function ( $selector ) {
+                                    return trim( (string) $selector );
+                                },
+                                (array) $settings['contentSelectors']
+                            ),
+                            static function ( $selector ) {
+                                return '' !== $selector;
+                            }
+                        );
+                        $selectors_placeholder = esc_attr__( '.entry-content a[href$=".jpg"]', 'lightbox-jlg' );
+                        ?>
+                        <div
+                            class="mga-content-selectors"
+                            data-mga-content-selectors
+                            data-mga-selector-placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
+                        >
+                            <textarea
+                                id="mga-content-selectors-textarea"
+                                name="mga_settings[contentSelectors]"
+                                rows="4"
+                                class="large-text code"
+                                data-mga-content-selectors-textarea
+                                placeholder="<?php echo esc_attr__( "Un sélecteur CSS par ligne\n.exemple article a[href$=\".jpg\"]", 'lightbox-jlg' ); ?>"
+                                aria-describedby="mga-content-selectors-help"
+                            ><?php echo esc_textarea( implode( "\n", $configured_selectors ) ); ?></textarea>
+                            <div class="mga-content-selectors__list" data-mga-content-selectors-list>
+                                <?php foreach ( $configured_selectors as $index => $selector ) : ?>
+                                    <?php $input_id = sprintf( 'mga-content-selector-%d', (int) $index ); ?>
+                                    <div class="mga-content-selectors__row" data-mga-content-selector-row>
+                                        <input
+                                            type="text"
+                                            id="<?php echo esc_attr( $input_id ); ?>"
+                                            class="regular-text"
+                                            value="<?php echo esc_attr( $selector ); ?>"
+                                            data-mga-content-selector-input
+                                            placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="button-link mga-content-selectors__remove"
+                                            data-mga-remove-selector
+                                            aria-label="<?php echo esc_attr__( 'Supprimer ce sélecteur CSS', 'lightbox-jlg' ); ?>"
+                                        >
+                                            <?php echo esc_html__( 'Retirer', 'lightbox-jlg' ); ?>
+                                        </button>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <p>
+                                <button
+                                    type="button"
+                                    class="button button-secondary"
+                                    data-mga-add-selector
+                                >
+                                    <?php echo esc_html__( 'Ajouter un sélecteur', 'lightbox-jlg' ); ?>
+                                </button>
+                            </p>
+                            <p class="description" id="mga-content-selectors-help">
+                                <?php
+                                echo wp_kses_post(
+                                    __( 'Ajoutez ici vos propres sélecteurs lorsque le contenu principal de votre thème n’utilise pas les classes par défaut (par exemple <code>.entry-content</code>). Chaque ligne correspond à un sélecteur complet, combiné aux valeurs natives du plugin. Utilisez le bouton <strong>Ajouter un sélecteur</strong> ou appuyez sur la touche <kbd>Entrée</kbd> dans un champ pour créer rapidement une nouvelle ligne.', 'lightbox-jlg' )
+                                );
+                                ?>
+                            </p>
+                            <div class="mga-content-selectors__details">
+                                <p><strong><?php echo esc_html__( 'Quand personnaliser ces sélecteurs ?', 'lightbox-jlg' ); ?></strong></p>
+                                <p>
+                                    <?php
+                                    echo wp_kses_post(
+                                        __( 'Utilisez cette liste si votre thème encapsule les images dans des conteneurs spécifiques (ex. <code>.site-main .article-body</code>) ou si vous avez besoin d’inclure des blocs personnalisés. En cas de doute, inspectez votre page avec les outils du navigateur pour identifier la classe englobante, puis ajoutez-la ici afin que le plugin repère les liens vers les fichiers médias.', 'lightbox-jlg' )
+                                    );
+                                    ?>
+                                </p>
+                            </div>
+                        </div>
+                        <template id="mga-content-selector-template">
+                            <div class="mga-content-selectors__row" data-mga-content-selector-row>
+                                <input
+                                    type="text"
+                                    class="regular-text"
+                                    data-mga-content-selector-input
+                                    placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
+                                />
+                                <button
+                                    type="button"
+                                    class="button-link mga-content-selectors__remove"
+                                    data-mga-remove-selector
+                                    aria-label="<?php echo esc_attr__( 'Supprimer ce sélecteur CSS', 'lightbox-jlg' ); ?>"
+                                >
+                                    <?php echo esc_html__( 'Retirer', 'lightbox-jlg' ); ?>
+                                </button>
+                            </div>
+                        </template>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php echo esc_html__( 'Mode de débogage', 'lightbox-jlg' ); ?></th>
+                    <td>
+                        <fieldset>
+                            <label for="mga_debug_mode">
+                                <input name="mga_settings[debug_mode]" type="checkbox" id="mga_debug_mode" value="1" <?php checked( ! empty( $settings['debug_mode'] ), 1 ); ?> />
+                                <span><?php echo esc_html__( 'Activer le mode débogage', 'lightbox-jlg' ); ?></span>
+                            </label>
+                            <p class="description"><?php echo esc_html__( "Affiche un panneau d'informations techniques sur le site pour aider à résoudre les problèmes.", 'lightbox-jlg' ); ?></p>
+                        </fieldset>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php echo esc_html__( 'Types de contenu suivis', 'lightbox-jlg' ); ?></th>
+                    <td>
+                        <fieldset>
+                            <legend class="screen-reader-text">
+                                <span><?php echo esc_html__( 'Sélectionnez les types de contenu à analyser', 'lightbox-jlg' ); ?></span>
+                            </legend>
+                            <?php
+                            $post_types = get_post_types( [ 'public' => true ], 'objects' );
+
+                            if ( empty( $post_types ) ) :
+                                ?>
+                                <p class="description"><?php echo esc_html__( 'Aucun type de contenu public n’a été détecté.', 'lightbox-jlg' ); ?></p>
+                                <?php
+                            else :
+                                foreach ( $post_types as $post_type ) :
+                                    if ( 'attachment' === $post_type->name ) {
+                                        continue;
+                                    }
+
+                                    $is_checked = in_array( $post_type->name, (array) $settings['tracked_post_types'], true );
+                                    ?>
+                                    <label for="mga-tracked-post-type-<?php echo esc_attr( $post_type->name ); ?>" class="mga-tracked-post-type">
+                                        <input
+                                            type="checkbox"
+                                            id="mga-tracked-post-type-<?php echo esc_attr( $post_type->name ); ?>"
+                                            name="mga_settings[tracked_post_types][]"
+                                            value="<?php echo esc_attr( $post_type->name ); ?>"
+                                            <?php checked( $is_checked ); ?>
+                                        />
+                                        <span><?php echo esc_html( $post_type->labels->singular_name ); ?></span>
+                                    </label>
+                                    <br />
+                                    <?php
+                                endforeach;
+
+                                ?>
+                                <p class="description">
+                                    <?php echo esc_html__( 'Limitez l’analyse aux contenus réellement utilisés pour vos galeries. Par défaut, seuls les articles et les pages sont inspectés.', 'lightbox-jlg' ); ?>
+                                </p>
+                                <?php
+                            endif;
+                            ?>
+                        </fieldset>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div
+            id="share"
+            class="tab-content"
+            role="tabpanel"
+            aria-labelledby="mga-tab-link-share"
+            aria-hidden="true"
+            tabindex="0"
+            hidden
+        >
+            <table class="form-table">
+                <tr>
                     <th scope="row"><?php echo esc_html__( 'Canaux de partage', 'lightbox-jlg' ); ?></th>
                     <td>
                         <?php
-                        $share_channels     = isset( $settings['share_channels'] ) && is_array( $settings['share_channels'] )
+                        $share_channels      = isset( $settings['share_channels'] ) && is_array( $settings['share_channels'] )
                             ? array_values( $settings['share_channels'] )
                             : [];
-                        $share_icon_choices = mga_get_share_icon_choices();
+                        $share_icon_choices  = mga_get_share_icon_choices();
                         $render_icon_options = static function ( array $choices, string $selected ): string {
                             $options = '';
 
@@ -365,14 +552,14 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                         <div class="mga-share-repeater" data-share-repeater>
                             <div class="mga-share-repeater__list" data-share-repeater-list>
                                 <?php foreach ( $share_channels as $index => $channel ) :
-                                    $channel_key       = isset( $channel['key'] ) ? sanitize_key( (string) $channel['key'] ) : '';
-                                    $channel_label     = isset( $channel['label'] ) ? (string) $channel['label'] : '';
-                                    $channel_template  = isset( $channel['template'] ) ? (string) $channel['template'] : '';
-                                    $channel_icon      = isset( $channel['icon'] ) ? (string) $channel['icon'] : '';
-                                    $channel_enabled   = ! empty( $channel['enabled'] );
-                                    $base_name         = sprintf( 'mga_settings[share_channels][%d]', $index );
-                                    $item_uid          = sprintf( 'mga-share-channel-%d', $index + 1 );
-                                    $channel_title     = $channel_label;
+                                    $channel_key      = isset( $channel['key'] ) ? sanitize_key( (string) $channel['key'] ) : '';
+                                    $channel_label    = isset( $channel['label'] ) ? (string) $channel['label'] : '';
+                                    $channel_template = isset( $channel['template'] ) ? (string) $channel['template'] : '';
+                                    $channel_icon     = isset( $channel['icon'] ) ? (string) $channel['icon'] : '';
+                                    $channel_enabled  = ! empty( $channel['enabled'] );
+                                    $base_name        = sprintf( 'mga_settings[share_channels][%d]', $index );
+                                    $item_uid         = sprintf( 'mga-share-channel-%d', $index + 1 );
+                                    $channel_title    = $channel_label;
 
                                     if ( '' === $channel_title ) {
                                         $channel_title = $channel_key ? strtoupper( $channel_key ) : __( 'Nouveau canal', 'lightbox-jlg' );
@@ -536,169 +723,6 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                                 </label>
                             </div>
                         </div>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">
-                        <label for="mga-content-selectors-textarea">
-                            <?php echo esc_html__( 'Sélecteurs CSS personnalisés', 'lightbox-jlg' ); ?>
-                        </label>
-                    </th>
-                    <td>
-                        <?php
-                        $configured_selectors = array_filter(
-                            array_map(
-                                static function ( $selector ) {
-                                    return trim( (string) $selector );
-                                },
-                                (array) $settings['contentSelectors']
-                            ),
-                            static function ( $selector ) {
-                                return '' !== $selector;
-                            }
-                        );
-                        $selectors_placeholder = esc_attr__( '.entry-content a[href$=".jpg"]', 'lightbox-jlg' );
-                        ?>
-                        <div
-                            class="mga-content-selectors"
-                            data-mga-content-selectors
-                            data-mga-selector-placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
-                        >
-                            <textarea
-                                id="mga-content-selectors-textarea"
-                                name="mga_settings[contentSelectors]"
-                                rows="4"
-                                class="large-text code"
-                                data-mga-content-selectors-textarea
-                                placeholder="<?php echo esc_attr__( "Un sélecteur CSS par ligne\n.exemple article a[href$=\".jpg\"]", 'lightbox-jlg' ); ?>"
-                                aria-describedby="mga-content-selectors-help"
-                            ><?php echo esc_textarea( implode( "\n", $configured_selectors ) ); ?></textarea>
-                            <div class="mga-content-selectors__list" data-mga-content-selectors-list>
-                                <?php foreach ( $configured_selectors as $index => $selector ) : ?>
-                                    <?php $input_id = sprintf( 'mga-content-selector-%d', (int) $index ); ?>
-                                    <div class="mga-content-selectors__row" data-mga-content-selector-row>
-                                        <input
-                                            type="text"
-                                            id="<?php echo esc_attr( $input_id ); ?>"
-                                            class="regular-text"
-                                            value="<?php echo esc_attr( $selector ); ?>"
-                                            data-mga-content-selector-input
-                                            placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
-                                        />
-                                        <button
-                                            type="button"
-                                            class="button-link mga-content-selectors__remove"
-                                            data-mga-remove-selector
-                                            aria-label="<?php echo esc_attr__( 'Supprimer ce sélecteur CSS', 'lightbox-jlg' ); ?>"
-                                        >
-                                            <?php echo esc_html__( 'Retirer', 'lightbox-jlg' ); ?>
-                                        </button>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <p>
-                                <button
-                                    type="button"
-                                    class="button button-secondary"
-                                    data-mga-add-selector
-                                >
-                                    <?php echo esc_html__( 'Ajouter un sélecteur', 'lightbox-jlg' ); ?>
-                                </button>
-                            </p>
-                            <p class="description" id="mga-content-selectors-help">
-                                <?php
-                                echo wp_kses_post(
-                                    __( 'Ajoutez ici vos propres sélecteurs lorsque le contenu principal de votre thème n’utilise pas les classes par défaut (par exemple <code>.entry-content</code>). Chaque ligne correspond à un sélecteur complet, combiné aux valeurs natives du plugin. Utilisez le bouton <strong>Ajouter un sélecteur</strong> ou appuyez sur la touche <kbd>Entrée</kbd> dans un champ pour créer rapidement une nouvelle ligne.', 'lightbox-jlg' )
-                                );
-                                ?>
-                            </p>
-                            <div class="mga-content-selectors__details">
-                                <p><strong><?php echo esc_html__( 'Quand personnaliser ces sélecteurs ?', 'lightbox-jlg' ); ?></strong></p>
-                                <p>
-                                    <?php
-                                    echo wp_kses_post(
-                                        __( 'Utilisez cette liste si votre thème encapsule les images dans des conteneurs spécifiques (ex. <code>.site-main .article-body</code>) ou si vous avez besoin d’inclure des blocs personnalisés. En cas de doute, inspectez votre page avec les outils du navigateur pour identifier la classe englobante, puis ajoutez-la ici afin que le plugin repère les liens vers les fichiers médias.', 'lightbox-jlg' )
-                                    );
-                                    ?>
-                                </p>
-                            </div>
-                        </div>
-                        <template id="mga-content-selector-template">
-                            <div class="mga-content-selectors__row" data-mga-content-selector-row>
-                                <input
-                                    type="text"
-                                    class="regular-text"
-                                    data-mga-content-selector-input
-                                    placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
-                                />
-                                <button
-                                    type="button"
-                                    class="button-link mga-content-selectors__remove"
-                                    data-mga-remove-selector
-                                    aria-label="<?php echo esc_attr__( 'Supprimer ce sélecteur CSS', 'lightbox-jlg' ); ?>"
-                                >
-                                    <?php echo esc_html__( 'Retirer', 'lightbox-jlg' ); ?>
-                                </button>
-                            </div>
-                        </template>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php echo esc_html__( 'Mode de débogage', 'lightbox-jlg' ); ?></th>
-                    <td>
-                        <fieldset>
-                            <label for="mga_debug_mode">
-                                <input name="mga_settings[debug_mode]" type="checkbox" id="mga_debug_mode" value="1" <?php checked( ! empty( $settings['debug_mode'] ), 1 ); ?> />
-                                <span><?php echo esc_html__( 'Activer le mode débogage', 'lightbox-jlg' ); ?></span>
-                            </label>
-                            <p class="description"><?php echo esc_html__( "Affiche un panneau d'informations techniques sur le site pour aider à résoudre les problèmes.", 'lightbox-jlg' ); ?></p>
-                        </fieldset>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php echo esc_html__( 'Types de contenu suivis', 'lightbox-jlg' ); ?></th>
-                    <td>
-                        <fieldset>
-                            <legend class="screen-reader-text">
-                                <span><?php echo esc_html__( 'Sélectionnez les types de contenu à analyser', 'lightbox-jlg' ); ?></span>
-                            </legend>
-                            <?php
-                            $post_types = get_post_types( [ 'public' => true ], 'objects' );
-
-                            if ( empty( $post_types ) ) :
-                                ?>
-                                <p class="description"><?php echo esc_html__( 'Aucun type de contenu public n’a été détecté.', 'lightbox-jlg' ); ?></p>
-                                <?php
-                            else :
-                                foreach ( $post_types as $post_type ) :
-                                    if ( 'attachment' === $post_type->name ) {
-                                        continue;
-                                    }
-
-                                    $is_checked = in_array( $post_type->name, (array) $settings['tracked_post_types'], true );
-                                    ?>
-                                    <label for="mga-tracked-post-type-<?php echo esc_attr( $post_type->name ); ?>" class="mga-tracked-post-type">
-                                        <input
-                                            type="checkbox"
-                                            id="mga-tracked-post-type-<?php echo esc_attr( $post_type->name ); ?>"
-                                            name="mga_settings[tracked_post_types][]"
-                                            value="<?php echo esc_attr( $post_type->name ); ?>"
-                                            <?php checked( $is_checked ); ?>
-                                        />
-                                        <span><?php echo esc_html( $post_type->labels->singular_name ); ?></span>
-                                    </label>
-                                    <br />
-                                    <?php
-                                endforeach;
-
-                                ?>
-                                <p class="description">
-                                    <?php echo esc_html__( 'Limitez l’analyse aux contenus réellement utilisés pour vos galeries. Par défaut, seuls les articles et les pages sont inspectés.', 'lightbox-jlg' ); ?>
-                                </p>
-                                <?php
-                            endif;
-                            ?>
-                        </fieldset>
                     </td>
                 </tr>
             </table>
