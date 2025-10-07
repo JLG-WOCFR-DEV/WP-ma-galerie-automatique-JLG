@@ -390,15 +390,15 @@
     }
     /* Correction : on cible bien .mga-main-swiper pour l'affichage mobile en mode portrait */
     .mga-viewer.mga-has-caption .mga-main-swiper {
-        margin-top: calc(
-            var(--mga-header-offset, 110px) +
-            env(safe-area-inset-top, 0px)
+        margin-top: var(
+            --mga-header-offset,
+            calc(110px + env(safe-area-inset-top, 0px))
         );
     }
     .mga-viewer:not(.mga-has-caption) .mga-main-swiper {
-        margin-top: calc(
-            var(--mga-header-offset, 60px) +
-            env(safe-area-inset-top, 0px)
+        margin-top: var(
+            --mga-header-offset,
+            calc(60px + env(safe-area-inset-top, 0px))
         );
     }
     .mga-main-swiper {
@@ -421,15 +421,15 @@
         );
     }
     .mga-viewer.mga-hide-thumbs-mobile.mga-has-caption .mga-main-swiper {
-        margin-top: calc(
-            var(--mga-header-offset, 110px) +
-            env(safe-area-inset-top, 0px)
+        margin-top: var(
+            --mga-header-offset,
+            calc(110px + env(safe-area-inset-top, 0px))
         );
     }
     .mga-viewer.mga-hide-thumbs-mobile:not(.mga-has-caption) .mga-main-swiper {
-        margin-top: calc(
-            var(--mga-header-offset, 60px) +
-            env(safe-area-inset-top, 0px)
+        margin-top: var(
+            --mga-header-offset,
+            calc(60px + env(safe-area-inset-top, 0px))
         );
     }
     .mga-thumbs-swiper {
