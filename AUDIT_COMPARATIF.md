@@ -111,14 +111,58 @@ etc.). Les recommandations sont classées par thématique demandée.
 
 #### Micro-interactions & feedback
 - **Animations contextuelles** : l’interface n’exploite que quelques transitions
-  génériques (fade/scale, hover) et un spinner circulaire uniforme.【F:ma-galerie-automatique/assets/css/gallery-slideshow.css†L90-L147】【F:ma-galerie-automatique/assets/css/gallery-slideshow.css†L115-L126】
-  Ajoutez des micro-interactions spécifiques (rebond léger sur changement
+  génériques (fade/scale, hover) et un spinner circulaire uniforme.【F:ma-galerie-automatique/assets/css/gallery-slideshow.css†L90-L126】 Ajoutez des micro-interactions spécifiques (rebond léger sur changement
   d’image, highlight progressif des miniatures, animation d’apparition des
   légendes) inspirées des lightbox premium pour renforcer la sensation haut de
   gamme.
+  - **Plan d’implémentation** : exploitez les hooks Swiper déjà en place (`slideChange`, `slideChangeTransitionStart/End`) pour ajouter des classes d’état (`is-entering`, `is-leaving`) et piloter des animations CSS fines, tout en respectant `prefers-reduced-motion` pour les utilisateurs sensibles.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L3034-L3074】
+  - **Personnalisation** : exposez un sélecteur de style d’animation (progressive, cinétique, minimaliste) avec prévisualisation live dans l’admin afin d’assurer la cohérence avec la charte graphique du site.【F:ma-galerie-automatique/includes/admin-page-template.php†L119-L214】
 - **Feedback utilisateur enrichi** : combinez les transitions avec des sons
   discrets, vibrations (mobile) et indicateurs contextuels (pills « Copié » ou
   « Ajouté aux favoris ») pour aligner l’expérience sur les standards pro.
+  - **Gestion des retours** : branchez les effets audio/haptiques sur les points d’entrée centralisés (`triggerImageDownload`, `shareAction`) pour couvrir téléchargements, partages natifs ou via la modale.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L730-L775】【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L800-L1100】
+  - **Feedback accessible** : réutilisez la zone `aria-live` de la légende pour afficher des confirmations textuelles temporaires (« Lien copié », « Favori ajouté »), assurant un retour vocalisé cohérent avec les lecteurs d’écran.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L1917-L2051】
+- **Guidage onboarding** : au premier lancement, affichez des bulles d’aide
+  superposées pour introduire les principaux contrôles (zoom, partage,
+  téléchargement), comme le font Envira et Modula dans leurs démos. Rendez ce
+  tutoriel re-jouable depuis la barre d’aide.
+  - **Détection du premier usage** : initialisez la séquence dans `openViewer` si aucun flag `mga-onboarding-seen` n’est présent en `localStorage`, puis exposez une option admin pour forcer la réapparition du tutoriel.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L2509-L2832】
+  - **Patron de navigation** : réemployez le focus trap existant pour sécuriser les bulles d’aide et garantir un parcours clavier fluide, y compris sur fermeture/relecture du tutoriel.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L2834-L2892】
+- **Retour haptique et audio adaptatif** : exposez une section « Feedback
+  sensoriel » dans l’admin pour activer vibrations, sons courts ou flash visuel
+  lorsque l’utilisateur atteint la dernière image ou déclenche un partage,
+  pratique pour les galeries événementielles.
+  - **Scénarios conditionnels** : utilisez les événements Swiper pour détecter l’arrivée sur la dernière diapositive ou un changement de boucle, puis déclenchez des effets spécifiques tout en respectant `prefers-reduced-motion` et les préférences utilisateur.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L3034-L3074】
+  - **Contrôles d’admin** : ajoutez des toggles audio/haptique/visuel assortis d’un aperçu rapide dans les réglages, afin que l’utilisateur puisse tester l’intensité avant publication.【F:ma-galerie-automatique/includes/admin-page-template.php†L119-L214】
+- **Timeline de progression** : ajoutez une barre ou un anneau de progression
+  cumulant le temps passé et le nombre de vues, afin de matérialiser le rythme
+  du diaporama comme dans les stories Instagram/Envira Slideshows.
+  - **Réutilisation du timer** : étendez l’anneau SVG piloté par `autoplayTimeLeft` pour afficher le pourcentage de diapositives vues et le temps cumulé, avec variante horizontale sur mobile.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L1980-L2054】【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L3053-L3056】
+  - **Analyse** : alimentez le futur module statistiques avec ces données pour produire un rapport « temps moyen par diapositive » (CSV/webhook) apprécié des agences.
+
+#### Parcours pro et scénarios avancés
+- **Mode « client proofing »** : ajoutez un panneau optionnel permettant de
+  taguer des images (approuver/rejeter/commenter) et d’exporter ces sélections
+  par email ou CSV. Les suites professionnelles le proposent pour les agences
+  photo.
+  - **Structure des données** : ajoutez un statut (`pending`, `approved`, `rejected`) et un commentaire aux objets `currentGalleryImages`, déjà centralisés lors de l’ouverture de la visionneuse, pour simplifier la persistance et l’export.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L548-L706】【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L2509-L2620】
+  - **Flux opérateur** : fournissez un panneau latéral repliable avec raccourcis clavier (`A`/`R`), filtres de statut et export CSV depuis l’admin afin de fluidifier les sessions de sélection avec les clients.
+- **Call-to-action configurables** : permettez d’ajouter des boutons personnalisés
+  par diapositive (ex. « Acheter », « Demander un devis ») avec icône et URL,
+  inspirés des workflows e-commerce de FooGallery Pro.
+  - **Saisie des CTA** : autorisez la définition de CTA via des attributs `data-mga-cta-*` ou via le bloc Gutenberg, synchronisés avec les données d’image récupérées au parsing.
+  - **Affichage et analytics** : réutilisez la logique de la modale de partage (construction dynamique, focus trap) pour afficher les CTA et remonter les clics dans le futur module d’analytics.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L800-L1100】
+- **Mode diaporama automatisé événementiel** : offrez un thème « kiosque » avec
+  lecture automatique, minuterie de session et verrouillage clavier (utile pour
+  les salons). Intégrez un chronomètre visible et la reprise automatique après
+  inactivité.
+  - **Preset dédié** : combinez autoplay forcé, désactivation des boutons sensibles et retour automatique à la première diapositive en exploitant les événements Swiper (`autoplayStop`, `sliderMove`).【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L3005-L3074】
+  - **Sécurité de session** : empêchez la fermeture via Échap et réinitialisez le focus via la mécanique de `setupViewerFocusManagement` après X minutes d’inactivité pour un usage kiosque sans supervision.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L2834-L2892】
+- **Intégration calendrier & rendez-vous** : pour les photographes ou agences,
+  permettez d’ouvrir directement un widget Calendly/Acuity dans un panneau
+  latéral, en reprenant les patterns multi-panneaux d’Envira.
+  - **Chargement paresseux** : ajoutez un onglet de partage supplémentaire qui charge l’iframe de prise de rendez-vous uniquement sur action de l’utilisateur, afin de préserver le temps de chargement initial.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L800-L1100】
+  - **Suivi de conversion** : connectez ces interactions au futur module analytics (clics, formulaires envoyés) pour fournir des rapports exploitables aux photographes.
 
 ### Quick wins supplémentaires
 
