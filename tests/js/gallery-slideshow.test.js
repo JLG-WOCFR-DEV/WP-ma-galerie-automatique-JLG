@@ -195,7 +195,7 @@ describe('start_on_clicked_image behaviour', () => {
     function bootstrap(overrides = {}, options = {}) {
         jest.resetModules();
 
-        document.body.innerHTML = `
+        const defaultMarkup = `
             <main>
                 <a href="https://example.com/high-1.jpg" data-mga-gallery="set">
                     <img src="https://example.com/thumb-1.jpg" alt="Première" />
@@ -205,6 +205,10 @@ describe('start_on_clicked_image behaviour', () => {
                 </a>
             </main>
         `;
+
+        const markup = typeof options.markup === 'string' ? options.markup : defaultMarkup;
+
+        document.body.innerHTML = markup;
 
         Object.defineProperty(document, 'readyState', {
             value: 'complete',
@@ -323,6 +327,27 @@ describe('start_on_clicked_image behaviour', () => {
                 delete window.requestAnimationFrame;
             }
         }
+    });
+
+    it('ouvre la visionneuse même si les images n’ont pas de miniature explicite', () => {
+        const markupSansMiniatures = `
+            <main>
+                <a href="https://example.com/high-1.jpg">
+                    <img alt="Première" />
+                </a>
+                <a href="https://example.com/high-2.jpg">
+                    <img alt="Deuxième" />
+                </a>
+            </main>
+        `;
+
+        bootstrap({ start_on_clicked_image: true }, { markup: markupSansMiniatures });
+
+        const links = document.querySelectorAll('a');
+        links[1].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+        expect(instances.main).toBeTruthy();
+        expect(instances.main.params.initialSlide).toBe(1);
     });
 
     it('garde les interactions standards lorsque la boucle est active malgré la réduction des animations', () => {
