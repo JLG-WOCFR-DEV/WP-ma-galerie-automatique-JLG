@@ -15,6 +15,7 @@ if ( is_multisite() ) {
         switch_to_blog( $site_id );
         delete_option( 'mga_settings' );
         delete_option( 'mga_swiper_asset_sources' );
+        delete_option( 'mga_detection_cache_version' );
         delete_post_meta_by_key( '_mga_has_linked_images' );
         restore_current_blog();
     }
@@ -24,4 +25,5 @@ if ( is_multisite() ) {
 
 delete_option( 'mga_settings' );
 delete_option( 'mga_swiper_asset_sources' );
+delete_option( 'mga_detection_cache_version' );
 delete_post_meta_by_key( '_mga_has_linked_images' );

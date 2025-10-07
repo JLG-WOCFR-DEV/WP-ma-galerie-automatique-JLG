@@ -265,6 +265,7 @@ class Plugin {
         }
 
         delete_post_meta_by_key( '_mga_has_linked_images' );
+        Detection::bump_global_cache_version();
     }
 
     private function normalize_detection_settings( array $settings ): array {
