@@ -465,6 +465,7 @@
             init: noop,
             log: noop,
             updateInfo: noop,
+            updateVisibleSlides: noop,
             onForceOpen: noop,
             stopTimer: noop,
             restartTimer: noop,
@@ -1575,6 +1576,94 @@
 
             return new Swiper(container, safeConfig);
         }
+
+        const DEVICE_WIDTH_PRESETS = [
+            { key: 'ultrawide', label: mga__( 'Écran ultralarge', 'lightbox-jlg' ), minWidth: 1600 },
+            { key: 'desktop', label: mga__( 'Bureau', 'lightbox-jlg' ), minWidth: 1200 },
+            { key: 'tablet', label: mga__( 'Tablette', 'lightbox-jlg' ), minWidth: 768 },
+            { key: 'portrait', label: mga__( 'Portrait', 'lightbox-jlg' ), minWidth: 0 },
+        ];
+
+        const isFiniteSlidesValue = (value) => typeof value === 'number' && Number.isFinite(value) && !Number.isNaN(value);
+
+        const resolveSlidesPerViewSetting = (config, viewportWidth) => {
+            if (!config || typeof config !== 'object') {
+                return 1;
+            }
+
+            let resolved = config.slidesPerView;
+            const { breakpoints } = config;
+
+            if (breakpoints && typeof breakpoints === 'object') {
+                const candidates = Object.entries(breakpoints)
+                    .map(([breakpoint, breakpointConfig]) => ({
+                        width: parseFloat(breakpoint),
+                        config: breakpointConfig,
+                    }))
+                    .filter(({ width, config: breakpointConfig }) => (
+                        !Number.isNaN(width) &&
+                        viewportWidth >= width &&
+                        breakpointConfig &&
+                        typeof breakpointConfig === 'object'
+                    ))
+                    .sort((a, b) => a.width - b.width);
+
+                candidates.forEach(({ config: breakpointConfig }) => {
+                    if (Object.prototype.hasOwnProperty.call(breakpointConfig, 'slidesPerView')) {
+                        resolved = breakpointConfig.slidesPerView;
+                    }
+                });
+            }
+
+            if (isFiniteSlidesValue(resolved)) {
+                return Math.max(1, Math.ceil(resolved));
+            }
+
+            if (resolved === 'auto') {
+                return 'auto';
+            }
+
+            return 1;
+        };
+
+        const buildSlidesVisibilitySummary = (config) => DEVICE_WIDTH_PRESETS.map((preset) => ({
+            key: preset.key,
+            label: preset.label,
+            value: resolveSlidesPerViewSetting(config, preset.minWidth),
+        }));
+
+        const reportSlidesVisibility = (swiper, config) => {
+            if (!debug || typeof debug.updateVisibleSlides !== 'function') {
+                return;
+            }
+
+            const snapshot = buildSlidesVisibilitySummary(config);
+            const dynamicValue = swiper && typeof swiper.slidesPerViewDynamic === 'function'
+                ? swiper.slidesPerViewDynamic()
+                : null;
+
+            const formatted = snapshot.map(({ label, value }) => {
+                if (value === 'auto') {
+                    if (isFiniteSlidesValue(dynamicValue)) {
+                        return mgaSprintf(
+                            mga__( '%1$s : auto (~%2$s)', 'lightbox-jlg' ),
+                            label,
+                            Math.max(1, Math.round(dynamicValue))
+                        );
+                    }
+
+                    return mgaSprintf(mga__( '%s : auto', 'lightbox-jlg' ), label);
+                }
+
+                return mgaSprintf(
+                    mga__( '%1$s : %2$s', 'lightbox-jlg' ),
+                    label,
+                    value
+                );
+            }).join(' | ');
+
+            debug.updateVisibleSlides(formatted);
+        };
 
         // --- FONCTIONS UTILITAIRES ---
 
@@ -3763,6 +3852,21 @@
             }
 
             applyTransitionEasing(mainSwiper, sanitizedEasing);
+
+            const emitSlidesVisibilityUpdate = () => {
+                const params = (mainSwiper && mainSwiper.params && typeof mainSwiper.params === 'object')
+                    ? mainSwiper.params
+                    : mainSwiperConfig;
+                reportSlidesVisibility(mainSwiper, params);
+            };
+
+            emitSlidesVisibilityUpdate();
+
+            if (mainSwiper && typeof mainSwiper.on === 'function') {
+                mainSwiper.on('resize', emitSlidesVisibilityUpdate);
+                mainSwiper.on('breakpoint', emitSlidesVisibilityUpdate);
+                mainSwiper.on('slidesLengthChange', emitSlidesVisibilityUpdate);
+            }
 
             const autoplayInstance = mainSwiper.autoplay;
             const hasAutoplayModule = !!(autoplayInstance && typeof autoplayInstance.start === 'function' && typeof autoplayInstance.stop === 'function');
