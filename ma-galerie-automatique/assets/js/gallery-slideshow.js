@@ -2948,11 +2948,6 @@
                 return;
             }
 
-            const linkTarget = targetLink.getAttribute('target');
-            if (typeof linkTarget === 'string' && linkTarget.toLowerCase() === '_blank') {
-                return;
-            }
-
             if (targetLink.hasAttribute('download')) {
                 return;
             }
