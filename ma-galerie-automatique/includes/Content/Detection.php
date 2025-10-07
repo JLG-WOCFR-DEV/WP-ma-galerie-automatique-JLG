@@ -851,9 +851,12 @@ class Detection {
             return false;
         }
 
-        if ( class_exists( 'DOMDocument' ) ) {
-            $document             = new DOMDocument();
-            $previous_error_state = libxml_use_internal_errors( true );
+        if ( ! class_exists( 'DOMDocument', false ) ) {
+            return $this->fallback_regex_detects_linked_media( $html );
+        }
+
+        $document = new DOMDocument();
+        $previous_error_state = libxml_use_internal_errors( true );
 
             $options = 0;
 
