@@ -119,6 +119,33 @@ etc.). Les recommandations sont classées par thématique demandée.
 - **Feedback utilisateur enrichi** : combinez les transitions avec des sons
   discrets, vibrations (mobile) et indicateurs contextuels (pills « Copié » ou
   « Ajouté aux favoris ») pour aligner l’expérience sur les standards pro.
+- **Guidage onboarding** : au premier lancement, affichez des bulles d’aide
+  superposées pour introduire les principaux contrôles (zoom, partage,
+  téléchargement), comme le font Envira et Modula dans leurs démos. Rendez ce
+  tutoriel re-jouable depuis la barre d’aide.
+- **Retour haptique et audio adaptatif** : exposez une section « Feedback
+  sensoriel » dans l’admin pour activer vibrations, sons courts ou flash visuel
+  lorsque l’utilisateur atteint la dernière image ou déclenche un partage,
+  pratique pour les galeries événementielles.
+- **Timeline de progression** : ajoutez une barre ou un anneau de progression
+  cumulant le temps passé et le nombre de vues, afin de matérialiser le rythme
+  du diaporama comme dans les stories Instagram/Envira Slideshows.
+
+#### Parcours pro et scénarios avancés
+- **Mode « client proofing »** : ajoutez un panneau optionnel permettant de
+  taguer des images (approuver/rejeter/commenter) et d’exporter ces sélections
+  par email ou CSV. Les suites professionnelles le proposent pour les agences
+  photo.
+- **Call-to-action configurables** : permettez d’ajouter des boutons personnalisés
+  par diapositive (ex. « Acheter », « Demander un devis ») avec icône et URL,
+  inspirés des workflows e-commerce de FooGallery Pro.
+- **Mode diaporama automatisé événementiel** : offrez un thème « kiosque » avec
+  lecture automatique, minuterie de session et verrouillage clavier (utile pour
+  les salons). Intégrez un chronomètre visible et la reprise automatique après
+  inactivité.
+- **Intégration calendrier & rendez-vous** : pour les photographes ou agences,
+  permettez d’ouvrir directement un widget Calendly/Acuity dans un panneau
+  latéral, en reprenant les patterns multi-panneaux d’Envira.
 
 ### Quick wins supplémentaires
 
