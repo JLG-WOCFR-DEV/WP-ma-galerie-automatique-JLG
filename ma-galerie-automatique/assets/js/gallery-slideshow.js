@@ -553,6 +553,11 @@
         let shareModalInvoker = null;
         let shareModalKeydownHandler = null;
         let thumbAccessibilityUpdater = null;
+        let captionFeedbackHideTimeout = null;
+        const captionAnnouncementState = {
+            lastBaseAnnouncement: '',
+            isTemporaryMessageActive: false,
+        };
 
         debug.init();
 
@@ -894,6 +899,8 @@
             feedback.className = 'mga-share-modal__feedback';
             feedback.setAttribute('role', 'status');
             feedback.setAttribute('aria-live', 'polite');
+            feedback.setAttribute('aria-atomic', 'true');
+            feedback.setAttribute('hidden', 'hidden');
             body.appendChild(feedback);
 
             viewer.appendChild(modalContainer);
@@ -933,21 +940,34 @@
 
             shareModal.feedback.textContent = '';
             shareModal.feedback.removeAttribute('data-mga-state');
+            shareModal.feedback.setAttribute('hidden', 'hidden');
         }
 
-        function setShareModalFeedback(message, isError = false) {
+        function setShareModalFeedback(message, isError = false, tone) {
             if (!shareModal || !shareModal.feedback) {
                 return;
             }
 
             shareModal.feedback.textContent = message || '';
 
-            if (isError) {
-                shareModal.feedback.setAttribute('data-mga-state', 'error');
-            } else if (message) {
-                shareModal.feedback.setAttribute('data-mga-state', 'success');
+            const resolvedTone = tone || (isError ? 'error' : (message ? 'info' : ''));
+
+            if (message) {
+                shareModal.feedback.removeAttribute('hidden');
+            } else {
+                shareModal.feedback.setAttribute('hidden', 'hidden');
+            }
+
+            if (resolvedTone) {
+                shareModal.feedback.setAttribute('data-mga-state', resolvedTone);
             } else {
                 shareModal.feedback.removeAttribute('data-mga-state');
+            }
+
+            if (message) {
+                announceViewerFeedback(message, {
+                    tone: resolvedTone || (isError ? 'error' : 'info'),
+                });
             }
         }
 
@@ -1219,7 +1239,7 @@
                 const shareUrl = buildShareUrl(template, payload);
 
                 if (!shareUrl) {
-                    setShareModalFeedback(mga__( 'Impossible de générer le lien de partage.', 'lightbox-jlg' ), true);
+                    setShareModalFeedback(mga__( 'Impossible de générer le lien de partage.', 'lightbox-jlg' ), true, 'error');
                     debug.shareAction('social', { target: shareKey, success: false, reason: 'invalid-url' });
                     return;
                 }
@@ -1245,7 +1265,9 @@
                         mgaSprintf(
                             mga__( 'Ouverture de %s dans un nouvel onglet.', 'lightbox-jlg' ),
                             shareLabel
-                        )
+                        ),
+                        false,
+                        'info'
                     );
                     debug.shareAction('social', { target: shareKey, success: true, url: shareUrl });
                 } else {
@@ -1254,7 +1276,8 @@
                             mga__( 'Impossible d’ouvrir %s. Vérifiez votre bloqueur de fenêtres.', 'lightbox-jlg' ),
                             shareLabel
                         ),
-                        true
+                        true,
+                        'error'
                     );
                     debug.shareAction('social', { target: shareKey, success: false, url: shareUrl });
                 }
@@ -1264,18 +1287,18 @@
 
             if ('copy' === shareType) {
                 if (!payload.url) {
-                    setShareModalFeedback(mga__( 'Aucun lien à copier pour cette image.', 'lightbox-jlg' ), true);
+                    setShareModalFeedback(mga__( 'Aucun lien à copier pour cette image.', 'lightbox-jlg' ), true, 'error');
                     debug.shareAction('copy', { success: false, reason: 'missing-url' });
                     return;
                 }
 
                 copyToClipboard(payload.url)
                     .then(() => {
-                        setShareModalFeedback(mga__( 'Lien copié dans le presse-papiers.', 'lightbox-jlg' ));
+                        setShareModalFeedback(mga__( 'Lien copié dans le presse-papiers.', 'lightbox-jlg' ), false, 'success');
                         debug.shareAction('copy', { success: true });
                     })
                     .catch((error) => {
-                        setShareModalFeedback(mga__( 'Impossible de copier le lien. Essayez le raccourci clavier.', 'lightbox-jlg' ), true);
+                        setShareModalFeedback(mga__( 'Impossible de copier le lien. Essayez le raccourci clavier.', 'lightbox-jlg' ), true, 'error');
                         debug.shareAction('copy', { success: false, reason: error && error.message ? error.message : 'copy-error' });
                     });
 
@@ -1284,7 +1307,7 @@
 
             if ('download' === shareType) {
                 if (!payload.url) {
-                    setShareModalFeedback(mga__( 'Aucun fichier à télécharger pour cette image.', 'lightbox-jlg' ), true);
+                    setShareModalFeedback(mga__( 'Aucun fichier à télécharger pour cette image.', 'lightbox-jlg' ), true, 'error');
                     debug.shareAction('download', { success: false, reason: 'missing-url' });
                     return;
                 }
@@ -1292,10 +1315,10 @@
                 const didDownload = triggerImageDownload(payload.url);
 
                 if (didDownload) {
-                    setShareModalFeedback(mga__( 'Téléchargement de l’image lancé.', 'lightbox-jlg' ));
+                    setShareModalFeedback(mga__( 'Téléchargement de l’image lancé.', 'lightbox-jlg' ), false, 'success');
                     debug.shareAction('download', { success: true });
                 } else {
-                    setShareModalFeedback(mga__( 'Impossible de lancer le téléchargement.', 'lightbox-jlg' ), true);
+                    setShareModalFeedback(mga__( 'Impossible de lancer le téléchargement.', 'lightbox-jlg' ), true, 'error');
                     debug.shareAction('download', { success: false });
                 }
 
@@ -1304,7 +1327,7 @@
 
             if ('native' === shareType) {
                 if (!hasNativeShareSupport()) {
-                    setShareModalFeedback(mga__( 'Le partage natif n’est pas pris en charge sur ce navigateur.', 'lightbox-jlg' ), true);
+                    setShareModalFeedback(mga__( 'Le partage natif n’est pas pris en charge sur ce navigateur.', 'lightbox-jlg' ), true, 'error');
                     debug.shareAction('native', { success: false, reason: 'unsupported' });
                     return;
                 }
@@ -1328,7 +1351,8 @@
                             mga__( 'Partage natif impossible : %s', 'lightbox-jlg' ),
                             error && error.message ? error.message : 'unknown'
                         ),
-                        true
+                        true,
+                        'error'
                     );
                     debug.shareAction('native', { success: false, reason: error && error.message ? error.message : 'error' });
                 }
@@ -2290,6 +2314,11 @@
                 const captionLiveRegion = document.createElement('span');
                 captionLiveRegion.className = 'mga-screen-reader-text mga-caption-live';
                 captionContainer.appendChild(captionLiveRegion);
+
+                const captionFeedback = document.createElement('p');
+                captionFeedback.className = 'mga-caption-feedback';
+                captionFeedback.setAttribute('hidden', 'hidden');
+                captionContainer.appendChild(captionFeedback);
 
                 const ctaContainer = document.createElement('div');
                 ctaContainer.className = 'mga-cta-container';
@@ -3905,6 +3934,7 @@
             const captionElement = viewer.querySelector('#mga-caption');
             const counterElement = viewer.querySelector('#mga-counter');
             const liveRegion = captionContainer ? captionContainer.querySelector('.mga-caption-live') : null;
+            const feedbackElement = captionContainer ? captionContainer.querySelector('.mga-caption-feedback') : null;
             const ctaContainer = viewer.querySelector('[data-mga-cta-container]');
 
             const imageData = images[index];
@@ -3913,6 +3943,8 @@
             const counterText = mgaSprintf(mga__( '%1$s / %2$s', 'lightbox-jlg' ), index + 1, images.length);
             const announcementCounterText = mgaSprintf(mga__( 'Image %1$s sur %2$s', 'lightbox-jlg' ), index + 1, images.length);
             const announcementText = captionText ? `${announcementCounterText}. ${captionText}` : announcementCounterText;
+
+            captionAnnouncementState.lastBaseAnnouncement = announcementText;
 
             if (captionElement) {
                 captionElement.textContent = captionText;
@@ -3923,8 +3955,14 @@
                 counterElement.textContent = counterText;
             }
 
-            if (liveRegion && liveRegion.textContent !== announcementText) {
+            if (!captionAnnouncementState.isTemporaryMessageActive && liveRegion && liveRegion.textContent !== announcementText) {
                 liveRegion.textContent = announcementText;
+            }
+
+            if (!captionAnnouncementState.isTemporaryMessageActive && feedbackElement && !feedbackElement.hasAttribute('hidden')) {
+                feedbackElement.textContent = '';
+                feedbackElement.setAttribute('hidden', 'hidden');
+                feedbackElement.removeAttribute('data-mga-state');
             }
 
             const ctaList = Array.isArray(imageData.ctas)
@@ -3985,6 +4023,88 @@
 
             if (historyManager.isSupported && historyManager.isActive && historyManager.isActive()) {
                 historyManager.update(index);
+            }
+        }
+
+        function getCaptionElements(targetViewer) {
+            let viewer = targetViewer || null;
+            if (!viewer && typeof document !== 'undefined') {
+                viewer = document.getElementById('mga-viewer');
+            }
+            if (!viewer) {
+                return { captionContainer: null, liveRegion: null, feedbackElement: null };
+            }
+
+            const captionContainer = viewer.querySelector('.mga-caption-container');
+            if (!captionContainer) {
+                return { captionContainer: null, liveRegion: null, feedbackElement: null };
+            }
+
+            return {
+                captionContainer,
+                liveRegion: captionContainer.querySelector('.mga-caption-live'),
+                feedbackElement: captionContainer.querySelector('.mga-caption-feedback'),
+            };
+        }
+
+        function clearCaptionFeedback({ restoreBaseAnnouncement = true } = {}) {
+            if (captionFeedbackHideTimeout) {
+                clearTimeout(captionFeedbackHideTimeout);
+                captionFeedbackHideTimeout = null;
+            }
+
+            const { feedbackElement, liveRegion } = getCaptionElements();
+
+            if (feedbackElement) {
+                feedbackElement.textContent = '';
+                feedbackElement.setAttribute('hidden', 'hidden');
+                feedbackElement.removeAttribute('data-mga-state');
+            }
+
+            if (restoreBaseAnnouncement && liveRegion) {
+                liveRegion.textContent = captionAnnouncementState.lastBaseAnnouncement || '';
+            }
+
+            captionAnnouncementState.isTemporaryMessageActive = false;
+        }
+
+        function announceViewerFeedback(message, { tone = 'info', duration = 6000 } = {}) {
+            if (!message) {
+                clearCaptionFeedback();
+                return;
+            }
+
+            const { feedbackElement, liveRegion } = getCaptionElements();
+
+            if (!feedbackElement && !liveRegion) {
+                return;
+            }
+
+            if (captionFeedbackHideTimeout) {
+                clearTimeout(captionFeedbackHideTimeout);
+                captionFeedbackHideTimeout = null;
+            }
+
+            if (feedbackElement) {
+                feedbackElement.textContent = message;
+                feedbackElement.removeAttribute('hidden');
+                if (tone) {
+                    feedbackElement.setAttribute('data-mga-state', tone);
+                } else {
+                    feedbackElement.removeAttribute('data-mga-state');
+                }
+            }
+
+            if (liveRegion) {
+                liveRegion.textContent = message;
+            }
+
+            captionAnnouncementState.isTemporaryMessageActive = true;
+
+            if (duration > 0 && typeof window !== 'undefined' && typeof window.setTimeout === 'function') {
+                captionFeedbackHideTimeout = window.setTimeout(() => {
+                    clearCaptionFeedback();
+                }, duration);
             }
         }
 
@@ -4149,6 +4269,7 @@
             }
             closeShareModal({ restoreFocus: false, reason: 'viewer-close' });
             resetShareModalFeedback();
+            clearCaptionFeedback({ restoreBaseAnnouncement: false });
             if (typeof cleanupAutoplayPreferenceListener === 'function') {
                 cleanupAutoplayPreferenceListener();
                 cleanupAutoplayPreferenceListener = null;

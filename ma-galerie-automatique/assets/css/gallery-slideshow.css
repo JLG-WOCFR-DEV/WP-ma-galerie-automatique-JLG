@@ -76,6 +76,39 @@
     white-space: normal;
     overflow-wrap: anywhere;
 }
+.mga-caption-feedback {
+    margin: 4px auto 0;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background-color: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+.mga-caption-feedback[hidden] {
+    display: none !important;
+}
+.mga-caption-feedback[data-mga-state='success'] {
+    background-color: rgba(23, 111, 44, 0.85);
+    color: #f3fff6;
+    box-shadow: 0 0 0 1px rgba(23, 111, 44, 0.6);
+}
+.mga-caption-feedback[data-mga-state='error'] {
+    background-color: rgba(160, 35, 44, 0.9);
+    color: #fff5f5;
+    box-shadow: 0 0 0 1px rgba(160, 35, 44, 0.65);
+}
+.mga-caption-feedback[data-mga-state='info'] {
+    background-color: rgba(16, 76, 120, 0.88);
+    color: #f1f8ff;
+    box-shadow: 0 0 0 1px rgba(16, 76, 120, 0.6);
+}
 .mga-cta-container {
     display: flex;
     flex-wrap: wrap;
@@ -706,6 +739,10 @@
 
 .mga-share-modal__feedback[data-mga-state='error'] {
     color: #fca5a5;
+}
+
+.mga-share-modal__feedback[data-mga-state='info'] {
+    color: #c3ddff;
 }
 
 @media (max-width: 600px) {
