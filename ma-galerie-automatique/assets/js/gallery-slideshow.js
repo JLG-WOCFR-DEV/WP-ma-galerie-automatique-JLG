@@ -546,6 +546,7 @@
         let lastFocusedElementBeforeViewer = null;
         let viewerFocusTrapHandler = null;
         let currentGalleryImages = [];
+        let currentGalleryId = null;
         let shareModal = null;
         let shareModalIsOpen = false;
         let shareModalInvoker = null;
@@ -1914,6 +1915,303 @@
             return null;
         }
 
+        const CTA_VARIANTS = new Set(['primary', 'secondary', 'outline']);
+
+        const sanitizeCtaVariant = (value) => {
+            if (typeof value !== 'string') {
+                return 'primary';
+            }
+
+            const normalized = value.trim().toLowerCase();
+            return CTA_VARIANTS.has(normalized) ? normalized : 'primary';
+        };
+
+        const sanitizeCtaTarget = (value) => {
+            if (typeof value !== 'string') {
+                return '_self';
+            }
+
+            const normalized = value.trim().toLowerCase();
+            switch (normalized) {
+                case '_blank':
+                case '_self':
+                case '_parent':
+                case '_top':
+                    return normalized;
+                default:
+                    return '_self';
+            }
+        };
+
+        const sanitizeCtaRel = (value, target) => {
+            if (typeof value === 'string' && value.trim()) {
+                return value.trim();
+            }
+
+            if (target === '_blank') {
+                return 'noopener noreferrer';
+            }
+
+            return '';
+        };
+
+        const createCtaEntry = (raw) => {
+            if (!raw || typeof raw !== 'object') {
+                return null;
+            }
+
+            const label = typeof raw.label === 'string' ? raw.label.trim() : '';
+            const url = typeof raw.url === 'string' ? raw.url.trim() : '';
+
+            if (!label || !url) {
+                return null;
+            }
+
+            const target = sanitizeCtaTarget(raw.target);
+            const rel = sanitizeCtaRel(raw.rel, target);
+            const variant = sanitizeCtaVariant(raw.variant);
+
+            return { label, url, target, rel, variant };
+        };
+
+        const parseCtaDefinitionList = (value) => {
+            if (typeof value !== 'string' || !value.trim()) {
+                return [];
+            }
+
+            try {
+                const parsed = JSON.parse(value);
+                if (Array.isArray(parsed)) {
+                    return parsed.map(createCtaEntry).filter(Boolean);
+                }
+
+                const single = createCtaEntry(parsed);
+                return single ? [single] : [];
+            } catch (error) {
+                if (debug && typeof debug.log === 'function') {
+                    debug.log(mgaSprintf(mga__( 'Impossible de parser les CTA personnalisés : %s', 'lightbox-jlg' ), error.message), true);
+                }
+            }
+
+            return [];
+        };
+
+        const readAttribute = (element, attributeName) => {
+            if (!element) {
+                return '';
+            }
+
+            const rawValue = element.getAttribute(attributeName);
+            return typeof rawValue === 'string' ? rawValue.trim() : '';
+        };
+
+        const collectSingleCta = (element, prefix, fallbackVariant) => {
+            if (!element) {
+                return null;
+            }
+
+            const label = readAttribute(element, `${prefix}-label`);
+            const url = readAttribute(element, `${prefix}-url`);
+
+            if (!label || !url) {
+                return null;
+            }
+
+            const target = readAttribute(element, `${prefix}-target`) || undefined;
+            const rel = readAttribute(element, `${prefix}-rel`) || undefined;
+            const variantAttribute = readAttribute(element, `${prefix}-variant`) || fallbackVariant;
+
+            return createCtaEntry({
+                label,
+                url,
+                target,
+                rel,
+                variant: variantAttribute || fallbackVariant,
+            });
+        };
+
+        const extractCallToActions = (linkElement, imageElement) => {
+            const sources = [];
+            if (linkElement instanceof Element) {
+                sources.push(linkElement);
+            }
+            if (imageElement instanceof Element) {
+                sources.push(imageElement);
+            }
+
+            const collected = [];
+            const seen = new Set();
+
+            const append = (entry) => {
+                if (!entry) {
+                    return;
+                }
+
+                const key = `${entry.label}::${entry.url}`;
+                if (seen.has(key)) {
+                    return;
+                }
+
+                seen.add(key);
+                collected.push(entry);
+            };
+
+            sources.forEach((node) => {
+                if (!node) {
+                    return;
+                }
+
+                const jsonDefinitions = parseCtaDefinitionList(readAttribute(node, 'data-mga-cta'));
+                jsonDefinitions.forEach(append);
+
+                append(collectSingleCta(node, 'data-mga-cta', 'primary'));
+                append(collectSingleCta(node, 'data-mga-cta-secondary', 'secondary'));
+            });
+
+            return collected;
+        };
+
+        const buildGalleryDataFromLinks = (triggerLinks) => {
+            if (!Array.isArray(triggerLinks) || !triggerLinks.length) {
+                return [];
+            }
+
+            return triggerLinks.reduce((accumulator, link, index) => {
+                const innerImg = link.querySelector('img');
+                if (!innerImg) {
+                    return accumulator;
+                }
+
+                const highResUrl = getHighResUrl(link);
+                if (!highResUrl) {
+                    return accumulator;
+                }
+
+                const thumbUrl = resolveThumbnailUrl(innerImg);
+                if (!thumbUrl) {
+                    return accumulator;
+                }
+
+                let caption = '';
+                const figure = link.closest('figure');
+                if (figure) {
+                    const figcaption = figure.querySelector('figcaption');
+                    if (figcaption) {
+                        caption = figcaption.textContent.trim();
+                    }
+                }
+
+                if (!caption) {
+                    caption = innerImg.alt || '';
+                }
+
+                const ctas = extractCallToActions(link, innerImg);
+
+                accumulator.push({
+                    highResUrl,
+                    thumbUrl,
+                    caption,
+                    triggerIndex: index,
+                    ctas,
+                });
+
+                return accumulator;
+            }, []);
+        };
+
+        const openViewerWithData = (galleryId, galleryData, startIndex, options = {}) => {
+            if (!Array.isArray(galleryData) || !galleryData.length) {
+                return false;
+            }
+
+            const sanitizedStartIndex = Math.max(
+                0,
+                Math.min(parseInt(startIndex, 10) || 0, galleryData.length - 1)
+            );
+
+            const focusOrigin = options.focusOrigin instanceof Element
+                ? options.focusOrigin
+                : (options.focusOrigin === null ? null : undefined);
+
+            let capturedFocusElement = null;
+
+            if (focusOrigin) {
+                capturedFocusElement = focusOrigin;
+                lastFocusedElementBeforeViewer = focusOrigin;
+            } else if (!options.skipFocusCapture) {
+                const activeElement = document && document.activeElement instanceof Element
+                    ? document.activeElement
+                    : null;
+                if (activeElement) {
+                    capturedFocusElement = activeElement;
+                    lastFocusedElementBeforeViewer = activeElement;
+                }
+            }
+
+            const historyConfig = options.history || {};
+
+            const viewerOpened = openViewer(galleryData, sanitizedStartIndex, {
+                galleryId,
+                history: historyConfig,
+            });
+
+            if (!viewerOpened && capturedFocusElement && capturedFocusElement === lastFocusedElementBeforeViewer) {
+                lastFocusedElementBeforeViewer = null;
+            }
+
+            return viewerOpened;
+        };
+
+        const parseDeepLinkFromUrl = () => {
+            if (typeof window === 'undefined' || typeof window.location === 'undefined') {
+                return null;
+            }
+
+            try {
+                const currentUrl = new URL(window.location.href);
+                const rawValue = currentUrl.searchParams.get('mga');
+                if (!rawValue) {
+                    return null;
+                }
+
+                const separatorIndex = rawValue.lastIndexOf(':');
+                if (separatorIndex === -1) {
+                    return null;
+                }
+
+                const encodedGalleryId = rawValue.slice(0, separatorIndex);
+                const slidePart = rawValue.slice(separatorIndex + 1);
+                if (!encodedGalleryId) {
+                    return null;
+                }
+
+                const galleryId = decodeURIComponent(encodedGalleryId);
+                if (!galleryId) {
+                    return null;
+                }
+
+                const slideNumber = parseInt(slidePart, 10);
+                const index = Number.isNaN(slideNumber) ? 0 : Math.max(slideNumber - 1, 0);
+
+                const sanitizedUrl = new URL(currentUrl.toString());
+                sanitizedUrl.searchParams.delete('mga');
+
+                return {
+                    galleryId,
+                    index,
+                    originalUrl: sanitizedUrl.toString(),
+                    originalState: window.history.state,
+                };
+            } catch (error) {
+                if (debug && typeof debug.log === 'function') {
+                    debug.log(mgaSprintf(mga__( 'Lien profond invalide détecté : %s', 'lightbox-jlg' ), error.message), true);
+                }
+                return null;
+            }
+        };
+
+        let pendingDeepLink = parseDeepLinkFromUrl();
+
         function getViewer() {
             let viewer = document.getElementById('mga-viewer');
             if (!viewer) {
@@ -1962,6 +2260,12 @@
                 const captionLiveRegion = document.createElement('span');
                 captionLiveRegion.className = 'mga-screen-reader-text mga-caption-live';
                 captionContainer.appendChild(captionLiveRegion);
+
+                const ctaContainer = document.createElement('div');
+                ctaContainer.className = 'mga-cta-container';
+                ctaContainer.setAttribute('data-mga-cta-container', 'true');
+                ctaContainer.setAttribute('hidden', 'hidden');
+                header.appendChild(ctaContainer);
 
                 const toolbar = document.createElement('div');
                 toolbar.className = 'mga-toolbar';
@@ -2350,6 +2654,149 @@
             module.exports.helpers = sharedHelpers;
         }
 
+        const historyManager = (() => {
+            const hasHistorySupport = typeof window !== 'undefined'
+                && window.history
+                && typeof window.history.pushState === 'function'
+                && typeof window.history.replaceState === 'function';
+
+            if (!hasHistorySupport) {
+                return {
+                    isSupported: false,
+                    isActive: () => false,
+                    getGalleryId: () => null,
+                    getLastIndex: () => 0,
+                    push: () => false,
+                    update: () => {},
+                    beginClose: () => false,
+                    finalizeClose: () => {},
+                    adoptExistingState: () => {},
+                };
+            }
+
+            let active = false;
+            let galleryId = null;
+            let lastIndex = 0;
+            let restoring = false;
+            let originalUrl = null;
+            let originalState = null;
+
+            const buildViewerUrl = (targetGalleryId, index) => {
+                try {
+                    const currentUrl = new URL(window.location.href);
+                    const encodedGalleryId = encodeURIComponent(targetGalleryId || '');
+                    const slideNumber = Math.max(1, (parseInt(index, 10) || 0) + 1);
+                    currentUrl.searchParams.set('mga', `${encodedGalleryId}:${slideNumber}`);
+                    return currentUrl.toString();
+                } catch (error) {
+                    return null;
+                }
+            };
+
+            const createState = (targetGalleryId, index) => ({
+                mgaViewer: {
+                    galleryId: targetGalleryId,
+                    index,
+                    returnUrl: originalUrl || window.location.href,
+                },
+            });
+
+            return {
+                isSupported: true,
+                isActive: () => active,
+                getGalleryId: () => galleryId,
+                getLastIndex: () => lastIndex,
+                push: (targetGalleryId, index, options = {}) => {
+                    const resolvedOriginalUrl = typeof options.originalUrl === 'string'
+                        ? options.originalUrl
+                        : window.location.href;
+                    const resolvedOriginalState = Object.prototype.hasOwnProperty.call(options, 'originalState')
+                        ? options.originalState
+                        : window.history.state;
+
+                    if (options.replaceOriginal && resolvedOriginalUrl) {
+                        try {
+                            window.history.replaceState(resolvedOriginalState, '', resolvedOriginalUrl);
+                        } catch (error) {
+                            // Ignoré : si replaceState échoue, on continue avec l'URL actuelle.
+                        }
+                    }
+
+                    const viewerUrl = buildViewerUrl(targetGalleryId, index);
+                    if (!viewerUrl) {
+                        return false;
+                    }
+
+                    try {
+                        originalUrl = resolvedOriginalUrl;
+                        originalState = resolvedOriginalState;
+                        window.history.pushState(createState(targetGalleryId, index), '', viewerUrl);
+                        active = true;
+                        restoring = false;
+                        galleryId = targetGalleryId;
+                        lastIndex = index;
+                        return true;
+                    } catch (error) {
+                        return false;
+                    }
+                },
+                update: (index) => {
+                    if (!active) {
+                        return;
+                    }
+
+                    const viewerUrl = buildViewerUrl(galleryId, index);
+                    if (!viewerUrl) {
+                        return;
+                    }
+
+                    lastIndex = index;
+
+                    try {
+                        window.history.replaceState(createState(galleryId, index), '', viewerUrl);
+                    } catch (error) {
+                        // Ignoré si replaceState échoue.
+                    }
+                },
+                beginClose: () => {
+                    if (!active) {
+                        return false;
+                    }
+
+                    restoring = true;
+                    try {
+                        window.history.back();
+                        return true;
+                    } catch (error) {
+                        restoring = false;
+                        return false;
+                    }
+                },
+                finalizeClose: () => {
+                    active = false;
+                    galleryId = null;
+                    lastIndex = 0;
+                    restoring = false;
+                    originalUrl = null;
+                    originalState = null;
+                },
+                adoptExistingState: (targetGalleryId, index, options = {}) => {
+                    active = true;
+                    galleryId = targetGalleryId;
+                    lastIndex = index;
+                    restoring = false;
+                    if (typeof options.originalUrl === 'string') {
+                        originalUrl = options.originalUrl;
+                    } else if (!originalUrl) {
+                        originalUrl = window.location.href;
+                    }
+                    if (Object.prototype.hasOwnProperty.call(options, 'originalState')) {
+                        originalState = options.originalState;
+                    }
+                },
+            };
+        })();
+
         const { cleanup: triggerObserverCleanup, active: hasActiveObserver } = (() => {
             if (typeof MutationObserver !== 'function') {
                 return { cleanup: noop, active: false };
@@ -2373,6 +2820,28 @@
 
         getTriggerLinks();
 
+        if (pendingDeepLink && pendingDeepLink.galleryId) {
+            setTimeout(() => {
+                const groupedLinks = getTriggerLinks(false);
+                const triggerLinks = groupedLinks[pendingDeepLink.galleryId] || [];
+                const galleryData = buildGalleryDataFromLinks(triggerLinks);
+
+                if (galleryData.length) {
+                    openViewerWithData(pendingDeepLink.galleryId, galleryData, pendingDeepLink.index, {
+                        skipFocusCapture: true,
+                        history: {
+                            action: 'push',
+                            replaceOriginal: true,
+                            originalUrl: pendingDeepLink.originalUrl,
+                            originalState: pendingDeepLink.originalState,
+                        },
+                    });
+                }
+
+                pendingDeepLink = null;
+            }, 0);
+        }
+
         if (hasActiveObserver) {
             window.addEventListener('beforeunload', triggerObserverCleanup);
         }
@@ -2391,9 +2860,11 @@
                     caption: mga__( 'Ceci est la seconde image de test.', 'lightbox-jlg' ),
                 },
             ];
-            const previouslyFocusedElement = document.activeElement;
-            lastFocusedElementBeforeViewer = previouslyFocusedElement;
-            const viewerOpened = openViewer(testImages, 0);
+            const previouslyFocusedElement = document.activeElement instanceof Element ? document.activeElement : null;
+            const viewerOpened = openViewerWithData('__debug__', testImages, 0, {
+                focusOrigin: previouslyFocusedElement || null,
+                history: { action: 'push' },
+            });
             if (!viewerOpened) {
                 lastFocusedElementBeforeViewer = null;
             }
@@ -2451,32 +2922,7 @@
                     return;
                 }
 
-                const galleryData = [];
-                triggerLinks.forEach((link, index) => {
-                    const innerImg = link.querySelector('img');
-                    if (!innerImg) return;
-
-                    const highResUrl = getHighResUrl(link);
-                    if (!highResUrl) return;
-
-                    const thumbUrl = resolveThumbnailUrl(innerImg);
-
-                    if (!thumbUrl) {
-                        return;
-                    }
-
-                    let caption = '';
-                    const figure = link.closest('figure');
-                    if (figure) {
-                        const figcaption = figure.querySelector('figcaption');
-                        if (figcaption) caption = figcaption.textContent.trim();
-                    }
-                    if (!caption) {
-                        caption = innerImg.alt || '';
-                    }
-
-                    galleryData.push({ highResUrl, thumbUrl, caption, triggerIndex: index });
-                });
+                const galleryData = buildGalleryDataFromLinks(triggerLinks);
 
                 debug.log(mgaSprintf(mga__( '%d images valides préparées pour la galerie.', 'lightbox-jlg' ), galleryData.length));
                 debug.table(galleryData);
@@ -2495,9 +2941,14 @@
 
                 const startIndex = startOnClickedImage && clickedImageIndex !== -1 ? clickedImageIndex : 0;
 
-                const previouslyFocusedElement = document.activeElement;
-                lastFocusedElementBeforeViewer = previouslyFocusedElement;
-                const viewerOpened = openViewer(galleryData, startIndex);
+                const previouslyFocusedElement = document.activeElement instanceof Element
+                    ? document.activeElement
+                    : null;
+
+                const viewerOpened = openViewerWithData(clickedGroupId, galleryData, startIndex, {
+                    focusOrigin: previouslyFocusedElement || null,
+                    history: { action: 'push' },
+                });
                 if (viewerOpened) {
                     e.preventDefault();
                 } else {
@@ -2506,7 +2957,77 @@
             }
         });
 
-        function openViewer(images, startIndex) {
+        const handleHistoryPop = (event) => {
+            if (!historyManager.isSupported) {
+                return;
+            }
+
+            const state = event && typeof event.state === 'object' && event.state !== null
+                ? event.state
+                : null;
+            const viewerState = state && typeof state.mgaViewer === 'object' ? state.mgaViewer : null;
+            const viewer = getViewer();
+
+            if (viewerState && viewerState.galleryId) {
+                const targetGalleryId = viewerState.galleryId;
+                const targetIndex = Number.isFinite(viewerState.index) ? viewerState.index : 0;
+                const returnUrl = typeof viewerState.returnUrl === 'string' ? viewerState.returnUrl : undefined;
+                const groupedLinks = getTriggerLinks(false);
+                const triggerLinks = groupedLinks[targetGalleryId] || [];
+                const galleryData = buildGalleryDataFromLinks(triggerLinks);
+
+                if (!galleryData.length) {
+                    if (viewer && viewer.style.display !== 'none') {
+                        closeViewer(viewer, { skipHistory: true });
+                    }
+                    return;
+                }
+
+                const historyPayload = {
+                    originalUrl: returnUrl,
+                    originalState: state,
+                };
+
+                if (viewer && viewer.style.display !== 'none') {
+                    if (currentGalleryId !== targetGalleryId) {
+                        closeViewer(viewer, { skipHistory: true });
+                        openViewerWithData(targetGalleryId, galleryData, targetIndex, {
+                            skipFocusCapture: true,
+                            history: Object.assign({ action: 'sync' }, historyPayload),
+                        });
+                    } else {
+                        historyManager.adoptExistingState(targetGalleryId, targetIndex, historyPayload);
+                        const clampedIndex = Math.max(0, Math.min(targetIndex, galleryData.length - 1));
+                        currentGalleryImages = galleryData;
+                        currentGalleryId = targetGalleryId;
+                        if (mainSwiper && !mainSwiper.destroyed) {
+                            if (typeof mainSwiper.slideToLoop === 'function') {
+                                mainSwiper.slideToLoop(clampedIndex, 0);
+                            } else if (typeof mainSwiper.slideTo === 'function') {
+                                mainSwiper.slideTo(clampedIndex, 0);
+                            }
+                        }
+                        updateInfo(viewer, galleryData, clampedIndex);
+                    }
+                } else {
+                    openViewerWithData(targetGalleryId, galleryData, targetIndex, {
+                        skipFocusCapture: true,
+                        history: Object.assign({ action: 'sync' }, historyPayload),
+                    });
+                }
+
+                return;
+            }
+
+            if (historyManager.isActive && historyManager.isActive()) {
+                const activeViewer = getViewer();
+                if (activeViewer && activeViewer.style.display !== 'none') {
+                    closeViewer(activeViewer, { skipHistory: true });
+                }
+            }
+        };
+
+        function openViewer(images, startIndex, options = {}) {
             debug.log(mgaSprintf(mga__( 'openViewer appelé avec %1$d images, index %2$d.', 'lightbox-jlg' ), images.length, startIndex));
             if (debug && typeof debug.restartTimer === 'function') {
                 debug.restartTimer();
@@ -2520,6 +3041,16 @@
                 Math.max(normalizedStartIndex, 0),
                 Math.max(images.length - 1, 0),
             );
+            const galleryId = typeof options.galleryId === 'string' ? options.galleryId : null;
+            const historyOptionsRaw = options && typeof options.history === 'object' && options.history !== null
+                ? options.history
+                : {};
+            const historyAction = typeof historyOptionsRaw.action === 'string' ? historyOptionsRaw.action : 'push';
+            const historyPayload = {
+                originalUrl: historyOptionsRaw.originalUrl,
+                originalState: historyOptionsRaw.originalState,
+                replaceOriginal: historyOptionsRaw.replaceOriginal,
+            };
 
             viewer.className = 'mga-viewer';
             viewer.classList.toggle('mga-has-caption', false);
@@ -2729,6 +3260,7 @@
                 }
 
                 currentGalleryImages = Array.isArray(images) ? images : [];
+                currentGalleryId = galleryId;
 
                 const finalizeInitialState = () => {
                     if (!mainSwiper || mainSwiper.destroyed) {
@@ -2774,6 +3306,24 @@
                 } else {
                     finalizeInitialState();
                     viewer.style.display = 'flex';
+                }
+                if (historyManager.isSupported) {
+                    if (historyAction === 'sync') {
+                        historyManager.adoptExistingState(galleryId, sanitizedStartIndex, historyPayload);
+                        if (historyManager.isActive && historyManager.isActive()) {
+                            historyManager.update(sanitizedStartIndex);
+                        }
+                    } else if (historyAction === 'none') {
+                        historyManager.adoptExistingState(galleryId, sanitizedStartIndex, historyPayload);
+                    } else {
+                        const pushed = historyManager.push(galleryId, sanitizedStartIndex, historyPayload);
+                        if (!pushed && typeof historyManager.adoptExistingState === 'function') {
+                            historyManager.adoptExistingState(galleryId, sanitizedStartIndex, historyPayload);
+                        }
+                        if (historyManager.isActive && historyManager.isActive()) {
+                            historyManager.update(sanitizedStartIndex);
+                        }
+                    }
                 }
                 if (!lastFocusedElementBeforeViewer) {
                     lastFocusedElementBeforeViewer = document.activeElement;
@@ -3308,6 +3858,7 @@
             const captionElement = viewer.querySelector('#mga-caption');
             const counterElement = viewer.querySelector('#mga-counter');
             const liveRegion = captionContainer ? captionContainer.querySelector('.mga-caption-live') : null;
+            const ctaContainer = viewer.querySelector('[data-mga-cta-container]');
 
             const imageData = images[index];
             const captionText = imageData.caption || '';
@@ -3329,7 +3880,65 @@
                 liveRegion.textContent = announcementText;
             }
 
+            const ctaList = Array.isArray(imageData.ctas)
+                ? imageData.ctas
+                : (Array.isArray(imageData.ctaButtons) ? imageData.ctaButtons : []);
+
+            if (ctaContainer) {
+                while (ctaContainer.firstChild) {
+                    ctaContainer.removeChild(ctaContainer.firstChild);
+                }
+
+                if (ctaList.length) {
+                    ctaContainer.removeAttribute('hidden');
+                    ctaContainer.setAttribute('role', 'group');
+                    ctaContainer.setAttribute('aria-label', mga__( 'Actions personnalisées', 'lightbox-jlg' ));
+
+                    ctaList.forEach((cta, ctaIndex) => {
+                        if (!cta || typeof cta !== 'object') {
+                            return;
+                        }
+
+                        const button = document.createElement('a');
+                        button.className = 'mga-cta-button';
+                        const variantClass = typeof cta.variant === 'string' && cta.variant.trim()
+                            ? ` mga-cta-button--${cta.variant.trim().toLowerCase()}`
+                            : ' mga-cta-button--primary';
+                        button.className += variantClass;
+                        button.textContent = cta.label || '';
+
+                        if (cta.url) {
+                            button.href = cta.url;
+                        } else {
+                            button.href = '#';
+                        }
+
+                        if (cta.target && cta.target !== '_self') {
+                            button.target = cta.target;
+                        }
+
+                        const relValue = cta.rel || (cta.target === '_blank' ? 'noopener noreferrer' : '');
+                        if (relValue) {
+                            button.rel = relValue;
+                        }
+
+                        button.setAttribute('data-mga-cta-index', String(ctaIndex));
+                        ctaContainer.appendChild(button);
+                    });
+                } else {
+                    ctaContainer.setAttribute('hidden', 'hidden');
+                    ctaContainer.removeAttribute('role');
+                    ctaContainer.removeAttribute('aria-label');
+                }
+            }
+
+            viewer.classList.toggle('mga-has-cta', ctaList.length > 0);
+
             scheduleHeaderOffsetUpdate(viewer);
+
+            if (historyManager.isSupported && historyManager.isActive && historyManager.isActive()) {
+                historyManager.update(index);
+            }
         }
 
         document.body.addEventListener('click', function(e) {
@@ -3386,7 +3995,7 @@
                 }
             }
         });
-        
+
         document.addEventListener('keydown', (e) => {
             const viewer = document.getElementById('mga-viewer');
             if (!viewer || viewer.style.display === 'none') return;
@@ -3396,6 +4005,10 @@
                 case 'ArrowRight': if (mainSwiper) mainSwiper.slideNext(); break;
             }
         });
+
+        if (historyManager.isSupported && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+            window.addEventListener('popstate', handleHistoryPop);
+        }
 
         const handleSharePreferencesChange = (event) => {
             const detail = event && typeof event.detail === 'object' && event.detail !== null
@@ -3455,7 +4068,20 @@
             module.exports.__testExports.syncShareControl = syncShareControl;
         }
 
-        function closeViewer(viewer) {
+        function closeViewer(viewer, options = {}) {
+            if (!viewer) {
+                return;
+            }
+
+            const skipHistory = Boolean(options && options.skipHistory);
+
+            if (!skipHistory && historyManager.isSupported && historyManager.isActive && historyManager.isActive()) {
+                const closedViaHistory = historyManager.beginClose();
+                if (closedViaHistory) {
+                    return;
+                }
+            }
+
             const { exit: exitFullscreen, element: fullscreenElement } = resolveFullscreenApi(viewer);
             if (fullscreenElement) {
                 if (exitFullscreen) {
@@ -3506,6 +4132,10 @@
             debug.log(mga__( 'Galerie fermée.', 'lightbox-jlg' ));
             debug.stopTimer();
             currentGalleryImages = [];
+            currentGalleryId = null;
+            if (historyManager.isSupported) {
+                historyManager.finalizeClose();
+            }
             if (lastFocusedElementBeforeViewer && typeof lastFocusedElementBeforeViewer.focus === 'function') {
                 safeFocus(lastFocusedElementBeforeViewer);
             }
