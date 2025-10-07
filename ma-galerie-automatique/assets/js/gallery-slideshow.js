@@ -2248,7 +2248,14 @@
                     return accumulator;
                 }
 
-                const thumbUrl = resolveThumbnailUrl(innerImg);
+                let thumbUrl = resolveThumbnailUrl(innerImg);
+                if (!thumbUrl) {
+                    const fallbackThumbUrl = sanitizeThumbnailUrl(highResUrl);
+                    if (fallbackThumbUrl) {
+                        thumbUrl = fallbackThumbUrl;
+                    }
+                }
+
                 if (!thumbUrl) {
                     return accumulator;
                 }
