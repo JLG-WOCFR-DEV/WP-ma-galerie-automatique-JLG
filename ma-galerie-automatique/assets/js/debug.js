@@ -141,6 +141,19 @@
         triggerCard.appendChild(triggerValue);
         statsGrid.appendChild(triggerCard);
 
+        const slidesCard = document.createElement('div');
+        slidesCard.style.cssText = 'background: #1c1f23; padding: 6px 8px; border-radius: 4px; grid-column: 1 / -1;';
+        const slidesLabel = document.createElement('strong');
+        slidesLabel.style.cssText = 'display: block; margin-bottom: 4px; color: #ccc;';
+        slidesLabel.textContent = mga__( 'Médias visibles :', 'lightbox-jlg' );
+        const slidesValue = document.createElement('div');
+        slidesValue.id = 'mga-debug-visible-slides';
+        slidesValue.style.cssText = 'font-size: 13px; color: #FFEB3B;';
+        slidesValue.textContent = mga__( 'N/A', 'lightbox-jlg' );
+        slidesCard.appendChild(slidesLabel);
+        slidesCard.appendChild(slidesValue);
+        statsGrid.appendChild(slidesCard);
+
         panel.appendChild(statsGrid);
 
         const forceButton = document.createElement('button');
@@ -292,6 +305,10 @@
         }
     }
 
+    function updateVisibleSlides(text) {
+        updateInfo('mga-debug-visible-slides', text, '#FFEB3B');
+    }
+
     function onForceOpen(callback) {
         if (!ensureActive() || typeof callback !== 'function') {
             return;
@@ -315,6 +332,7 @@
         init,
         log,
         updateInfo,
+        updateVisibleSlides,
         onForceOpen,
         stopTimer,
         restartTimer,
