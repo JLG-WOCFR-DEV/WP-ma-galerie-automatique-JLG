@@ -121,9 +121,12 @@ class Detection {
         $cached_persistent_result = $this->get_persistent_detection_cache( $post->ID, $snapshot );
 
         if ( null !== $cached_persistent_result ) {
-            $this->request_detection_cache[ $post->ID ] = $cached_persistent_result;
+            $filtered_result = apply_filters( 'mga_post_has_linked_images', $cached_persistent_result, $post );
+            $filtered_result = (bool) $filtered_result;
 
-            return $cached_persistent_result;
+            $this->request_detection_cache[ $post->ID ] = $filtered_result;
+
+            return $filtered_result;
         }
 
         $has_linked_images = $this->get_cached_post_linked_images( $post );
