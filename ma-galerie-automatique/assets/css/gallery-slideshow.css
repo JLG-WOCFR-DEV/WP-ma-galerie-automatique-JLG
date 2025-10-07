@@ -76,6 +76,68 @@
     white-space: normal;
     overflow-wrap: anywhere;
 }
+.mga-cta-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    flex: 1 0 100%;
+    order: 3;
+    margin-top: 4px;
+    padding: 0 10px;
+}
+.mga-cta-container[hidden] {
+    display: none !important;
+}
+.mga-cta-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.mga-cta-button:hover,
+.mga-cta-button:focus-visible {
+    text-decoration: none;
+}
+.mga-cta-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+.mga-cta-button--primary {
+    background-color: var(--mga-accent-color, #ffffff);
+    color: #111;
+}
+.mga-cta-button--primary:hover {
+    filter: brightness(0.95);
+}
+.mga-cta-button--secondary {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: var(--mga-accent-color, #ffffff);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+.mga-cta-button--secondary:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+.mga-cta-button--outline {
+    background-color: transparent;
+    color: var(--mga-accent-color, #ffffff);
+    border-color: var(--mga-accent-color, #ffffff);
+}
+.mga-cta-button--outline:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+@media (min-width: 768px) {
+    .mga-cta-container {
+        justify-content: flex-start;
+    }
+}
+
 .mga-toolbar {
     --mga-toolbar-gap: 10px;
     display: flex;
