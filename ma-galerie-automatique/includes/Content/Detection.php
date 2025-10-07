@@ -858,39 +858,40 @@ class Detection {
         $document = new DOMDocument();
         $previous_error_state = libxml_use_internal_errors( true );
 
-        $options = 0;
+            $options = 0;
 
-        if ( defined( 'LIBXML_HTML_NOIMPLIED' ) ) {
-            $options |= LIBXML_HTML_NOIMPLIED;
-        }
+            if ( defined( 'LIBXML_HTML_NOIMPLIED' ) ) {
+                $options |= LIBXML_HTML_NOIMPLIED;
+            }
 
-        if ( defined( 'LIBXML_HTML_NODEFDTD' ) ) {
-            $options |= LIBXML_HTML_NODEFDTD;
-        }
+            if ( defined( 'LIBXML_HTML_NODEFDTD' ) ) {
+                $options |= LIBXML_HTML_NODEFDTD;
+            }
 
-        $loaded = $document->loadHTML( '<!DOCTYPE html><html><body>' . $html . '</body></html>', $options );
+            $loaded = $document->loadHTML( '<!DOCTYPE html><html><body>' . $html . '</body></html>', $options );
 
-        libxml_clear_errors();
-        libxml_use_internal_errors( $previous_error_state );
+            libxml_clear_errors();
+            libxml_use_internal_errors( $previous_error_state );
 
-        if ( $loaded ) {
-            foreach ( $document->getElementsByTagName( 'a' ) as $anchor ) {
-                if ( ! $anchor instanceof DOMElement ) {
-                    continue;
-                }
+            if ( $loaded ) {
+                foreach ( $document->getElementsByTagName( 'a' ) as $anchor ) {
+                    if ( ! $anchor instanceof DOMElement ) {
+                        continue;
+                    }
 
-                $href = trim( (string) $anchor->getAttribute( 'href' ) );
+                    $href = trim( (string) $anchor->getAttribute( 'href' ) );
 
-                if ( '' === $href ) {
-                    continue;
-                }
+                    if ( '' === $href ) {
+                        continue;
+                    }
 
-                if ( ! $this->is_image_candidate_href( $href ) ) {
-                    continue;
-                }
+                    if ( ! $this->is_image_candidate_href( $href ) ) {
+                        continue;
+                    }
 
-                if ( $this->dom_element_contains_media( $anchor ) ) {
-                    return true;
+                    if ( $this->dom_element_contains_media( $anchor ) ) {
+                        return true;
+                    }
                 }
             }
         }
