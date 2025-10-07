@@ -322,6 +322,15 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                             </div>
 
                             <div class="mga-toggle-list__item">
+                                <input type="hidden" name="mga_settings[show_cta]" value="0" />
+                                <label for="mga_show_cta">
+                                    <input name="mga_settings[show_cta]" type="checkbox" id="mga_show_cta" value="1" <?php checked( ! empty( $settings['show_cta'] ), 1 ); ?> />
+                                    <span><?php echo esc_html__( 'Afficher le bouton « S’abonner »', 'lightbox-jlg' ); ?></span>
+                                </label>
+                                <p class="description"><?php echo esc_html__( 'Masquez complètement le bouton d’abonnement si vous ne souhaitez pas le proposer.', 'lightbox-jlg' ); ?></p>
+                            </div>
+
+                            <div class="mga-toggle-list__item">
                                 <input type="hidden" name="mga_settings[show_fullscreen]" value="0" />
                                 <label for="mga_show_fullscreen">
                                     <input name="mga_settings[show_fullscreen]" type="checkbox" id="mga_show_fullscreen" value="1" <?php checked( ! empty( $settings['show_fullscreen'] ), 1 ); ?> />
