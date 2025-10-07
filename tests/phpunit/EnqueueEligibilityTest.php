@@ -1,4 +1,6 @@
 <?php
+
+use MaGalerieAutomatique\Content\Detection;
 /**
  * @group enqueue
  */
@@ -19,6 +21,8 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
         if ( $plugin instanceof \MaGalerieAutomatique\Plugin ) {
             $plugin->settings()->invalidate_settings_cache();
         }
+
+        Detection::bump_global_cache_version();
     }
 
     public function tearDown(): void {
@@ -176,6 +180,42 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
         $detection_runs = 0;
         $this->assertFalse( $this->detection()->should_enqueue_assets( $reusable_wrapper_id ) );
         $this->assertSame( 0, $detection_runs, 'Reusable block detection should be skipped when the cache forbids it.' );
+
+        remove_filter( 'mga_linked_image_blocks', $marker_filter );
+    }
+
+    public function test_persistent_cache_survives_meta_deletion() {
+        $detection_runs = 0;
+        $marker_filter  = function( $block_names ) use ( &$detection_runs ) {
+            $detection_runs++;
+
+            return $block_names;
+        };
+
+        add_filter( 'mga_linked_image_blocks', $marker_filter );
+
+        $linked_image_markup = '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>';
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => $linked_image_markup,
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+        $this->assertTrue( $this->detection()->should_enqueue_assets( $post_id ) );
+        $this->assertSame( 1, $detection_runs, 'Initial detection should run when no persistent cache exists.' );
+
+        delete_post_meta( $post_id, '_mga_has_linked_images' );
+
+        $this->go_to( get_permalink( $post_id ) );
+        $detection_runs = 0;
+        $this->assertTrue( $this->detection()->should_enqueue_assets( $post_id ) );
+        $this->assertSame(
+            0,
+            $detection_runs,
+            'Deleting the meta cache should still reuse the persistent cache snapshot.'
+        );
 
         remove_filter( 'mga_linked_image_blocks', $marker_filter );
     }

@@ -1,4 +1,6 @@
 <?php
+
+use MaGalerieAutomatique\Content\Detection;
 /**
  * @group settings
  */
@@ -13,6 +15,8 @@ class DetectionSettingsPurgeTest extends WP_UnitTestCase {
         if ( $plugin instanceof \MaGalerieAutomatique\Plugin ) {
             $plugin->settings()->invalidate_settings_cache();
         }
+
+        Detection::bump_global_cache_version();
     }
 
     public function test_detection_setting_change_purges_cache() {
@@ -102,5 +106,7 @@ class DetectionSettingsPurgeTest extends WP_UnitTestCase {
         $this->assertSame( $expected, (bool) $meta['has_linked_images'], $message );
         $this->assertArrayHasKey( 'signature', $meta );
         $this->assertNotEmpty( $meta['signature'], 'Cache entries must include a non-empty signature.' );
+        $this->assertArrayHasKey( 'settings_signature', $meta );
+        $this->assertNotEmpty( $meta['settings_signature'], 'Cache entries must store a settings signature.' );
     }
 }

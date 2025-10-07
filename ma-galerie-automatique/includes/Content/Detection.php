@@ -9,6 +9,21 @@ use MaGalerieAutomatique\Plugin;
 use WP_Post;
 
 class Detection {
+    private const CACHE_VERSION_OPTION = 'mga_detection_cache_version';
+
+    private const CACHE_TTL_FALLBACK = 86400;
+
+    /**
+     * @var string|null
+     */
+    private static ?string $cache_version = null;
+
+    private const SETTINGS_SIGNATURE_KEYS = [
+        'tracked_post_types',
+        'contentSelectors',
+        'allowBodyFallback',
+        'groupAttribute',
+    ];
     private Plugin $plugin;
 
     private Settings $settings;
@@ -101,17 +116,40 @@ class Detection {
             return $this->request_detection_cache[ $post->ID ];
         }
 
+        $snapshot = $this->build_detection_snapshot( $post, false, $settings );
+
+        $cached_persistent_result = $this->get_persistent_detection_cache( $post->ID, $snapshot );
+
+        if ( null !== $cached_persistent_result ) {
+            $this->request_detection_cache[ $post->ID ] = $cached_persistent_result;
+
+            return $cached_persistent_result;
+        }
+
         $has_linked_images = $this->get_cached_post_linked_images( $post );
 
         if ( null === $has_linked_images ) {
             $has_linked_images = $this->detect_post_linked_images( $post );
             $this->update_post_linked_images_cache( $post->ID, $has_linked_images );
+        } else {
+            if ( is_array( $this->latest_detection_snapshot ) ) {
+                $snapshot = $this->latest_detection_snapshot;
+            } else {
+                $snapshot = $this->build_detection_snapshot( $post, $has_linked_images, $settings );
+                $this->latest_detection_snapshot = $snapshot;
+            }
         }
 
         $has_linked_images = apply_filters( 'mga_post_has_linked_images', $has_linked_images, $post );
         $has_linked_images = (bool) $has_linked_images;
 
         $this->request_detection_cache[ $post->ID ] = $has_linked_images;
+
+        if ( is_array( $this->latest_detection_snapshot ) ) {
+            $this->set_persistent_detection_cache( $post->ID, $this->latest_detection_snapshot, $has_linked_images );
+        } elseif ( is_array( $snapshot ) ) {
+            $this->set_persistent_detection_cache( $post->ID, $snapshot, $has_linked_images );
+        }
 
         return $has_linked_images;
     }
@@ -219,10 +257,13 @@ class Detection {
             'signature'         => $snapshot['signature'],
             'content_hash'      => $snapshot['content_hash'],
             'reusable'          => $snapshot['reusable'],
+            'settings_signature' => $snapshot['settings_signature'],
             'generated_at'      => isset( $snapshot['generated_at'] ) ? absint( $snapshot['generated_at'] ) : time(),
         ];
 
         update_post_meta( $post_id, '_mga_has_linked_images', $payload );
+
+        $this->set_persistent_detection_cache( $post_id, $snapshot, $has_linked_images );
     }
 
     public function parse_blocks_from_content( string $content ): array {
@@ -987,18 +1028,35 @@ class Detection {
             return null;
         }
 
+        $cached_settings_signature = isset( $cached_value['settings_signature'] )
+            ? (string) $cached_value['settings_signature']
+            : '';
+
+        if ( '' === $cached_settings_signature ) {
+            return null;
+        }
+
         $snapshot = $this->build_detection_snapshot( $post, $has_linked_images );
 
         if ( $cached_signature !== $snapshot['signature'] ) {
             return null;
         }
 
-        $snapshot['generated_at'] = isset( $cached_value['generated_at'] ) ? absint( $cached_value['generated_at'] ) : time();
+        if ( $cached_settings_signature !== $snapshot['settings_signature'] ) {
+            return null;
+        }
+
+        $snapshot['generated_at']      = isset( $cached_value['generated_at'] ) ? absint( $cached_value['generated_at'] ) : time();
+        $snapshot['settings_signature'] = $cached_settings_signature;
 
         return $snapshot;
     }
 
-    private function build_detection_snapshot( WP_Post $post, bool $has_linked_images ): array {
+    private function build_detection_snapshot( WP_Post $post, bool $has_linked_images, ?array $settings = null ): array {
+        if ( null === $settings ) {
+            $settings = $this->settings->get_sanitized_settings();
+        }
+
         $content_hash = sha1( (string) $post->post_content );
         $reusable     = $this->collect_reusable_block_references_from_content( $post );
 
@@ -1014,12 +1072,189 @@ class Detection {
 
         $signature = sha1( implode( '|', $signature_parts ) );
 
+        $settings_signature = $this->build_detection_settings_signature( $settings );
+
         return [
             'has_linked_images' => $has_linked_images,
             'signature'         => $signature,
             'content_hash'      => $content_hash,
             'reusable'          => $reusable,
+            'settings_signature' => $settings_signature,
         ];
+    }
+
+    private function build_detection_settings_signature( array $settings ): string {
+        $normalized = [];
+
+        foreach ( self::SETTINGS_SIGNATURE_KEYS as $key ) {
+            switch ( $key ) {
+                case 'tracked_post_types':
+                    $value = isset( $settings[ $key ] ) && is_array( $settings[ $key ] ) ? $settings[ $key ] : [];
+                    $value = array_map( 'sanitize_key', $value );
+                    $value = array_values( array_filter( array_unique( $value ) ) );
+                    sort( $value );
+                    $normalized[ $key ] = $value;
+                    break;
+                case 'contentSelectors':
+                    $value = isset( $settings[ $key ] ) && is_array( $settings[ $key ] ) ? $settings[ $key ] : [];
+                    $value = array_map(
+                        static function ( $selector ) {
+                            if ( ! is_string( $selector ) ) {
+                                return '';
+                            }
+
+                            $trimmed = trim( $selector );
+
+                            if ( '' === $trimmed ) {
+                                return '';
+                            }
+
+                            $condensed = preg_replace( '/\s+/u', ' ', $trimmed );
+
+                            return is_string( $condensed ) ? $condensed : $trimmed;
+                        },
+                        $value
+                    );
+                    $value = array_values(
+                        array_filter(
+                            array_unique( $value ),
+                            static function ( $selector ) {
+                                return '' !== $selector;
+                            }
+                        )
+                    );
+                    sort( $value );
+                    $normalized[ $key ] = $value;
+                    break;
+                case 'allowBodyFallback':
+                    $normalized[ $key ] = ! empty( $settings[ $key ] );
+                    break;
+                case 'groupAttribute':
+                    $value = isset( $settings[ $key ] ) ? $settings[ $key ] : '';
+
+                    if ( ! is_string( $value ) ) {
+                        $value = '';
+                    }
+
+                    $normalized[ $key ] = strtolower( trim( $value ) );
+                    break;
+                default:
+                    $normalized[ $key ] = $settings[ $key ] ?? null;
+            }
+        }
+
+        $encoded = wp_json_encode( $normalized );
+
+        if ( ! is_string( $encoded ) ) {
+            $encoded = maybe_serialize( $normalized );
+        }
+
+        return sha1( (string) $encoded );
+    }
+
+    private function get_persistent_detection_cache( int $post_id, array $snapshot ): ?bool {
+        $cache_key = $this->build_persistent_cache_key( $post_id, $snapshot );
+
+        if ( null === $cache_key ) {
+            return null;
+        }
+
+        $cached = get_transient( $cache_key );
+
+        if ( false === $cached || ! is_array( $cached ) ) {
+            return null;
+        }
+
+        if ( ! array_key_exists( 'result', $cached ) ) {
+            return null;
+        }
+
+        return (bool) $cached['result'];
+    }
+
+    private function set_persistent_detection_cache( int $post_id, array $snapshot, bool $value ): void {
+        $cache_key = $this->build_persistent_cache_key( $post_id, $snapshot );
+
+        if ( null === $cache_key ) {
+            return;
+        }
+
+        $ttl = defined( 'DAY_IN_SECONDS' ) ? DAY_IN_SECONDS : self::CACHE_TTL_FALLBACK;
+
+        set_transient(
+            $cache_key,
+            [
+                'result' => (bool) $value,
+            ],
+            $ttl
+        );
+    }
+
+    private function build_persistent_cache_key( int $post_id, array $snapshot ): ?string {
+        $signature           = isset( $snapshot['signature'] ) ? (string) $snapshot['signature'] : '';
+        $settings_signature  = isset( $snapshot['settings_signature'] ) ? (string) $snapshot['settings_signature'] : '';
+
+        if ( '' === $signature || '' === $settings_signature ) {
+            return null;
+        }
+
+        $locale  = $this->get_cache_locale();
+        $version = self::get_cache_version();
+
+        $hash = md5( implode( '|', [ $version, $post_id, $locale, $signature, $settings_signature ] ) );
+
+        return 'mga_det_' . $hash;
+    }
+
+    private function get_cache_locale(): string {
+        if ( function_exists( 'determine_locale' ) ) {
+            $locale = determine_locale();
+        } elseif ( function_exists( 'get_locale' ) ) {
+            $locale = get_locale();
+        } else {
+            $locale = 'default';
+        }
+
+        if ( ! is_string( $locale ) || '' === $locale ) {
+            $locale = 'default';
+        }
+
+        return $locale;
+    }
+
+    private static function get_cache_version(): string {
+        if ( null !== self::$cache_version ) {
+            return self::$cache_version;
+        }
+
+        $version = get_option( self::CACHE_VERSION_OPTION, '' );
+
+        if ( ! is_string( $version ) || '' === $version ) {
+            $version = self::generate_cache_version();
+            update_option( self::CACHE_VERSION_OPTION, $version );
+        }
+
+        self::$cache_version = $version;
+
+        return $version;
+    }
+
+    private static function generate_cache_version(): string {
+        $microtime = microtime( true );
+
+        if ( ! is_float( $microtime ) ) {
+            $microtime = (float) time();
+        }
+
+        return (string) $microtime;
+    }
+
+    public static function bump_global_cache_version(): void {
+        $version = self::generate_cache_version();
+
+        update_option( self::CACHE_VERSION_OPTION, $version );
+
+        self::$cache_version = $version;
     }
 
     private function collect_reusable_block_references_from_content( WP_Post $post ): array {

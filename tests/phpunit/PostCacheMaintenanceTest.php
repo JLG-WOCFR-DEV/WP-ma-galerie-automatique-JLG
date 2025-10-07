@@ -1,4 +1,6 @@
 <?php
+
+use MaGalerieAutomatique\Content\Detection;
 /**
  * @group cache
  */
@@ -451,6 +453,8 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
         $this->assertSame( $expected, (bool) $meta['has_linked_images'], $message ?: 'Unexpected cache flag state.' );
         $this->assertArrayHasKey( 'signature', $meta, 'Cache entries must provide a signature for invalidation.' );
         $this->assertNotEmpty( $meta['signature'], 'Cache entries should expose a non-empty signature.' );
+        $this->assertArrayHasKey( 'settings_signature', $meta, 'Cache entries must include the settings signature snapshot.' );
+        $this->assertNotEmpty( $meta['settings_signature'], 'Settings signatures should be persisted with the cache snapshot.' );
     }
 
     private function detection(): \MaGalerieAutomatique\Content\Detection {
@@ -471,5 +475,7 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
         if ( $plugin instanceof \MaGalerieAutomatique\Plugin ) {
             $plugin->settings()->invalidate_settings_cache();
         }
+
+        Detection::bump_global_cache_version();
     }
 }
