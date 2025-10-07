@@ -2,6 +2,8 @@
 
 namespace MaGalerieAutomatique\Content;
 
+use DOMDocument;
+use DOMElement;
 use MaGalerieAutomatique\Admin\Settings;
 use MaGalerieAutomatique\Plugin;
 use WP_Post;
@@ -318,9 +320,7 @@ class Detection {
             $content = $post->post_content;
 
             if ( ! empty( $content ) ) {
-                $pattern = '#<a\\b[^>]*href=["\\\']([^"\\\']+\\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\\?[^"\\\']*)?(?:\\#[^"\\\']*)?["\\\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
-
-                $has_linked_images = (bool) preg_match( $pattern, $content );
+                $has_linked_images = $this->html_contains_linked_media( $content );
             }
         }
 
@@ -843,9 +843,136 @@ class Detection {
             return false;
         }
 
-        $pattern = '#<a\\b[^>]*href=["\']([^"\']+\.(?:jpe?g|png|gif|bmp|webp|avif|svg))(?:\?[^"\']*)?(?:\\#[^"\']*)?["\'][^>]*>\\s*(?:<picture\\b[^>]*>.*?<img\\b[^>]*>|<img\\b[^>]*>)#is';
+        return $this->html_contains_linked_media( $content );
+    }
 
-        return (bool) preg_match( $pattern, $content );
+    private function html_contains_linked_media( string $html ): bool {
+        if ( '' === trim( $html ) ) {
+            return false;
+        }
+
+        $document = new DOMDocument();
+        $previous_error_state = libxml_use_internal_errors( true );
+
+        $options = 0;
+
+        if ( defined( 'LIBXML_HTML_NOIMPLIED' ) ) {
+            $options |= LIBXML_HTML_NOIMPLIED;
+        }
+
+        if ( defined( 'LIBXML_HTML_NODEFDTD' ) ) {
+            $options |= LIBXML_HTML_NODEFDTD;
+        }
+
+        $loaded = $document->loadHTML( '<!DOCTYPE html><html><body>' . $html . '</body></html>', $options );
+
+        libxml_clear_errors();
+        libxml_use_internal_errors( $previous_error_state );
+
+        if ( $loaded ) {
+            foreach ( $document->getElementsByTagName( 'a' ) as $anchor ) {
+                if ( ! $anchor instanceof DOMElement ) {
+                    continue;
+                }
+
+                $href = trim( (string) $anchor->getAttribute( 'href' ) );
+
+                if ( '' === $href ) {
+                    continue;
+                }
+
+                if ( ! $this->is_image_candidate_href( $href ) ) {
+                    continue;
+                }
+
+                if ( $this->dom_element_contains_media( $anchor ) ) {
+                    return true;
+                }
+            }
+        }
+
+        return $this->fallback_regex_detects_linked_media( $html );
+    }
+
+    private function dom_element_contains_media( DOMElement $element ): bool {
+        foreach ( $element->getElementsByTagName( 'img' ) as $image ) {
+            if ( $image instanceof DOMElement && $this->dom_image_node_is_meaningful( $image ) ) {
+                return true;
+            }
+        }
+
+        foreach ( $element->getElementsByTagName( 'picture' ) as $picture ) {
+            if ( ! $picture instanceof DOMElement ) {
+                continue;
+            }
+
+            if ( $picture->getElementsByTagName( 'img' )->length > 0 ) {
+                return true;
+            }
+
+            if ( $picture->getElementsByTagName( 'source' )->length > 0 ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function dom_image_node_is_meaningful( DOMElement $image ): bool {
+        $attributes_to_check = [ 'src', 'data-src', 'data-original', 'data-lazy-src', 'data-srcset', 'srcset' ];
+
+        foreach ( $attributes_to_check as $attribute ) {
+            $value = trim( (string) $image->getAttribute( $attribute ) );
+
+            if ( '' !== $value ) {
+                return true;
+            }
+        }
+
+        return true;
+    }
+
+    private function fallback_regex_detects_linked_media( string $html ): bool {
+        if ( '' === trim( $html ) ) {
+            return false;
+        }
+
+        $pattern = '#<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>#is';
+
+        if ( ! preg_match_all( $pattern, $html, $matches, PREG_SET_ORDER ) ) {
+            return false;
+        }
+
+        foreach ( $matches as $match ) {
+            if ( count( $match ) < 3 ) {
+                continue;
+            }
+
+            $href       = trim( (string) $match[1] );
+            $inner_html = $match[2];
+
+            if ( '' === $href ) {
+                continue;
+            }
+
+            if ( ! $this->is_image_candidate_href( $href ) ) {
+                continue;
+            }
+
+            if ( false !== stripos( $inner_html, '<img' ) || false !== stripos( $inner_html, '<picture' ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function is_image_candidate_href( string $href ): bool {
+        if ( $this->is_image_url( $href ) ) {
+            return true;
+        }
+
+        return $this->is_attachment_permalink( $href );
     }
 
     private function normalize_cached_detection_value( array $cached_value, WP_Post $post ): ?array {
