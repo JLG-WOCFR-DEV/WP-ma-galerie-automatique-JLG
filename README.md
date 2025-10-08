@@ -6,7 +6,7 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 - **Nom** : Lightbox - JLG
 - **Rôle** : Créer une visionneuse plein écran pour les images reliées à leur média.
 - **Auteur** : Jérôme Le Gousse
-- **Version** : 1.8
+- **Version** : 1.8.1
 
 ## Installation et activation
 1. Téléchargez ou clonez ce dépôt dans `wp-content/plugins/`.
@@ -119,6 +119,23 @@ Les scénarios Playwright (par exemple `tests/e2e/gallery-viewer.spec.ts`) gén�
 ### Presets graphiques inspirés de bibliothèques UI
 
 Pour gagner du temps lors du maquettage, voici six presets de réglages qui s’inspirent de bibliothèques/UI kits populaires. Chacun s’appuie sur les options natives du plugin : effets, easing, dispositions des miniatures, couleurs d’accent et opacité de fond peuvent être ajustés depuis l’interface d’administration.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L422-L504】 Depuis **Réglages → Ma Galerie Automatique**, sélectionnez un preset dans le champ « Preset graphique », cliquez sur **Appliquer ce preset** puis affinez librement chaque option ou revenez aux valeurs par défaut en un clic.【F:ma-galerie-automatique/includes/admin-page-template.php†L20-L73】【F:ma-galerie-automatique/assets/js/admin-script.js†L400-L532】 Adaptez librement les valeurs proposées pour coller à votre direction artistique.
+
+### Filtre `mga_dynamic_style_rules`
+
+Le front injecte des variables CSS (`--mga-thumb-size-*`, `--mga-accent-color`, etc.) afin d’aligner l’interface avec les réglages actifs. Vous pouvez désormais compléter ou modifier ces règles en filtrant `mga_dynamic_style_rules`. Le callback reçoit les règles calculées par défaut, les réglages sauvegardés et leurs valeurs par défaut.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L150-L218】
+
+```php
+add_filter( 'mga_dynamic_style_rules', function ( array $rules ) {
+    $rules[':root']['--mga-accent-color'] = '#ff00aa';
+    $rules['body.lightbox-dark'] = [
+        '--mga-bg-opacity' => '0.85',
+    ];
+
+    return $rules;
+} );
+```
+
+Le plugin se charge ensuite de normaliser et d’échapper les propriétés avant d’injecter le CSS final, ce qui évite d’avoir à concaténer manuellement les chaînes de caractères.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L187-L218】
 
 #### Preset « Headless UI » — minimalisme fonctionnel
 - **Effet** : `fade` pour des transitions sobres.【F:ma-galerie-automatique/includes/Admin/Settings.php†L484-L493】

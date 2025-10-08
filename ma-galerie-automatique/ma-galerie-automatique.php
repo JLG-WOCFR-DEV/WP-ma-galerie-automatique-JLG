@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Lightbox - JLG
  * Description:       Transforme les galeries d'images en un slideshow plein écran avec de nombreuses options de personnalisation.
- * Version:           1.8
+ * Version:           1.8.1
  * Author:            Jérôme Le Gousse
  * Text Domain:       lightbox-jlg
  * Domain Path:       /languages
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'MGA_VERSION' ) ) {
-    define( 'MGA_VERSION', '1.8' );
+    define( 'MGA_VERSION', '1.8.1' );
 }
 
 if ( ! defined( 'MGA_ADMIN_TEMPLATE_PATH' ) ) {
