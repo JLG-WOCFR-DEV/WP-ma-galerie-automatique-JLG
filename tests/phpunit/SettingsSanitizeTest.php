@@ -359,6 +359,27 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     ],
                 ],
             ],
+            'share_channel_enabled_without_template_is_disabled' => [
+                [
+                    'share_channels' => [
+                        [
+                            'key'      => 'custom-network',
+                            'label'    => 'Custom Network',
+                            'enabled'  => true,
+                            'template' => '   ',
+                        ],
+                    ],
+                ],
+                [],
+                [
+                    'share_channels' => [
+                        'custom-network' => [
+                            'enabled'  => false,
+                            'template' => '',
+                        ],
+                    ],
+                ],
+            ],
             'partial_updates_preserve_existing_values' => [
                 [
                     'thumb_size_mobile' => 60,

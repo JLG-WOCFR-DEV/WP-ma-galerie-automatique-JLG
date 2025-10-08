@@ -947,12 +947,21 @@ class Settings {
         $defaults_for_key = $defaults_by_key[ $sanitized_key ] ?? [];
         $existing_for_key = $existing_by_key[ $sanitized_key ] ?? [];
 
+        $label    = $this->resolve_share_channel_label( $channel_candidate, $existing_for_key, $defaults_for_key, $sanitized_key );
+        $template = $this->resolve_share_channel_template( $channel_candidate, $existing_for_key, $defaults_for_key );
+        $icon     = $this->resolve_share_channel_icon( $channel_candidate, $existing_for_key, $defaults_for_key, $sanitized_key );
+        $enabled  = $this->resolve_share_channel_enabled( $channel_candidate, $existing_for_key, $defaults_for_key );
+
+        if ( '' === $template ) {
+            $enabled = false;
+        }
+
         return [
             'key'      => $sanitized_key,
-            'label'    => $this->resolve_share_channel_label( $channel_candidate, $existing_for_key, $defaults_for_key, $sanitized_key ),
-            'template' => $this->resolve_share_channel_template( $channel_candidate, $existing_for_key, $defaults_for_key ),
-            'icon'     => $this->resolve_share_channel_icon( $channel_candidate, $existing_for_key, $defaults_for_key, $sanitized_key ),
-            'enabled'  => $this->resolve_share_channel_enabled( $channel_candidate, $existing_for_key, $defaults_for_key ),
+            'label'    => $label,
+            'template' => $template,
+            'icon'     => $icon,
+            'enabled'  => $enabled,
         ];
     }
 
