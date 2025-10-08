@@ -173,6 +173,15 @@ etc.). Les recommandations sont classées par thématique demandée.
 - **CTA personnalisables** : permettre l'ajout de boutons secondaires (« Réserver
   une séance », « Ajouter au panier ») connectés à des URLs configurables.
 
+### Revue de code – synthèse rapide
+
+- **Faux positifs DOM** : `dom_image_node_is_meaningful()` considère toute balise `<img>` comme valide même si aucun attribut de
+  source n’est renseigné. La détection peut donc se déclencher sur des éléments décoratifs ou des placeholders vides.【F:ma-galerie-automatique/includes/Content/Detection.php†L992-L1004】 Corrigez la condition pour ne renvoyer `true` que lorsqu’un `src` ou équivalent est présent.
+- **Formats médias restreints** : l’analyse `is_image_url()` ignore les formats HEIC/JPEG XL alors que les solutions pro supportent
+  ces formats haut de gamme.【F:ma-galerie-automatique/includes/Content/Detection.php†L780-L807】 Ajoutez-les à la liste ou exposez un filtre pour que les intégrateurs puissent étendre la détection sans surcharger le cœur.
+- **Modules front indissociables** : `Frontend\Assets::enqueue_assets()` charge un bundle unique qui inclut Swiper et toutes les options.
+  Un découpage par fonctionnalités (thumbnails, partage, debug) faciliterait les optimisations Core Web Vitals et alignerait l’architecture sur les offres premium.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L20-L142】
+
 ## 3. Navigation mobile
 
 ### Benchmark mobile
