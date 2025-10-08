@@ -109,6 +109,11 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 ## Développement
 Le modèle de la page d’administration se trouve dans `includes/admin-page-template.php` et est chargé automatiquement lors de l’affichage des réglages.
 
+### Suivi technique courant
+- **Cache multisite** : le cache mémoire des réglages est invalidé lors d’un changement de site grâce à `handle_switch_blog()`, mais aucun test automatisé ne couvre encore ce scénario. Planifiez une suite PHPUnit qui vérifie l’invalidation par blog ID pour éviter les régressions sur les réseaux multisites.【F:ma-galerie-automatique/includes/Admin/Settings.php†L858-L898】
+- **Sources Swiper** : le plugin mémorise l’origine des assets Swiper et force un rafraîchissement après une mise à jour, ce qui facilite l’alternance CDN/local. Documentez les impacts en performance et prévoyez un mode debug pour tracer les changements de source lors des déploiements.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L399-L460】
+- **Fallback de traduction** : `load_textdomain()` bascule automatiquement vers un fichier `.mo` encodé en Base64 quand le dossier `languages/` est absent. Ajoutez une procédure de QA pour s’assurer que le fichier encodé est régénéré à chaque livraison et pour surveiller l’usage mémoire du fallback temporaire.【F:ma-galerie-automatique/includes/Plugin.php†L68-L120】
+
 ### Tests E2E
 Les scénarios Playwright (par exemple `tests/e2e/gallery-viewer.spec.ts`) génèrent leurs propres images de test afin d’éviter de versionner des médias binaires. Pour vérifier la lightbox avec vos visuels, déposez simplement les fichiers dans `tests/e2e/assets/` (non suivi par Git). Les formats `png`, `jpg`, `jpeg`, `gif`, `webp` ou `avif` sont pris en charge ; prévoyez au minimum deux images.
 
