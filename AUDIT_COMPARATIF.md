@@ -276,16 +276,16 @@ etc.). Les recommandations sont classées par thématique demandée.
 ## 6. Compatibilité multisite & internationalisation
 
 ### Points solides
-- Le cache des réglages est invalidé dès qu’un changement de site survient grâce au hook `switch_blog`, garantissant que chaque blog charge bien sa configuration après bascule.【F:ma-galerie-automatique/includes/Admin/Settings.php†L858-L886】
-- Le fallback de traduction en Base64 permet de livrer une traduction française même lorsque le dossier `languages/` n’est pas disponible sur l’hébergement, assurant un minimum de localisation hors standard WordPress.【F:ma-galerie-automatique/includes/Plugin.php†L68-L120】
+- Le cache des réglages est invalidé dès qu’un changement de site survient grâce au hook `switch_blog`, et la couverture unitaire prévient désormais les régressions de cache sur les réseaux multisites.【F:tests/phpunit/SettingsCacheTest.php†L52-L91】
+- Le fallback de traduction en Base64 est désormais géré par un service dédié qui décode et met en cache les `.mo` dans `wp-content/uploads/mga-translations/`, limitant les I/O récurrentes en production.【F:ma-galerie-automatique/includes/Translation/Manager.php†L9-L108】
 
 ### Améliorations recommandées
-- **Tests multisites automatisés** : aucune couverture ne vérifie aujourd’hui que `handle_switch_blog()` purge réellement le cache pour chaque réseau. Ajoutez une batterie de tests PHPUnit simulant les changements de blog afin d’éviter les régressions lors des optimisations de performance.【F:ma-galerie-automatique/includes/Admin/Settings.php†L858-L898】
-- **Gestion avancée des traductions** : le fallback Base64 repose sur un fichier unique (`lightbox-jlg-fr_FR.mo.b64`). Externalisez-le vers un service dédié pour supporter plusieurs locales, gérer la rotation des fichiers temporaires et centraliser les métriques d’échec de chargement.【F:ma-galerie-automatique/includes/Plugin.php†L68-L120】
+- **Tests multisites automatisés** : poursuivez l’effort en simulant des environnements avec objet-cache distribué pour compléter le test `SettingsCacheTest::test_handle_switch_blog_invalidates_cache_snapshot` et mesurer l’impact sur des réseaux volumineux.【F:tests/phpunit/SettingsCacheTest.php†L52-L91】
+- **Gestion avancée des traductions** : factorisez le `TranslationManager` pour piloter plusieurs locales, intégrer `WP_Filesystem` et publier des métriques (hash, taille, erreurs) exploitables par les équipes d’intégration.【F:ma-galerie-automatique/includes/Translation/Manager.php†L9-L108】
 
 ### Opportunités court terme
-- Instrumentez un log (WP-CLI ou Action Scheduler) pour tracer les rafraîchissements d’assets Swiper et les bascules CDN/local sur chaque site d’un réseau, afin de rassurer les intégrateurs sur la stabilité des déploiements.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L399-L460】
-- Ajoutez une commande WP-CLI qui recompresse automatiquement les fichiers `.mo` en `.b64` et valide leur checksum afin de sécuriser les livraisons continue.【F:ma-galerie-automatique/includes/Plugin.php†L68-L120】
+- Capitalisez sur l’action `mga_swiper_asset_sources_refreshed` pour alimenter un log (WP-CLI ou Action Scheduler) retraçant les rafraîchissements et bascules CDN/local par site, afin de rassurer les intégrateurs sur la stabilité des déploiements.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L395-L418】
+- Ajoutez une commande WP-CLI qui recompresse automatiquement les fichiers `.mo` en `.b64`, met à jour le hash attendu par le `TranslationManager` et valide l’écriture dans `wp-content/uploads/mga-translations/`.【F:ma-galerie-automatique/includes/Translation/Manager.php†L9-L108】
 
 ---
 

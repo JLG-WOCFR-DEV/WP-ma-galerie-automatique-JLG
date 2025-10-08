@@ -73,10 +73,10 @@ function mga_activate(): void {
     }
 }
 
-function mga_refresh_swiper_asset_sources(): array {
+function mga_refresh_swiper_asset_sources( string $context = 'manual' ): array {
     $plugin = mga_plugin();
 
-    return $plugin ? $plugin->frontend_assets()->refresh_swiper_asset_sources() : [];
+    return $plugin ? $plugin->frontend_assets()->refresh_swiper_asset_sources( $context ) : [];
 }
 
 function mga_get_swiper_asset_sources(): array {

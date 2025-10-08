@@ -56,9 +56,13 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 - **Journal de partage** : chaque action de partage déclenche une entrée dédiée, utile pour vérifier l’assemblage des URLs et des métadonnées.【F:ma-galerie-automatique/assets/js/debug.js†L262-L283】
 
 ### Internationalisation et assets
-- **Traductions** : le chargement du domaine de traduction tente d’abord la méthode WordPress standard, puis retombe sur un fichier `.mo` encodé en base64 lorsque le dossier `languages` est indisponible.【F:ma-galerie-automatique/includes/Plugin.php†L66-L119】
+- **Traductions** : le chargement du domaine de traduction tente d’abord la méthode WordPress standard, puis retombe sur un fichier `.mo` encodé en base64 lorsque le dossier `languages` est indisponible.【F:ma-galerie-automatique/includes/Translation/Manager.php†L9-L76】
 - **Gestion des dépendances** : Swiper (CSS/JS) est servi en local ou via CDN selon disponibilité, avec gestion conditionnelle des attributs SRI et d’un rafraîchissement automatique après mise à jour du plugin.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L23-L177】
 - **Variables dynamiques** : la taille des miniatures, la couleur d’accent et l’opacité du fond sont injectées via CSS personnalisé pour s’aligner sur les réglages actifs.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L161-L177】
+
+### Internationalisation renforcée et instrumentation des assets
+- **Cache persistant des traductions** : un gestionnaire dédié décode les `.mo` encodés en base64 dans un cache uploads (`wp-content/uploads/mga-translations/`) et réutilise les fichiers tant que le hash source reste identique, ce qui limite les lectures disque à chaque requête.【F:ma-galerie-automatique/includes/Translation/Manager.php†L9-L108】
+- **Notifications de rafraîchissement Swiper** : l’action `mga_swiper_asset_sources_refreshed` expose désormais le contexte (activation, mise à jour, assets manquants, rafraîchissement planifié) et la valeur précédente pour simplifier l’observabilité en production.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L395-L418】
 
 ## Exemples d’utilisation
 1. Éditez une page ou un article.
@@ -110,9 +114,9 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 Le modèle de la page d’administration se trouve dans `includes/admin-page-template.php` et est chargé automatiquement lors de l’affichage des réglages.
 
 ### Suivi technique courant
-- **Cache multisite** : le cache mémoire des réglages est invalidé lors d’un changement de site grâce à `handle_switch_blog()`, mais aucun test automatisé ne couvre encore ce scénario. Planifiez une suite PHPUnit qui vérifie l’invalidation par blog ID pour éviter les régressions sur les réseaux multisites.【F:ma-galerie-automatique/includes/Admin/Settings.php†L858-L898】
-- **Sources Swiper** : le plugin mémorise l’origine des assets Swiper et force un rafraîchissement après une mise à jour, ce qui facilite l’alternance CDN/local. Documentez les impacts en performance et prévoyez un mode debug pour tracer les changements de source lors des déploiements.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L399-L460】
-- **Fallback de traduction** : `load_textdomain()` bascule automatiquement vers un fichier `.mo` encodé en Base64 quand le dossier `languages/` est absent. Ajoutez une procédure de QA pour s’assurer que le fichier encodé est régénéré à chaque livraison et pour surveiller l’usage mémoire du fallback temporaire.【F:ma-galerie-automatique/includes/Plugin.php†L68-L120】
+- **Cache multisite** : la couverture unitaire s’étend désormais au hook `switch_blog` pour garantir l’invalidation du cache mémoire lors d’un changement de site et prévenir les réglages incohérents sur les réseaux multisites.【F:tests/phpunit/SettingsCacheTest.php†L52-L91】
+- **Sources Swiper** : le plugin mémorise l’origine des assets Swiper, force un rafraîchissement après mise à jour et expose un hook de notification documenté pour suivre les bascules CDN/local en production.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L395-L418】
+- **Fallback de traduction** : `load_textdomain()` s’appuie sur un cache persistant des `.mo` encodés en Base64 ; une procédure de QA doit veiller à régénérer les fichiers encodés à chaque livraison et à vérifier les droits d’écriture sur `wp-content/uploads/mga-translations/`.【F:ma-galerie-automatique/includes/Translation/Manager.php†L9-L108】
 
 ### Tests E2E
 Les scénarios Playwright (par exemple `tests/e2e/gallery-viewer.spec.ts`) génèrent leurs propres images de test afin d’éviter de versionner des médias binaires. Pour vérifier la lightbox avec vos visuels, déposez simplement les fichiers dans `tests/e2e/assets/` (non suivi par Git). Les formats `png`, `jpg`, `jpeg`, `gif`, `webp` ou `avif` sont pris en charge ; prévoyez au minimum deux images.
