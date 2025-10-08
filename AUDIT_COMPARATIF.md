@@ -273,6 +273,20 @@ etc.). Les recommandations sont classées par thématique demandée.
 3. Synchronisation bidirectionnelle avec les galeries WP natives (hooks sur
    `core/gallery`).
 
+## 6. Compatibilité multisite & internationalisation
+
+### Points solides
+- Le cache des réglages est invalidé dès qu’un changement de site survient grâce au hook `switch_blog`, garantissant que chaque blog charge bien sa configuration après bascule.【F:ma-galerie-automatique/includes/Admin/Settings.php†L858-L886】
+- Le fallback de traduction en Base64 permet de livrer une traduction française même lorsque le dossier `languages/` n’est pas disponible sur l’hébergement, assurant un minimum de localisation hors standard WordPress.【F:ma-galerie-automatique/includes/Plugin.php†L68-L120】
+
+### Améliorations recommandées
+- **Tests multisites automatisés** : aucune couverture ne vérifie aujourd’hui que `handle_switch_blog()` purge réellement le cache pour chaque réseau. Ajoutez une batterie de tests PHPUnit simulant les changements de blog afin d’éviter les régressions lors des optimisations de performance.【F:ma-galerie-automatique/includes/Admin/Settings.php†L858-L898】
+- **Gestion avancée des traductions** : le fallback Base64 repose sur un fichier unique (`lightbox-jlg-fr_FR.mo.b64`). Externalisez-le vers un service dédié pour supporter plusieurs locales, gérer la rotation des fichiers temporaires et centraliser les métriques d’échec de chargement.【F:ma-galerie-automatique/includes/Plugin.php†L68-L120】
+
+### Opportunités court terme
+- Instrumentez un log (WP-CLI ou Action Scheduler) pour tracer les rafraîchissements d’assets Swiper et les bascules CDN/local sur chaque site d’un réseau, afin de rassurer les intégrateurs sur la stabilité des déploiements.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L399-L460】
+- Ajoutez une commande WP-CLI qui recompresse automatiquement les fichiers `.mo` en `.b64` et valide leur checksum afin de sécuriser les livraisons continue.【F:ma-galerie-automatique/includes/Plugin.php†L68-L120】
+
 ---
 
 ## Synthèse des écarts et plan d'action

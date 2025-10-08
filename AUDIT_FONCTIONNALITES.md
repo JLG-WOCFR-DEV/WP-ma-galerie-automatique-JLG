@@ -14,6 +14,10 @@
 
 6. **`Plugin::maybe_purge_detection_cache`** – La purge invalide l’ensemble du cache dès qu’un paramètre de détection varie. Des solutions plus fines segmentent par type de contenu ou par site multilingue, et enregistrent des journaux d’invalidation pour aider au diagnostic lors d’un pic de recalcul.【F:ma-galerie-automatique/includes/Plugin.php†L246-L335】
 
+7. **`Settings::handle_switch_blog`** – L’invalidation du cache des réglages repose uniquement sur le hook `switch_blog` et n’est pas couverte par des tests automatisés. Sur un réseau multisite volumineux, une régression casserait la synchronisation des options et pourrait charger les mauvais presets dans le front.【F:ma-galerie-automatique/includes/Admin/Settings.php†L858-L886】
+
+8. **`Frontend\Assets::refresh_swiper_asset_sources`** – La détection et le cache des sources Swiper sont stockés en option simple sans journalisation ni TTL configurable par réseau. Un refactor vers une API modulaire (ex. `wp_register_script` par fonctionnalité) faciliterait les diagnostics CDN/local et la personnalisation par thème.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L399-L460】
+
 ### Feuille de route technique détaillée
 
 | Fonction | Semaine cible | Étapes recommandées | Tests à prévoir | Indicateurs | Risques / mitigation |
@@ -30,5 +34,6 @@
 - **`DetectionSettingsPurgeTest::test_detection_setting_change_purges_cache`** : vérifie que la modification des types suivis supprime bien le meta `_mga_has_linked_images`. Permet de confirmer que les purges s’exécutent lors des changements critiques.【F:tests/phpunit/DetectionSettingsPurgeTest.php†L12-L40】
 - **`DetectionSettingsPurgeTest::test_unrelated_setting_change_preserves_cache`** : garantit qu’un réglage hors périmètre (ex. `debug_mode`) ne vide pas inutilement le cache, ce qui aide à diagnostiquer les invalidations intempestives.【F:tests/phpunit/DetectionSettingsPurgeTest.php†L42-L67】
 - **`DetectionSettingsPurgeTest::test_normalized_selector_equivalence_does_not_trigger_purge`** : assure que les variations de casse/espaces des sélecteurs ne provoquent pas de purge, utile pour isoler les divergences entre interface admin et base de données.【F:tests/phpunit/DetectionSettingsPurgeTest.php†L69-L97】
+- **Couverture multisite** : ajoutez un test PHPUnit dédié à `Settings::handle_switch_blog` pour simuler le changement de blog et vérifier que `invalidate_settings_cache()` supprime bien les entrées correspondantes. Cela sécurisera les optimisations futures du cache en mémoire.【F:ma-galerie-automatique/includes/Admin/Settings.php†L858-L898】
 
 > 💡 Complétez ces tests PHP par une vérification E2E sur une page de démonstration (mode debug actif) afin de capturer les régressions de performance lors des purges massives.
