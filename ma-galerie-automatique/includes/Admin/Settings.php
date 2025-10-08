@@ -285,6 +285,7 @@ class Settings {
             'show_share'         => 'bool',
             'show_cta'           => 'bool',
             'show_fullscreen'    => 'bool',
+            'include_svg'        => 'bool',
         ];
 
         $normalized = [];
@@ -507,6 +508,7 @@ class Settings {
             'contentSelectors'   => [],
             'allowBodyFallback'  => false,
             'load_on_archives'   => false,
+            'include_svg'        => true,
             'tracked_post_types' => [ 'post', 'page' ],
         ];
     }
@@ -636,6 +638,7 @@ class Settings {
             'load_on_archives',
             'close_on_backdrop',
             'show_cta',
+            'include_svg',
         ];
 
         foreach ( $general_toggle_keys as $checkbox_key ) {

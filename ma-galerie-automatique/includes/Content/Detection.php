@@ -22,6 +22,7 @@ class Detection {
         'tracked_post_types',
         'contentSelectors',
         'allowBodyFallback',
+        'include_svg',
         'groupAttribute',
     ];
     private Plugin $plugin;
@@ -778,7 +779,18 @@ class Detection {
             return false;
         }
 
-        $allowed_extensions = [ 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'avif', 'svg' ];
+        $allowed_extensions = [ 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'avif' ];
+        $settings           = $this->settings->get_sanitized_settings();
+
+        $include_svg = true;
+
+        if ( isset( $settings['include_svg'] ) ) {
+            $include_svg = (bool) $settings['include_svg'];
+        }
+
+        if ( $include_svg ) {
+            $allowed_extensions[] = 'svg';
+        }
 
         return in_array( $extension, $allowed_extensions, true );
     }
@@ -1145,6 +1157,9 @@ class Detection {
                     $normalized[ $key ] = $value;
                     break;
                 case 'allowBodyFallback':
+                    $normalized[ $key ] = ! empty( $settings[ $key ] );
+                    break;
+                case 'include_svg':
                     $normalized[ $key ] = ! empty( $settings[ $key ] );
                     break;
                 case 'groupAttribute':

@@ -30,6 +30,7 @@ class DetectionSettingsPurgeTest extends WP_UnitTestCase {
             'tracked_post_types' => [ 'post', 'page' ],
             'contentSelectors'   => [ '.entry-content' ],
             'allowBodyFallback'  => false,
+            'include_svg'        => true,
             'groupAttribute'     => 'data-mga-gallery',
         ];
 
@@ -37,6 +38,7 @@ class DetectionSettingsPurgeTest extends WP_UnitTestCase {
             'tracked_post_types' => [ 'page' ],
             'contentSelectors'   => [ '.entry-content' ],
             'allowBodyFallback'  => false,
+            'include_svg'        => false,
             'groupAttribute'     => 'data-mga-gallery',
         ];
 
@@ -60,6 +62,7 @@ class DetectionSettingsPurgeTest extends WP_UnitTestCase {
             'tracked_post_types' => [ 'post', 'page' ],
             'contentSelectors'   => [ '.entry-content' ],
             'allowBodyFallback'  => false,
+            'include_svg'        => true,
             'groupAttribute'     => 'data-mga-gallery',
         ];
 
@@ -83,6 +86,7 @@ class DetectionSettingsPurgeTest extends WP_UnitTestCase {
             'tracked_post_types' => [ 'post', 'page' ],
             'contentSelectors'   => [ '.entry-content' ],
             'allowBodyFallback'  => false,
+            'include_svg'        => true,
             'groupAttribute'     => 'data-mga-gallery',
         ];
 
@@ -90,6 +94,7 @@ class DetectionSettingsPurgeTest extends WP_UnitTestCase {
             'tracked_post_types' => [ 'page', 'post' ],
             'contentSelectors'   => [ "\n  .entry-content  ", '.entry-content' ],
             'allowBodyFallback'  => false,
+            'include_svg'        => true,
             'groupAttribute'     => 'DATA-MGA-GALLERY',
         ];
 

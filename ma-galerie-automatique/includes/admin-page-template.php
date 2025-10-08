@@ -309,6 +309,21 @@ $style_presets     = mga_get_style_presets();
                             </div>
 
                             <div class="mga-toggle-list__item">
+                                <input type="hidden" name="mga_settings[include_svg]" value="0" />
+                                <label for="mga_include_svg">
+                                    <input
+                                        name="mga_settings[include_svg]"
+                                        type="checkbox"
+                                        id="mga_include_svg"
+                                        value="1"
+                                        <?php checked( ! empty( $settings['include_svg'] ), 1 ); ?>
+                                    />
+                                    <span><?php echo esc_html__( 'Inclure les fichiers SVG', 'lightbox-jlg' ); ?></span>
+                                </label>
+                                <p class="description"><?php echo esc_html__( 'Décochez si votre site bloque le rendu des SVG ou si vous préférez les exclure du diaporama.', 'lightbox-jlg' ); ?></p>
+                            </div>
+
+                            <div class="mga-toggle-list__item">
                                 <input type="hidden" name="mga_settings[load_on_archives]" value="0" />
                                 <label for="mga_load_on_archives">
                                     <input

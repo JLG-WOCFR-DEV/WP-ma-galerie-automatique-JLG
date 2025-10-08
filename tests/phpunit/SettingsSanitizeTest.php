@@ -223,6 +223,15 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'thumbs_layout'   => 'left',
                 ],
             ],
+            'include_svg_checkbox_cast' => [
+                [
+                    'include_svg' => 'off',
+                ],
+                [],
+                [
+                    'include_svg' => false,
+                ],
+            ],
             'thumbs_layout_existing_value_is_preserved' => [
                 [],
                 [
