@@ -127,6 +127,19 @@ Les scénarios Playwright (par exemple `tests/e2e/gallery-viewer.spec.ts`) gén�
 
 - ✅ **Test vital : démarrage sur l’image cliquée** — Le scénario `starts the viewer at the clicked image` vérifie que la visionneuse s’ouvre directement sur la miniature sélectionnée au lieu de revenir au début de la galerie. Cette option est essentielle à l’expérience utilisateur et doit rester fonctionnelle à chaque mise à jour.
 
+## Revue de code technique (avril 2024)
+
+### Observations notables
+- **Détection des balises `<img>` trop permissive** : la méthode `dom_image_node_is_meaningful()` renvoie `true` même si aucune source (`src`, `data-src`, `srcset`, etc.) n’est définie. Toute balise `<img>` vide est donc considérée comme valide, ce qui augmente les faux positifs côté détection et peut déclencher inutilement les assets.【F:ma-galerie-automatique/includes/Content/Detection.php†L992-L1004】 Il est recommandé de retourner `false` lorsque aucun attribut pertinent n’est renseigné.
+- **Extensions d’image limitées** : `is_image_url()` n’accepte que sept formats (JPG, PNG, GIF, BMP, WebP, AVIF et SVG optionnel). Les formats récents tels que HEIC/HEIF ou JPEG XL sont ignorés alors que les concurrents premium commencent à les prendre en charge.【F:ma-galerie-automatique/includes/Content/Detection.php†L780-L807】 Étendez la liste ou exposez un filtre dédié.
+- **Enfilement monolithique des scripts** : `enqueue_assets()` charge systématiquement la feuille de styles et le bundle JavaScript principaux sans possibilité native de segmentation (zoom, partage, miniatures). Cette approche complique les optimisations de performance par thème ou constructeur.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L20-L142】 Introduire des `wp_register_*` modulaires et des contrôles par fonctionnalité rapprocherait le plugin des offres pro.
+- **Préchargement Swiper perfectible** : lorsque les fichiers locaux sont absents, le basculement vers le CDN est silencieux. Journaliser l’événement (ou exposer une notice admin) via l’action `mga_swiper_asset_sources_refreshed` faciliterait le diagnostic des installations qui oublient de publier les assets.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L35-L83】【F:ma-galerie-automatique/includes/Frontend/Assets.php†L395-L418】
+
+### Suivi recommandé
+- Créer un ticket pour renforcer `dom_image_node_is_meaningful()` (retour `false` si aucun attribut exploitable) et ajouter des tests unitaires couvrant des images sans `src`.
+- Documenter/implémenter un filtre `mga_allowed_image_extensions` afin de supporter les formats émergents sans forker le cœur.
+- Prototyper un découpage des bundles Swiper/visionneuse (scripts « core », « thumbs », « share », etc.) et mesurer l’impact via Lighthouse pour alimenter la roadmap performance.
+
 ## Hooks et personnalisation
 
 ### Presets graphiques inspirés de bibliothèques UI
