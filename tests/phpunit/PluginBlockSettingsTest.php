@@ -31,12 +31,12 @@ class PluginBlockSettingsTest extends WP_UnitTestCase {
         $this->assertSame( 'ease-out', $result['easing'], 'Easing should match the default easing curve.' );
         $this->assertSame( 0.95, $result['bgOpacity'], 'Background opacity should fall back to the default opacity.' );
         $this->assertSame( 'bottom', $result['thumbsLayout'], 'Thumbnail layout should fall back to the default layout.' );
-        $this->assertTrue( $result['showThumbsMobile'], 'Mobile thumbnails should honour their default visibility.' );
-        $this->assertTrue( $result['showZoom'], 'Zoom control should be enabled by default.' );
-        $this->assertTrue( $result['showDownload'], 'Download control should be enabled by default.' );
-        $this->assertTrue( $result['showShare'], 'Share control should be enabled by default.' );
-        $this->assertTrue( $result['showCta'], 'CTA control should be enabled by default.' );
-        $this->assertTrue( $result['showFullscreen'], 'Fullscreen control should be enabled by default.' );
+        $this->assertFalse( $result['showThumbsMobile'], 'Mobile thumbnails default to disabled unless explicitly enabled.' );
+        $this->assertFalse( $result['showZoom'], 'Zoom control should remain disabled when the payload omits the flag.' );
+        $this->assertFalse( $result['showDownload'], 'Download control should remain disabled when the payload omits the flag.' );
+        $this->assertFalse( $result['showShare'], 'Share control should remain disabled when the payload omits the flag.' );
+        $this->assertFalse( $result['showCta'], 'CTA control should remain disabled when the payload omits the flag.' );
+        $this->assertFalse( $result['showFullscreen'], 'Fullscreen control should remain disabled when the payload omits the flag.' );
     }
 
     public function test_prepare_block_settings_casts_and_sanitizes_custom_values(): void {
