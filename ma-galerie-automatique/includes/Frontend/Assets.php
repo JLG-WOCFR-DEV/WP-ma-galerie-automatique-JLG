@@ -52,7 +52,7 @@ class Assets {
         }
 
         if ( $should_refresh_sources ) {
-            $asset_sources = $this->refresh_swiper_asset_sources();
+            $asset_sources = $this->refresh_swiper_asset_sources( 'missing_local_assets' );
         }
 
         $swiper_css = 'local' === $asset_sources['css'] ? $local_css_url : $cdn_swiper_css;
@@ -396,7 +396,7 @@ class Assets {
         wp_enqueue_script( $script_handle );
     }
 
-    public function refresh_swiper_asset_sources(): array {
+    public function refresh_swiper_asset_sources( string $context = 'manual' ): array {
         $local_swiper_css_path = $this->plugin->get_plugin_dir_path() . 'assets/vendor/swiper/swiper-bundle.min.css';
         $local_swiper_js_path  = $this->plugin->get_plugin_dir_path() . 'assets/vendor/swiper/swiper-bundle.min.js';
 
@@ -413,6 +413,13 @@ class Assets {
         } else {
             update_option( 'mga_swiper_asset_sources', $sources );
         }
+
+        do_action(
+            'mga_swiper_asset_sources_refreshed',
+            $sources,
+            $context,
+            is_array( $existing_sources ) ? $existing_sources : []
+        );
 
         return $sources;
     }
@@ -438,7 +445,7 @@ class Assets {
         }
 
         if ( $needs_refresh ) {
-            $sources = $this->refresh_swiper_asset_sources();
+            $sources = $this->refresh_swiper_asset_sources( 'stale_cache' );
         }
 
         return $sources;
@@ -456,7 +463,7 @@ class Assets {
         $plugin_basename = plugin_basename( $this->plugin->get_plugin_file() );
 
         if ( in_array( $plugin_basename, $options['plugins'], true ) ) {
-            $this->refresh_swiper_asset_sources();
+            $this->refresh_swiper_asset_sources( 'plugin_upgrade' );
         }
     }
 }

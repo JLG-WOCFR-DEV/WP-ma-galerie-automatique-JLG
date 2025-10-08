@@ -41,6 +41,27 @@ class MGA_Swiper_Asset_Sources_Test extends WP_UnitTestCase {
         $this->assertSame( 'no', $autoload );
     }
 
+    public function test_swiper_source_refresh_notifies_with_context() {
+        delete_option( 'mga_swiper_asset_sources' );
+
+        $notifications = [];
+
+        add_action(
+            'mga_swiper_asset_sources_refreshed',
+            function ( $sources, $context, $previous ) use ( &$notifications ) {
+                $notifications[] = compact( 'sources', 'context', 'previous' );
+            },
+            10,
+            3
+        );
+
+        $this->assets()->refresh_swiper_asset_sources( 'integration_test' );
+
+        $this->assertNotEmpty( $notifications, 'Refreshing the sources should fire the notification action.' );
+        $this->assertSame( 'integration_test', $notifications[0]['context'], 'The provided context should be forwarded to listeners.' );
+        $this->assertIsArray( $notifications[0]['previous'], 'Previous sources should be provided as an array.' );
+    }
+
     public function test_swiper_sources_refreshed_when_plugin_in_upgrade_batch() {
         global $wpdb;
 

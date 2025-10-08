@@ -69,4 +69,38 @@ class SettingsCacheTest extends WP_UnitTestCase {
 
         $this->assertSame( 7, $second['delay'], 'Updating the option should invalidate the cache automatically.' );
     }
+
+    public function test_handle_switch_blog_invalidates_cache_snapshot() {
+        $plugin = mga_plugin();
+        $this->assertInstanceOf( \MaGalerieAutomatique\Plugin::class, $plugin );
+
+        $settings = $plugin->settings();
+
+        $calls         = 0;
+        $valueProvider = [ 'delay' => 2 ];
+
+        add_filter(
+            'pre_option_mga_settings',
+            function () use ( &$calls, &$valueProvider ) {
+                $calls++;
+                return $valueProvider;
+            }
+        );
+
+        $first = $settings->get_sanitized_settings();
+        $this->assertSame( 1, $calls, 'The option should be read during the first access.' );
+        $this->assertSame( 2, $first['delay'], 'The cached value should reflect the first snapshot.' );
+
+        $valueProvider = [ 'delay' => 4 ];
+
+        $second = $settings->get_sanitized_settings();
+        $this->assertSame( 1, $calls, 'The cached snapshot should be reused until it is invalidated.' );
+        $this->assertSame( 2, $second['delay'], 'Without invalidation, the cached value should remain unchanged.' );
+
+        $settings->handle_switch_blog( 2, 1 );
+
+        $third = $settings->get_sanitized_settings();
+        $this->assertSame( 2, $calls, 'Switching blogs should invalidate the cache and trigger a fresh read.' );
+        $this->assertSame( 4, $third['delay'], 'After invalidation, the cache should expose the latest snapshot.' );
+    }
 }

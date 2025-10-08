@@ -5,6 +5,7 @@ namespace MaGalerieAutomatique;
 use MaGalerieAutomatique\Admin\Settings;
 use MaGalerieAutomatique\Content\Detection;
 use MaGalerieAutomatique\Frontend\Assets;
+use MaGalerieAutomatique\Translation\Manager as TranslationManager;
 use const FILTER_NULL_ON_FAILURE;
 use const FILTER_VALIDATE_BOOLEAN;
 
@@ -25,11 +26,14 @@ class Plugin {
 
     private ?bool $languages_directory_exists = null;
 
+    private TranslationManager $translation_manager;
+
     public function __construct( string $plugin_file ) {
         $this->plugin_file = $plugin_file;
         $this->settings    = new Settings( $this );
         $this->detection   = new Detection( $this, $this->settings );
         $this->frontend_assets = new Assets( $this, $this->settings, $this->detection );
+        $this->translation_manager = new TranslationManager( $this );
     }
 
     public function register_hooks(): void {
@@ -43,10 +47,11 @@ class Plugin {
         add_action( 'admin_enqueue_scripts', [ $this->settings, 'enqueue_assets' ] );
         add_action( 'init', [ $this, 'register_block' ] );
         add_action( 'update_option_mga_settings', [ $this, 'maybe_purge_detection_cache' ], 10, 3 );
+        add_action( 'switch_blog', [ $this, 'handle_switch_blog' ], 10, 2 );
     }
 
     public function activate(): void {
-        $this->frontend_assets->refresh_swiper_asset_sources();
+        $this->frontend_assets->refresh_swiper_asset_sources( 'activation' );
 
         $defaults          = $this->settings->get_default_settings();
         $existing_settings = get_option( 'mga_settings', false );
@@ -66,58 +71,7 @@ class Plugin {
     }
 
     public function load_textdomain(): void {
-        $domain        = 'lightbox-jlg';
-        $relative_path = $this->languages_directory_exists()
-            ? dirname( plugin_basename( $this->plugin_file ) ) . '/languages'
-            : false;
-
-        if ( load_plugin_textdomain( $domain, false, $relative_path ) ) {
-            return;
-        }
-
-        $base64_path = trailingslashit( $this->get_languages_path() ) . 'lightbox-jlg-fr_FR.mo.b64';
-
-        if ( ! file_exists( $base64_path ) ) {
-            return;
-        }
-
-        $encoded_contents = file_get_contents( $base64_path );
-
-        if ( false === $encoded_contents ) {
-            return;
-        }
-
-        $decoded_contents = base64_decode( $encoded_contents, true );
-
-        if ( false === $decoded_contents ) {
-            return;
-        }
-
-        if ( ! function_exists( 'wp_tempnam' ) ) {
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-        }
-
-        $temp_mofile = wp_tempnam( 'lightbox-jlg-fr_FR.mo' );
-
-        if ( ! $temp_mofile ) {
-            return;
-        }
-
-        $bytes_written = file_put_contents( $temp_mofile, $decoded_contents );
-
-        if ( false === $bytes_written ) {
-            if ( file_exists( $temp_mofile ) ) {
-                unlink( $temp_mofile );
-            }
-
-            return;
-        }
-
-        load_textdomain( $domain, $temp_mofile );
-
-        if ( file_exists( $temp_mofile ) ) {
-            unlink( $temp_mofile );
-        }
+        $this->translation_manager->load_textdomain();
     }
 
     public function get_plugin_file(): string {
@@ -144,6 +98,16 @@ class Plugin {
         return $this->languages_directory_exists;
     }
 
+    public function handle_switch_blog( $new_blog_id, $old_blog_id ): void {
+        unset( $new_blog_id, $old_blog_id );
+
+        $this->languages_directory_exists = null;
+
+        if ( isset( $this->translation_manager ) ) {
+            $this->translation_manager->handle_switch_blog();
+        }
+    }
+
     public function settings(): Settings {
         return $this->settings;
     }
@@ -154,6 +118,10 @@ class Plugin {
 
     public function frontend_assets(): Assets {
         return $this->frontend_assets;
+    }
+
+    public function translation_manager(): TranslationManager {
+        return $this->translation_manager;
     }
 
     public function register_block(): void {
