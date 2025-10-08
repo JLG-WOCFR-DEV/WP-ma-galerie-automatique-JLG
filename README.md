@@ -116,6 +116,46 @@ Les scénarios Playwright (par exemple `tests/e2e/gallery-viewer.spec.ts`) gén�
 
 ## Hooks et personnalisation
 
+### Presets graphiques inspirés de bibliothèques UI
+
+Pour gagner du temps lors du maquettage, voici six presets de réglages qui s’inspirent de bibliothèques/UI kits populaires. Chacun s’appuie sur les options natives du plugin : effets, easing, dispositions des miniatures, couleurs d’accent et opacité de fond peuvent être ajustés depuis l’interface d’administration.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L422-L504】 Adaptez librement les valeurs proposées pour coller à votre direction artistique.
+
+#### Preset « Headless UI » — minimalisme fonctionnel
+- **Effet** : `fade` pour des transitions sobres.【F:ma-galerie-automatique/includes/Admin/Settings.php†L484-L493】
+- **Easing** : `ease-in-out` afin de lisser l’entrée/sortie.【F:ma-galerie-automatique/includes/Admin/Settings.php†L495-L504】
+- **Miniatures** : position `hidden` avec zoom activé pour laisser le focus sur l’image principale.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L295】【F:ma-galerie-automatique/includes/Admin/Settings.php†L471-L482】
+- **Arrière-plan** : style `echo` avec opacité 0,92 pour un fondu discret.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L461-L469】
+
+#### Preset « Shadcn UI » — sobriété typographique
+- **Effet** : `slide` pour accompagner une mise en page éditoriale.【F:ma-galerie-automatique/includes/Admin/Settings.php†L484-L493】
+- **Easing** : `ease-out` pour un ressenti nerveux mais accessible.【F:ma-galerie-automatique/includes/Admin/Settings.php†L495-L504】
+- **Miniatures** : alignées `left` avec taille desktop 88 px / mobile 64 px pour rappeler les barres latérales modulaires.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L471-L482】
+- **Couleur d’accent** : `#0f172a` (ardoise) et opacité 0,85 pour s’harmoniser avec des interfaces sombres.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】
+
+#### Preset « Radix UI » — accessibilité stricte
+- **Effet** : `slide` avec vitesse 450 ms pour conserver la perception de mouvement tout en respectant les préférences réduites.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L484-L504】
+- **Easing** : `linear` afin d’offrir une animation prévisible.【F:ma-galerie-automatique/includes/Admin/Settings.php†L495-L504】
+- **Miniatures** : `bottom`, 96 px desktop / 72 px mobile avec contraste renforcé (`accent_color` `#2563eb`).【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L471-L482】
+- **Barre d’actions** : conserver zoom, téléchargement et partage pour répondre aux cas d’usage avancés.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L296】
+
+#### Preset « Bootstrap » — esthétique corporate
+- **Effet** : `slide` rapide (350 ms) pour refléter la réactivité des composants Bootstrap.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L484-L504】
+- **Easing** : `ease` couplé à l’autoplay en pause par défaut (lecture manuelle).【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L435】【F:ma-galerie-automatique/includes/Admin/Settings.php†L495-L504】
+- **Couleur d’accent** : `#0d6efd`, opacité de fond 0,9 et miniatures `bottom` pour rappeler la hiérarchie visuelle classique.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L471-L482】
+- **CTA** : garder le bouton d’appel à l’action visible afin d’encourager les interactions commerciales.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L296】
+
+#### Preset « Semantic UI » — équilibre éditorial
+- **Effet** : `coverflow` pour apporter une touche dynamique maîtrisée.【F:ma-galerie-automatique/includes/Admin/Settings.php†L484-L493】
+- **Easing** : `ease-in-out` et délai 5 s pour laisser respirer les visuels.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L495-L504】
+- **Miniatures** : `bottom`, 80 px desktop, 60 px mobile, accent `#6435c9` (violet) pour rappeler la palette Semantic.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L471-L482】
+- **Fond** : style `blur` pour souligner les transitions tout en conservant la lisibilité des légendes.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L461-L469】
+
+#### Preset « Anime.js » — motion design expressif
+- **Effet** : `flip` avec vitesse 520 ms pour un rendu cinétique.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L484-L504】
+- **Easing** : `ease-in-out` et autoplay activé pour lancer le storytelling visuel automatiquement.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L435】【F:ma-galerie-automatique/includes/Admin/Settings.php†L495-L504】
+- **Couleur d’accent** : gradient néon (ex. `#f97316` en accent principal) et opacité 0,75 pour laisser transparaître les textures de fond.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】
+- **Miniatures** : `hidden` sur desktop mais visibles sur mobile (`show_thumbs_mobile` vrai) pour maximiser l’espace scénique tout en conservant la navigation tactile.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L296】【F:ma-galerie-automatique/includes/Admin/Settings.php†L471-L482】
+
 Ces filtres permettent d’adapter le comportement du plugin selon vos besoins.
 
 ### Quand ajuster les sélecteurs CSS ?
