@@ -116,6 +116,49 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
         $this->assertFalse( $this->detection()->should_enqueue_assets( $untracked_id ), 'Custom post types omitted from the tracked list should not enqueue assets.' );
     }
 
+    public function test_tracked_post_types_filter_can_disable_detection() {
+        $linked_image_markup = '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>';
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => $linked_image_markup,
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $detection_runs = 0;
+        $marker_filter  = static function ( $block_names ) use ( &$detection_runs ) {
+            $detection_runs++;
+
+            return $block_names;
+        };
+
+        add_filter( 'mga_linked_image_blocks', $marker_filter );
+        add_filter( 'mga_tracked_post_types', '__return_empty_array' );
+
+        try {
+            $this->assertFalse(
+                $this->detection()->should_enqueue_assets( $post_id ),
+                'An empty tracked post type list injected via the filter should disable detection entirely.'
+            );
+            $this->assertSame(
+                0,
+                $detection_runs,
+                'Detection should be skipped when the tracked post types filter disables all tracking.'
+            );
+        } finally {
+            remove_filter( 'mga_tracked_post_types', '__return_empty_array' );
+            remove_filter( 'mga_linked_image_blocks', $marker_filter );
+        }
+
+        $this->assertSame(
+            '',
+            get_post_meta( $post_id, '_mga_has_linked_images', true ),
+            'The cache meta should remain untouched when tracking is disabled.'
+        );
+    }
+
     /**
      * Cached `_mga_has_linked_images` meta entries should bypass the expensive detection logic.
      */

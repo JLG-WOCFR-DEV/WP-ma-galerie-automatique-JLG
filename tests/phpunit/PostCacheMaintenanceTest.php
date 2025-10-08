@@ -152,6 +152,37 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
         $this->assertCacheSnapshotMatches( $post_id, true, 'Reusable blocks containing linked media should update the cache flag to one.' );
     }
 
+    public function test_refresh_cache_respects_empty_tracked_post_types_filter() {
+        update_option(
+            'mga_settings',
+            [
+                'tracked_post_types' => [ 'post' ],
+            ]
+        );
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+            ]
+        );
+
+        update_post_meta( $post_id, '_mga_has_linked_images', 'seed' );
+
+        add_filter( 'mga_tracked_post_types', '__return_empty_array' );
+
+        try {
+            $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
+        } finally {
+            remove_filter( 'mga_tracked_post_types', '__return_empty_array' );
+        }
+
+        $this->assertSame(
+            'seed',
+            get_post_meta( $post_id, '_mga_has_linked_images', true ),
+            'Cache meta should remain untouched when the tracked post types filter disables detection.'
+        );
+    }
+
     public function test_default_tracked_post_types_are_shared_between_cache_and_enqueue() {
         delete_option( 'mga_settings' );
 
