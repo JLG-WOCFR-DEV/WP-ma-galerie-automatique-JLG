@@ -100,7 +100,12 @@ class Detection {
 
         $tracked_post_types = $this->resolve_tracked_post_types( $post, $settings );
 
-        if ( ! empty( $tracked_post_types ) && ! in_array( $post->post_type, $tracked_post_types, true ) ) {
+        if ( empty( $tracked_post_types ) ) {
+            $this->request_detection_cache[ $post->ID ] = false;
+            return false;
+        }
+
+        if ( ! in_array( $post->post_type, $tracked_post_types, true ) ) {
             $this->request_detection_cache[ $post->ID ] = false;
             return false;
         }
@@ -382,7 +387,11 @@ class Detection {
         $settings           = $this->settings->get_sanitized_settings();
         $tracked_post_types = $this->resolve_tracked_post_types( $post, $settings );
 
-        if ( ! empty( $tracked_post_types ) && ! in_array( $post->post_type, $tracked_post_types, true ) ) {
+        if ( empty( $tracked_post_types ) ) {
+            return;
+        }
+
+        if ( ! in_array( $post->post_type, $tracked_post_types, true ) ) {
             return;
         }
 
