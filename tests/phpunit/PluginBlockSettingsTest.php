@@ -31,12 +31,19 @@ class PluginBlockSettingsTest extends WP_UnitTestCase {
         $this->assertSame( 'ease-out', $result['easing'], 'Easing should match the default easing curve.' );
         $this->assertSame( 0.95, $result['bgOpacity'], 'Background opacity should fall back to the default opacity.' );
         $this->assertSame( 'bottom', $result['thumbsLayout'], 'Thumbnail layout should fall back to the default layout.' );
-        $this->assertFalse( $result['showThumbsMobile'], 'Mobile thumbnails default to disabled unless explicitly enabled.' );
-        $this->assertFalse( $result['showZoom'], 'Zoom control should remain disabled when the payload omits the flag.' );
-        $this->assertFalse( $result['showDownload'], 'Download control should remain disabled when the payload omits the flag.' );
-        $this->assertFalse( $result['showShare'], 'Share control should remain disabled when the payload omits the flag.' );
-        $this->assertFalse( $result['showCta'], 'CTA control should remain disabled when the payload omits the flag.' );
-        $this->assertFalse( $result['showFullscreen'], 'Fullscreen control should remain disabled when the payload omits the flag.' );
+        $expected_disabled_toggles = [
+            'showThumbsMobile',
+            'showZoom',
+            'showDownload',
+            'showShare',
+            'showCta',
+            'showFullscreen',
+        ];
+
+        foreach ( $expected_disabled_toggles as $toggle_key ) {
+            $this->assertArrayHasKey( $toggle_key, $result, sprintf( 'The %s toggle should be part of the defaults payload.', $toggle_key ) );
+            $this->assertFalse( $result[ $toggle_key ], sprintf( 'The %s toggle should default to false until explicitly enabled.', $toggle_key ) );
+        }
     }
 
     public function test_prepare_block_settings_casts_and_sanitizes_custom_values(): void {
