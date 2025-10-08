@@ -275,6 +275,18 @@
     outline: none;
 }
 
+.mga-admin-wrap .mga-style-preset-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.mga-admin-wrap .mga-style-preset-description {
+    margin-top: 8px;
+}
+
 .mga-admin-wrap input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;

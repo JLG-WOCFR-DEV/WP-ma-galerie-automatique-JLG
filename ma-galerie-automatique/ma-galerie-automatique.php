@@ -223,6 +223,12 @@ function mga_get_share_icon_choices(): array {
     return $plugin ? $plugin->settings()->get_share_icon_choices() : [];
 }
 
+function mga_get_style_presets(): array {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->settings()->get_style_presets() : [];
+}
+
 function mga_sanitize_settings( $input, $existing_settings = null ): array {
     $plugin = mga_plugin();
 

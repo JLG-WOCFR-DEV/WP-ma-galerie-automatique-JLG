@@ -384,6 +384,26 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'background_style' => 'blur',
                 ],
             ],
+            'style_preset_known_value' => [
+                [
+                    'style_preset' => 'headless-ui',
+                ],
+                [],
+                [
+                    'style_preset' => 'headless-ui',
+                ],
+            ],
+            'style_preset_unknown_value_resets_to_custom' => [
+                [
+                    'style_preset' => 'does-not-exist',
+                ],
+                [
+                    'style_preset' => 'radix-ui',
+                ],
+                [
+                    'style_preset' => '',
+                ],
+            ],
         ];
     }
 

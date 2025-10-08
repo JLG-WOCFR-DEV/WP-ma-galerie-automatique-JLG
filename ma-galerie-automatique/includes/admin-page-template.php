@@ -9,6 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Sécurité
 $defaults          = mga_get_default_settings();
 $sanitized_settings = mga_sanitize_settings( $settings, $settings );
 $settings          = wp_parse_args( $sanitized_settings, $defaults );
+$style_presets     = mga_get_style_presets();
 
 ?>
 <div class="wrap mga-admin-wrap">
@@ -68,6 +69,39 @@ $settings          = wp_parse_args( $sanitized_settings, $defaults );
                     <td>
                         <input name="mga_settings[delay]" type="number" id="mga_delay" value="<?php echo esc_attr( $settings['delay'] ); ?>" min="1" max="30" class="small-text" /> <?php echo esc_html__( 'secondes', 'lightbox-jlg' ); ?>
                         <p class="description"><?php echo esc_html__( "Durée d'affichage de chaque image en mode lecture automatique.", 'lightbox-jlg' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="mga_style_preset"><?php echo esc_html__( 'Preset graphique', 'lightbox-jlg' ); ?></label></th>
+                    <td>
+                        <select
+                            name="mga_settings[style_preset]"
+                            id="mga_style_preset"
+                            aria-describedby="mga_style_preset_help mga_style_preset_description"
+                        >
+                            <option value="" <?php selected( $settings['style_preset'], '' ); ?>><?php echo esc_html__( 'Aucun (personnalisé)', 'lightbox-jlg' ); ?></option>
+                            <?php foreach ( $style_presets as $preset_key => $preset_definition ) :
+                                $sanitized_key = sanitize_key( (string) $preset_key );
+
+                                if ( '' === $sanitized_key ) {
+                                    continue;
+                                }
+
+                                $label = isset( $preset_definition['label'] ) && '' !== trim( (string) $preset_definition['label'] )
+                                    ? $preset_definition['label']
+                                    : ucwords( str_replace( '-', ' ', $sanitized_key ) );
+                                ?>
+                                <option value="<?php echo esc_attr( $sanitized_key ); ?>" <?php selected( $settings['style_preset'], $sanitized_key ); ?>>
+                                    <?php echo esc_html( $label ); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <p class="description" id="mga_style_preset_help"><?php echo esc_html__( 'Appliquez un ensemble de réglages inspiré de bibliothèques UI populaires. Vous pouvez ensuite ajuster chaque option librement.', 'lightbox-jlg' ); ?></p>
+                        <div class="mga-style-preset-actions">
+                            <button type="button" class="button button-secondary" data-mga-apply-style-preset><?php echo esc_html__( 'Appliquer ce preset', 'lightbox-jlg' ); ?></button>
+                            <button type="button" class="button-link" data-mga-reset-style-preset><?php echo esc_html__( 'Revenir aux valeurs par défaut', 'lightbox-jlg' ); ?></button>
+                        </div>
+                        <p class="description mga-style-preset-description" id="mga_style_preset_description" data-mga-style-preset-description></p>
                     </td>
                 </tr>
                 <tr>
