@@ -22,8 +22,11 @@ class PluginBlockSettingsTest extends WP_UnitTestCase {
         $this->assertSame( __( 'Lightbox active', 'lightbox-jlg' ), $result['noteText'], 'The note text should use the translated default.' );
         $this->assertSame( '#ffffff', $result['accentColor'], 'Default accent colour should fall back to white when absent.' );
         $this->assertSame( 'echo', $result['backgroundStyle'], 'Background style should fall back to the expected default.' );
+        $this->assertIsBool( $result['autoplay'], 'Autoplay flag should always be cast to boolean.' );
         $this->assertFalse( $result['autoplay'], 'Autoplay should be disabled by default.' );
+        $this->assertIsBool( $result['startOnClickedImage'], 'Start-on-clicked-image flag should always be cast to boolean.' );
         $this->assertFalse( $result['startOnClickedImage'], 'Viewer should not start on the clicked image by default.' );
+        $this->assertIsBool( $result['loop'], 'Loop flag should always be cast to boolean.' );
         $this->assertTrue( $result['loop'], 'Looping should default to true for accessibility parity with the UI.' );
         $this->assertSame( 4, $result['delay'], 'Default delay should match the settings baseline.' );
         $this->assertSame( 600, $result['speed'], 'Default speed should match the settings baseline.' );
@@ -31,19 +34,18 @@ class PluginBlockSettingsTest extends WP_UnitTestCase {
         $this->assertSame( 'ease-out', $result['easing'], 'Easing should match the default easing curve.' );
         $this->assertSame( 0.95, $result['bgOpacity'], 'Background opacity should fall back to the default opacity.' );
         $this->assertSame( 'bottom', $result['thumbsLayout'], 'Thumbnail layout should fall back to the default layout.' );
-        $expected_disabled_toggles = [
-            'showThumbsMobile',
-            'showZoom',
-            'showDownload',
-            'showShare',
-            'showCta',
-            'showFullscreen',
-        ];
-
-        foreach ( $expected_disabled_toggles as $toggle_key ) {
-            $this->assertArrayHasKey( $toggle_key, $result, sprintf( 'The %s toggle should be part of the defaults payload.', $toggle_key ) );
-            $this->assertFalse( $result[ $toggle_key ], sprintf( 'The %s toggle should default to false until explicitly enabled.', $toggle_key ) );
-        }
+        $this->assertIsBool( $result['showThumbsMobile'], 'Mobile thumbnails toggle should always be boolean.' );
+        $this->assertFalse( $result['showThumbsMobile'], 'Mobile thumbnails default to disabled unless explicitly enabled.' );
+        $this->assertIsBool( $result['showZoom'], 'Zoom control toggle should always be boolean.' );
+        $this->assertFalse( $result['showZoom'], 'Zoom control should remain disabled when the payload omits the flag.' );
+        $this->assertIsBool( $result['showDownload'], 'Download control toggle should always be boolean.' );
+        $this->assertFalse( $result['showDownload'], 'Download control should remain disabled when the payload omits the flag.' );
+        $this->assertIsBool( $result['showShare'], 'Share control toggle should always be boolean.' );
+        $this->assertFalse( $result['showShare'], 'Share control should remain disabled when the payload omits the flag.' );
+        $this->assertIsBool( $result['showCta'], 'CTA control toggle should always be boolean.' );
+        $this->assertFalse( $result['showCta'], 'CTA control should remain disabled when the payload omits the flag.' );
+        $this->assertIsBool( $result['showFullscreen'], 'Fullscreen control toggle should always be boolean.' );
+        $this->assertFalse( $result['showFullscreen'], 'Fullscreen control should remain disabled when the payload omits the flag.' );
     }
 
     public function test_prepare_block_settings_casts_and_sanitizes_custom_values(): void {
