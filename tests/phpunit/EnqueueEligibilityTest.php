@@ -159,6 +159,49 @@ class EnqueueEligibilityTest extends WP_UnitTestCase {
         );
     }
 
+    public function test_unregistered_tracked_post_types_fall_back_to_defaults() {
+        update_option(
+            'mga_settings',
+            [
+                'tracked_post_types' => [ 'book' ],
+            ]
+        );
+
+        $linked_image_markup = '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>';
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => $linked_image_markup,
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $detection_runs = 0;
+        $marker_filter  = static function ( $block_names ) use ( &$detection_runs ) {
+            $detection_runs++;
+
+            return $block_names;
+        };
+
+        add_filter( 'mga_linked_image_blocks', $marker_filter );
+
+        try {
+            $this->assertTrue(
+                $this->detection()->should_enqueue_assets( $post_id ),
+                'Missing tracked post types should fall back to defaults so detection continues running.'
+            );
+        } finally {
+            remove_filter( 'mga_linked_image_blocks', $marker_filter );
+        }
+
+        $this->assertGreaterThan(
+            0,
+            $detection_runs,
+            'Fallback resolution should still trigger the detection routine.'
+        );
+    }
+
     /**
      * Cached `_mga_has_linked_images` meta entries should bypass the expensive detection logic.
      */

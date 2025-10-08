@@ -39,6 +39,29 @@ class PostCacheMaintenanceTest extends WP_UnitTestCase {
         $this->assertCacheSnapshotMatches( $post_id, true, 'Tracked posts should store a positive cache flag when linked media is detected.' );
     }
 
+    public function test_cache_refresh_falls_back_to_default_when_tracked_type_missing() {
+        update_option(
+            'mga_settings',
+            [
+                'tracked_post_types' => [ 'book' ],
+            ]
+        );
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+            ]
+        );
+
+        $this->detection()->refresh_post_linked_images_cache_on_save( $post_id, get_post( $post_id ) );
+
+        $this->assertCacheSnapshotMatches(
+            $post_id,
+            true,
+            'When saved settings reference missing post types, cache refresh should fall back to default tracking.'
+        );
+    }
+
     /**
      * Tracked post types without linked media should store a "0" meta flag.
      */
