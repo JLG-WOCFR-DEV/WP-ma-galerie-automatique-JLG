@@ -409,21 +409,30 @@ class Detection {
             $settings = $this->settings->get_sanitized_settings();
         }
 
-        $tracked_post_types = [];
+        $tracked_post_types_from_settings = [];
 
         if ( ! empty( $settings['tracked_post_types'] ) && is_array( $settings['tracked_post_types'] ) ) {
-            $tracked_post_types = array_map( 'sanitize_key', $settings['tracked_post_types'] );
+            $tracked_post_types_from_settings = array_map( 'sanitize_key', $settings['tracked_post_types'] );
         }
 
+        $defaults                   = $this->settings->get_default_settings();
+        $default_tracked_post_types = isset( $defaults['tracked_post_types'] ) ? (array) $defaults['tracked_post_types'] : [];
+        $default_tracked_post_types = array_values( array_unique( array_map( 'sanitize_key', $default_tracked_post_types ) ) );
+
+        $tracked_post_types = $tracked_post_types_from_settings;
+
         if ( empty( $tracked_post_types ) ) {
-            $defaults = $this->settings->get_default_settings();
-            $tracked_post_types = isset( $defaults['tracked_post_types'] ) ? (array) $defaults['tracked_post_types'] : [];
+            $tracked_post_types = $default_tracked_post_types;
         }
 
         $tracked_post_types = array_values( array_unique( $tracked_post_types ) );
 
         $all_registered_post_types = get_post_types( [], 'names' );
         $tracked_post_types        = array_values( array_intersect( $tracked_post_types, $all_registered_post_types ) );
+
+        if ( empty( $tracked_post_types ) && ! empty( $tracked_post_types_from_settings ) ) {
+            $tracked_post_types = array_values( array_intersect( $default_tracked_post_types, $all_registered_post_types ) );
+        }
 
         $tracked_post_types = apply_filters( 'mga_tracked_post_types', $tracked_post_types, $post );
 
