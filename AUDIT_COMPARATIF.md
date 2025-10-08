@@ -22,6 +22,7 @@ etc.). Les recommandations sont classées par thématique demandée.
 - L’interface d’administration permet déjà de gérer une liste ordonnée de
   canaux de partage, chacun avec libellé, icône, modèle d’URL et activation
   individuelle, ce qui rivalise avec les solutions avancées.【F:ma-galerie-automatique/includes/admin-page-template.php†L412-L520】
+- Un nouveau lot de commandes WP-CLI (`wp mga cache status|purge`) facilite les purges et audits de cache sans passer par l’interface graphique, ce qui s’aligne sur les attentes des équipes ops des extensions pro.【F:ma-galerie-automatique/includes/Cli/CacheCommand.php†L18-L205】
 
 ### Options manquantes / recommandations
 - **Presets et ciblage contextuel** : aujourd’hui toutes les options sont
