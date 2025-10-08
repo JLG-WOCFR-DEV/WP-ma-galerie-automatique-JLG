@@ -391,6 +391,290 @@
             }
         }
 
+        const stylePresetExport = global.mgaStylePresets && typeof global.mgaStylePresets === 'object'
+            ? global.mgaStylePresets
+            : {};
+        const stylePresets = stylePresetExport.presets && typeof stylePresetExport.presets === 'object'
+            ? stylePresetExport.presets
+            : {};
+        const presetSelect = doc.getElementById('mga_style_preset');
+        const applyPresetButton = doc.querySelector('[data-mga-apply-style-preset]');
+        const resetPresetButton = doc.querySelector('[data-mga-reset-style-preset]');
+        const presetDescription = doc.querySelector('[data-mga-style-preset-description]');
+        let isApplyingPreset = false;
+
+        const maybeDispatchEvent = (element, eventType) => {
+            if (!element || typeof element.dispatchEvent !== 'function') {
+                return;
+            }
+
+            try {
+                element.dispatchEvent(new Event(eventType, { bubbles: true }));
+            } catch (error) {
+                if (typeof doc.createEvent === 'function') {
+                    try {
+                        const fallbackEvent = doc.createEvent('Event');
+                        fallbackEvent.initEvent(eventType, true, true);
+                        element.dispatchEvent(fallbackEvent);
+                    } catch (fallbackError) {
+                        // Ignore unsupported event creation paths.
+                    }
+                }
+            }
+        };
+
+        const setNumericInputValue = (id, value) => {
+            const input = doc.getElementById(id);
+
+            if (!input) {
+                return;
+            }
+
+            input.value = value;
+            maybeDispatchEvent(input, 'input');
+            maybeDispatchEvent(input, 'change');
+        };
+
+        const setRangeInputValue = setNumericInputValue;
+
+        const setSelectValue = (id, value) => {
+            const select = doc.getElementById(id);
+
+            if (!select) {
+                return;
+            }
+
+            select.value = value;
+            maybeDispatchEvent(select, 'change');
+        };
+
+        const setCheckboxValue = (id, value) => {
+            const checkbox = doc.getElementById(id);
+
+            if (!checkbox) {
+                return;
+            }
+
+            checkbox.checked = Boolean(value);
+            maybeDispatchEvent(checkbox, 'change');
+        };
+
+        const setAccentColorValue = (value) => {
+            if (!accentColorInput) {
+                return;
+            }
+
+            const targetColor = typeof value === 'string' ? value : '';
+            const maybeJQuery = global.jQuery;
+
+            if (maybeJQuery && typeof maybeJQuery.fn === 'object' && typeof maybeJQuery.fn.wpColorPicker === 'function') {
+                const picker = maybeJQuery(accentColorInput);
+
+                if (picker && typeof picker.wpColorPicker === 'function') {
+                    picker.wpColorPicker('color', targetColor);
+                    return;
+                }
+            }
+
+            accentColorInput.value = targetColor;
+            maybeDispatchEvent(accentColorInput, 'change');
+        };
+
+        const applyPresetSettings = (settings) => {
+            if (!settings || typeof settings !== 'object') {
+                return;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'delay')) {
+                setNumericInputValue('mga_delay', settings.delay);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'speed')) {
+                setNumericInputValue('mga_speed', settings.speed);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'effect')) {
+                setSelectValue('mga_effect', settings.effect);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'easing')) {
+                setSelectValue('mga_easing', settings.easing);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'thumbs_layout')) {
+                setSelectValue('mga_thumbs_layout', settings.thumbs_layout);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'thumb_size')) {
+                setRangeInputValue('mga_thumb_size', settings.thumb_size);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'thumb_size_mobile')) {
+                setRangeInputValue('mga_thumb_size_mobile', settings.thumb_size_mobile);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'show_thumbs_mobile')) {
+                setCheckboxValue('mga_show_thumbs_mobile', settings.show_thumbs_mobile);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'accent_color')) {
+                setAccentColorValue(settings.accent_color);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'bg_opacity')) {
+                setRangeInputValue('mga_bg_opacity', settings.bg_opacity);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'background_style')) {
+                setSelectValue('mga_background_style', settings.background_style);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'autoplay_start')) {
+                setCheckboxValue('mga_autoplay_start', settings.autoplay_start);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'loop')) {
+                setCheckboxValue('mga_loop', settings.loop);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'show_zoom')) {
+                setCheckboxValue('mga_show_zoom', settings.show_zoom);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'show_download')) {
+                setCheckboxValue('mga_show_download', settings.show_download);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'show_share')) {
+                setCheckboxValue('mga_show_share', settings.show_share);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'show_cta')) {
+                setCheckboxValue('mga_show_cta', settings.show_cta);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'show_fullscreen')) {
+                setCheckboxValue('mga_show_fullscreen', settings.show_fullscreen);
+            }
+        };
+
+        const updatePresetDescription = () => {
+            if (!presetDescription) {
+                return;
+            }
+
+            const key = presetSelect ? presetSelect.value : '';
+
+            if (key && stylePresets[key] && stylePresets[key].description) {
+                presetDescription.textContent = stylePresets[key].description;
+                return;
+            }
+
+            const customDescription = typeof stylePresetExport.customDescription === 'string'
+                ? stylePresetExport.customDescription
+                : '';
+
+            presetDescription.textContent = customDescription;
+        };
+
+        const markPresetAsCustom = () => {
+            if (isApplyingPreset || !presetSelect) {
+                return;
+            }
+
+            if (presetSelect.value === '') {
+                return;
+            }
+
+            presetSelect.value = '';
+            updatePresetDescription();
+        };
+
+        const registerPresetWatcher = (id) => {
+            const element = doc.getElementById(id);
+
+            if (!element) {
+                return;
+            }
+
+            const eventNames = ['change'];
+
+            if (element.tagName === 'INPUT' && ['text', 'number', 'range'].includes(element.type)) {
+                eventNames.push('input');
+            }
+
+            eventNames.forEach((eventName) => {
+                element.addEventListener(eventName, markPresetAsCustom);
+            });
+        };
+
+        if (presetSelect) {
+            updatePresetDescription();
+            presetSelect.addEventListener('change', updatePresetDescription);
+        }
+
+        if (applyPresetButton) {
+            applyPresetButton.addEventListener('click', (event) => {
+                event.preventDefault();
+
+                if (!presetSelect) {
+                    return;
+                }
+
+                const key = presetSelect.value;
+
+                if (!key || !stylePresets[key]) {
+                    return;
+                }
+
+                isApplyingPreset = true;
+                applyPresetSettings(stylePresets[key].settings || {});
+                isApplyingPreset = false;
+                updatePresetDescription();
+            });
+        }
+
+        if (resetPresetButton) {
+            resetPresetButton.addEventListener('click', (event) => {
+                event.preventDefault();
+
+                const defaults = stylePresetExport.defaults || {};
+
+                if (defaults && typeof defaults === 'object' && Object.keys(defaults).length > 0) {
+                    isApplyingPreset = true;
+                    applyPresetSettings(defaults);
+                    isApplyingPreset = false;
+                }
+
+                if (presetSelect) {
+                    presetSelect.value = '';
+                }
+
+                updatePresetDescription();
+            });
+        }
+
+        [
+            'mga_delay',
+            'mga_speed',
+            'mga_effect',
+            'mga_easing',
+            'mga_thumb_size',
+            'mga_thumb_size_mobile',
+            'mga_thumbs_layout',
+            'mga_accent_color',
+            'mga_bg_opacity',
+            'mga_background_style',
+            'mga_show_thumbs_mobile',
+            'mga_autoplay_start',
+            'mga_loop',
+            'mga_show_zoom',
+            'mga_show_download',
+            'mga_show_share',
+            'mga_show_cta',
+            'mga_show_fullscreen',
+        ].forEach(registerPresetWatcher);
+
         const shareRepeater = doc.querySelector('[data-share-repeater]');
 
         if (shareRepeater) {

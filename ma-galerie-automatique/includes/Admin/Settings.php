@@ -155,6 +155,179 @@ class Settings {
         return $choices;
     }
 
+    public function get_style_presets(): array {
+        $defaults = $this->get_default_settings();
+
+        return [
+            'headless-ui' => [
+                'label'       => __( 'Headless UI — minimalisme fonctionnel', 'lightbox-jlg' ),
+                'description' => __( 'Transitions en fondu, interface épurée et accent discret pour mettre la photo au premier plan.', 'lightbox-jlg' ),
+                'settings'    => [
+                    'delay'              => 5,
+                    'speed'              => 500,
+                    'effect'             => 'fade',
+                    'easing'             => 'ease-in-out',
+                    'thumbs_layout'      => 'hidden',
+                    'thumb_size'         => 90,
+                    'thumb_size_mobile'  => 70,
+                    'show_thumbs_mobile' => false,
+                    'accent_color'       => '#111827',
+                    'bg_opacity'         => 0.92,
+                    'background_style'   => 'echo',
+                ],
+            ],
+            'shadcn-ui'   => [
+                'label'       => __( 'Shadcn UI — sobriété typographique', 'lightbox-jlg' ),
+                'description' => __( 'Mise en page éditoriale avec miniatures latérales et contraste soutenu.', 'lightbox-jlg' ),
+                'settings'    => [
+                    'delay'              => $defaults['delay'],
+                    'speed'              => 550,
+                    'effect'             => 'slide',
+                    'easing'             => 'ease-out',
+                    'thumbs_layout'      => 'left',
+                    'thumb_size'         => 88,
+                    'thumb_size_mobile'  => 64,
+                    'show_thumbs_mobile' => true,
+                    'accent_color'       => '#0f172a',
+                    'bg_opacity'         => 0.85,
+                    'background_style'   => 'echo',
+                ],
+            ],
+            'radix-ui'    => [
+                'label'       => __( 'Radix UI — accessibilité stricte', 'lightbox-jlg' ),
+                'description' => __( 'Animations prévisibles, contraste fort et navigation renforcée.', 'lightbox-jlg' ),
+                'settings'    => [
+                    'delay'              => 5,
+                    'speed'              => 450,
+                    'effect'             => 'slide',
+                    'easing'             => 'linear',
+                    'thumbs_layout'      => 'bottom',
+                    'thumb_size'         => 96,
+                    'thumb_size_mobile'  => 72,
+                    'show_thumbs_mobile' => true,
+                    'accent_color'       => '#2563eb',
+                    'bg_opacity'         => 0.9,
+                    'background_style'   => 'echo',
+                ],
+            ],
+            'bootstrap'   => [
+                'label'       => __( 'Bootstrap — esthétique corporate', 'lightbox-jlg' ),
+                'description' => __( 'Rythme nerveux, CTA visible et couleur de marque inspirée de Bootstrap 5.', 'lightbox-jlg' ),
+                'settings'    => [
+                    'delay'              => $defaults['delay'],
+                    'speed'              => 350,
+                    'effect'             => 'slide',
+                    'easing'             => 'ease',
+                    'thumbs_layout'      => 'bottom',
+                    'thumb_size'         => 90,
+                    'thumb_size_mobile'  => 70,
+                    'show_thumbs_mobile' => true,
+                    'accent_color'       => '#0d6efd',
+                    'bg_opacity'         => 0.9,
+                    'background_style'   => 'texture',
+                ],
+            ],
+            'semantic-ui' => [
+                'label'       => __( 'Semantic UI — équilibre éditorial', 'lightbox-jlg' ),
+                'description' => __( 'Perspective coverflow, palette violette et transitions plus espacées.', 'lightbox-jlg' ),
+                'settings'    => [
+                    'delay'              => 5,
+                    'speed'              => 650,
+                    'effect'             => 'coverflow',
+                    'easing'             => 'ease-in-out',
+                    'thumbs_layout'      => 'bottom',
+                    'thumb_size'         => 80,
+                    'thumb_size_mobile'  => 60,
+                    'show_thumbs_mobile' => true,
+                    'accent_color'       => '#6435c9',
+                    'bg_opacity'         => 0.9,
+                    'background_style'   => 'blur',
+                ],
+            ],
+            'anime-js'    => [
+                'label'       => __( 'Anime.js — motion design expressif', 'lightbox-jlg' ),
+                'description' => __( 'Transitions cinétiques flip, autoplay activé et ambiance néon.', 'lightbox-jlg' ),
+                'settings'    => [
+                    'delay'              => $defaults['delay'],
+                    'speed'              => 520,
+                    'effect'             => 'flip',
+                    'easing'             => 'ease-in-out',
+                    'thumbs_layout'      => 'hidden',
+                    'thumb_size'         => 90,
+                    'thumb_size_mobile'  => 70,
+                    'show_thumbs_mobile' => true,
+                    'accent_color'       => '#f97316',
+                    'bg_opacity'         => 0.75,
+                    'background_style'   => 'texture',
+                    'autoplay_start'     => true,
+                ],
+            ],
+        ];
+    }
+
+    private function normalize_style_preset_settings_for_js( array $settings ): array {
+        $map = [
+            'delay'              => 'int',
+            'speed'              => 'int',
+            'thumb_size'         => 'int',
+            'thumb_size_mobile'  => 'int',
+            'bg_opacity'         => 'float',
+            'accent_color'       => 'color',
+            'thumbs_layout'      => [ 'bottom', 'left', 'hidden' ],
+            'background_style'   => [ 'echo', 'texture', 'blur' ],
+            'effect'             => [ 'slide', 'fade', 'cube', 'coverflow', 'flip' ],
+            'easing'             => [ 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear' ],
+            'show_thumbs_mobile' => 'bool',
+            'autoplay_start'     => 'bool',
+            'loop'               => 'bool',
+            'show_zoom'          => 'bool',
+            'show_download'      => 'bool',
+            'show_share'         => 'bool',
+            'show_cta'           => 'bool',
+            'show_fullscreen'    => 'bool',
+        ];
+
+        $normalized = [];
+
+        foreach ( $map as $key => $type ) {
+            if ( ! array_key_exists( $key, $settings ) ) {
+                continue;
+            }
+
+            $value = $settings[ $key ];
+
+            switch ( $type ) {
+                case 'int':
+                    $normalized[ $key ] = (int) $value;
+                    break;
+                case 'float':
+                    $normalized[ $key ] = round( (float) $value, 2 );
+                    break;
+                case 'bool':
+                    $normalized[ $key ] = (bool) $value;
+                    break;
+                case 'color':
+                    $color = sanitize_hex_color( (string) $value );
+
+                    if ( $color ) {
+                        $normalized[ $key ] = $color;
+                    }
+                    break;
+                default:
+                    if ( is_array( $type ) ) {
+                        $candidate = is_string( $value ) ? strtolower( $value ) : '';
+
+                        if ( in_array( $candidate, $type, true ) ) {
+                            $normalized[ $key ] = $candidate;
+                        }
+                    }
+                    break;
+            }
+        }
+
+        return $normalized;
+    }
+
     private function get_default_share_channels(): array {
         $catalog = $this->get_share_channel_catalog();
 
@@ -251,6 +424,40 @@ class Settings {
         wp_enqueue_script( 'mga-focus-utils' );
         wp_enqueue_script( 'mga-admin-script' );
 
+        $style_presets_for_js = [];
+
+        foreach ( $this->get_style_presets() as $preset_key => $preset_definition ) {
+            $sanitized_key = sanitize_key( (string) $preset_key );
+
+            if ( '' === $sanitized_key ) {
+                continue;
+            }
+
+            $style_presets_for_js[ $sanitized_key ] = [
+                'label'       => isset( $preset_definition['label'] )
+                    ? (string) $preset_definition['label']
+                    : ucwords( str_replace( '-', ' ', $sanitized_key ) ),
+                'description' => isset( $preset_definition['description'] )
+                    ? (string) $preset_definition['description']
+                    : '',
+                'settings'    => $this->normalize_style_preset_settings_for_js(
+                    isset( $preset_definition['settings'] ) && is_array( $preset_definition['settings'] )
+                        ? $preset_definition['settings']
+                        : []
+                ),
+            ];
+        }
+
+        wp_localize_script(
+            'mga-admin-script',
+            'mgaStylePresets',
+            [
+                'presets'           => $style_presets_for_js,
+                'customDescription' => __( 'Réglages personnalisés actifs.', 'lightbox-jlg' ),
+                'defaults'          => $this->normalize_style_preset_settings_for_js( $this->get_default_settings() ),
+            ]
+        );
+
         if ( $this->plugin->languages_directory_exists() ) {
             wp_set_script_translations( 'mga-admin-script', 'lightbox-jlg', $this->plugin->get_languages_path() );
         }
@@ -295,6 +502,7 @@ class Settings {
             'share_channels'     => $this->get_default_share_channels(),
             'share_copy'         => true,
             'share_download'     => true,
+            'style_preset'       => '',
             'groupAttribute'     => 'data-mga-gallery',
             'contentSelectors'   => [],
             'allowBodyFallback'  => false,
@@ -466,6 +674,26 @@ class Settings {
             $output['background_style'] = $existing_settings['background_style'];
         } else {
             $output['background_style'] = $defaults['background_style'];
+        }
+
+        $style_presets          = $this->get_style_presets();
+        $allowed_preset_keys    = array_keys( $style_presets );
+        $resolve_style_preset   = static function ( $value ) use ( $allowed_preset_keys ) {
+            $candidate = sanitize_key( (string) $value );
+
+            if ( '' === $candidate ) {
+                return '';
+            }
+
+            return in_array( $candidate, $allowed_preset_keys, true ) ? $candidate : '';
+        };
+
+        if ( array_key_exists( 'style_preset', $input ) ) {
+            $output['style_preset'] = $resolve_style_preset( $input['style_preset'] );
+        } elseif ( isset( $existing_settings['style_preset'] ) ) {
+            $output['style_preset'] = $resolve_style_preset( $existing_settings['style_preset'] );
+        } else {
+            $output['style_preset'] = $resolve_style_preset( $defaults['style_preset'] ?? '' );
         }
 
         $allowed_thumb_layouts = [ 'bottom', 'left', 'hidden' ];
