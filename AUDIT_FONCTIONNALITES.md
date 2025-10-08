@@ -12,7 +12,7 @@
 
 5. **`Plugin::register_block` / `prepare_block_settings`** – Le bloc éditeur expose uniquement un script d’aperçu mais aucun `view_script`, `render_callback` ou gestion dynamique des attributs. Les éditeurs avancés alignent les options du bloc sur les réglages front (synchronisation par REST, prévisualisation SSR) et valident les couleurs/typographies côté serveur afin d’éviter les divergences de rendu entre éditeur et front.【F:ma-galerie-automatique/includes/Plugin.php†L157-L244】
 
-6. **`Plugin::maybe_purge_detection_cache`** – La purge invalide l’ensemble du cache dès qu’un paramètre de détection varie. Des solutions plus fines segmentent par type de contenu ou par site multilingue, et enregistrent des journaux d’invalidation pour aider au diagnostic lors d’un pic de recalcul.【F:ma-galerie-automatique/includes/Plugin.php†L246-L335】
+6. **`Plugin::maybe_purge_detection_cache`** – La purge invalide l’ensemble du cache dès qu’un paramètre de détection varie. Des solutions plus fines segmentent par type de contenu ou par site multilingue, et enregistrent des journaux d’invalidation pour aider au diagnostic lors d’un pic de recalcul.【F:ma-galerie-automatique/includes/Plugin.php†L246-L335】 À noter : un lot de commandes WP-CLI (`wp mga cache status|purge`) facilite désormais les purges manuelles et l’observation des volumes de cache, mais n’apporte pas encore de segmentation native.【F:ma-galerie-automatique/includes/Cli/CacheCommand.php†L18-L205】
 
 7. **`Settings::handle_switch_blog`** – La couverture unitaire vérifie désormais l’invalidation du cache, mais il reste à implémenter un cache différencié par réseau (objet-cache) pour absorber les fortes volumétries multisites sans recalculs répétés.【F:tests/phpunit/SettingsCacheTest.php†L52-L91】
 

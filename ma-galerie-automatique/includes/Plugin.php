@@ -3,6 +3,7 @@
 namespace MaGalerieAutomatique;
 
 use MaGalerieAutomatique\Admin\Settings;
+use MaGalerieAutomatique\Cli\CacheCommand;
 use MaGalerieAutomatique\Content\Detection;
 use MaGalerieAutomatique\Frontend\Assets;
 use MaGalerieAutomatique\Translation\Manager as TranslationManager;
@@ -48,6 +49,10 @@ class Plugin {
         add_action( 'init', [ $this, 'register_block' ] );
         add_action( 'update_option_mga_settings', [ $this, 'maybe_purge_detection_cache' ], 10, 3 );
         add_action( 'switch_blog', [ $this, 'handle_switch_blog' ], 10, 2 );
+
+        if ( defined( 'WP_CLI' ) && WP_CLI ) {
+            CacheCommand::register( $this );
+        }
     }
 
     public function activate(): void {
