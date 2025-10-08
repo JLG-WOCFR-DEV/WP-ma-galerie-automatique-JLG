@@ -916,108 +916,160 @@ class Settings {
         $registered_keys  = [];
 
         foreach ( $channels_list as $channel_candidate ) {
-            if ( ! is_array( $channel_candidate ) ) {
-                continue;
+            $sanitized_channel = $this->sanitize_single_share_channel(
+                $channel_candidate,
+                $defaults_by_key,
+                $existing_by_key,
+                $registered_keys
+            );
+
+            if ( null !== $sanitized_channel ) {
+                $sanitized[] = $sanitized_channel;
             }
-
-            $candidate_key = '';
-
-            if ( isset( $channel_candidate['key'] ) ) {
-                $candidate_key = (string) $channel_candidate['key'];
-            } elseif ( isset( $channel_candidate['slug'] ) ) {
-                $candidate_key = (string) $channel_candidate['slug'];
-            }
-
-            $sanitized_key = sanitize_key( $candidate_key );
-
-            if ( '' === $sanitized_key && isset( $channel_candidate['label'] ) ) {
-                $label_key    = sanitize_title( (string) $channel_candidate['label'] );
-                $sanitized_key = sanitize_key( $label_key );
-            }
-
-            if ( '' === $sanitized_key && isset( $channel_candidate['template'] ) ) {
-                $hash          = md5( (string) $channel_candidate['template'] );
-                $sanitized_key = sanitize_key( substr( $hash, 0, 12 ) );
-            }
-
-            if ( '' === $sanitized_key || isset( $registered_keys[ $sanitized_key ] ) ) {
-                continue;
-            }
-
-            $registered_keys[ $sanitized_key ] = true;
-
-            $defaults_for_key = $defaults_by_key[ $sanitized_key ] ?? null;
-            $existing_for_key = $existing_by_key[ $sanitized_key ] ?? null;
-
-            $label = '';
-
-            if ( isset( $channel_candidate['label'] ) ) {
-                $label = sanitize_text_field( (string) $channel_candidate['label'] );
-            }
-
-            if ( '' === $label && $existing_for_key && isset( $existing_for_key['label'] ) ) {
-                $label = sanitize_text_field( (string) $existing_for_key['label'] );
-            }
-
-            if ( '' === $label && $defaults_for_key && isset( $defaults_for_key['label'] ) ) {
-                $label = sanitize_text_field( (string) $defaults_for_key['label'] );
-            }
-
-            if ( '' === $label ) {
-                $label = ucwords( str_replace( [ '-', '_' ], ' ', $sanitized_key ) );
-            }
-
-            $template_candidates = [];
-            $template            = '';
-
-            $candidate_template_sanitized = '';
-
-            if ( isset( $channel_candidate['template'] ) ) {
-                $template = $this->sanitize_share_channel_template( (string) $channel_candidate['template'] );
-            }
-
-            if ( '' === $template && $existing_for_key && isset( $existing_for_key['template'] ) ) {
-                $template = $this->sanitize_share_channel_template( (string) $existing_for_key['template'] );
-            }
-
-            if ( '' === $template && $defaults_for_key && isset( $defaults_for_key['template'] ) ) {
-                $template = $this->sanitize_share_channel_template( (string) $defaults_for_key['template'] );
-            }
-
-            $enabled_default = $defaults_for_key['enabled'] ?? false;
-
-            if ( isset( $channel_candidate['enabled'] ) ) {
-                $enabled = $this->normalize_checkbox_value( $channel_candidate['enabled'], $enabled_default );
-            } elseif ( $existing_for_key && array_key_exists( 'enabled', $existing_for_key ) ) {
-                $enabled = $this->normalize_checkbox_value( $existing_for_key['enabled'], $enabled_default );
-            } else {
-                $enabled = (bool) $enabled_default;
-            }
-
-            $icon = '';
-
-            if ( isset( $channel_candidate['icon'] ) ) {
-                $icon = $this->sanitize_share_channel_icon( (string) $channel_candidate['icon'] );
-            } elseif ( $existing_for_key && isset( $existing_for_key['icon'] ) ) {
-                $icon = $this->sanitize_share_channel_icon( (string) $existing_for_key['icon'] );
-            } elseif ( $defaults_for_key && isset( $defaults_for_key['icon'] ) ) {
-                $icon = $this->sanitize_share_channel_icon( (string) $defaults_for_key['icon'] );
-            }
-
-            if ( '' === $icon ) {
-                $icon = $this->sanitize_share_channel_icon( $sanitized_key, 'generic' );
-            }
-
-            $sanitized[] = [
-                'key'      => $sanitized_key,
-                'label'    => $label,
-                'template' => $template,
-                'icon'     => $icon,
-                'enabled'  => (bool) $enabled,
-            ];
         }
 
         return array_values( $sanitized );
+    }
+
+    private function sanitize_single_share_channel( $channel_candidate, array $defaults_by_key, array $existing_by_key, array &$registered_keys ): ?array {
+        if ( ! is_array( $channel_candidate ) ) {
+            return null;
+        }
+
+        $sanitized_key = $this->resolve_share_channel_key( $channel_candidate );
+
+        if ( '' === $sanitized_key || isset( $registered_keys[ $sanitized_key ] ) ) {
+            return null;
+        }
+
+        $registered_keys[ $sanitized_key ] = true;
+
+        $defaults_for_key = $defaults_by_key[ $sanitized_key ] ?? [];
+        $existing_for_key = $existing_by_key[ $sanitized_key ] ?? [];
+
+        return [
+            'key'      => $sanitized_key,
+            'label'    => $this->resolve_share_channel_label( $channel_candidate, $existing_for_key, $defaults_for_key, $sanitized_key ),
+            'template' => $this->resolve_share_channel_template( $channel_candidate, $existing_for_key, $defaults_for_key ),
+            'icon'     => $this->resolve_share_channel_icon( $channel_candidate, $existing_for_key, $defaults_for_key, $sanitized_key ),
+            'enabled'  => $this->resolve_share_channel_enabled( $channel_candidate, $existing_for_key, $defaults_for_key ),
+        ];
+    }
+
+    private function resolve_share_channel_key( array $channel_candidate ): string {
+        $candidate_key = '';
+
+        if ( isset( $channel_candidate['key'] ) ) {
+            $candidate_key = (string) $channel_candidate['key'];
+        } elseif ( isset( $channel_candidate['slug'] ) ) {
+            $candidate_key = (string) $channel_candidate['slug'];
+        }
+
+        $sanitized_key = sanitize_key( $candidate_key );
+
+        if ( '' !== $sanitized_key ) {
+            return $sanitized_key;
+        }
+
+        if ( isset( $channel_candidate['label'] ) ) {
+            $label_key    = sanitize_title( (string) $channel_candidate['label'] );
+            $sanitized_key = sanitize_key( $label_key );
+
+            if ( '' !== $sanitized_key ) {
+                return $sanitized_key;
+            }
+        }
+
+        if ( isset( $channel_candidate['template'] ) ) {
+            $hash          = md5( (string) $channel_candidate['template'] );
+            $sanitized_key = sanitize_key( substr( $hash, 0, 12 ) );
+
+            if ( '' !== $sanitized_key ) {
+                return $sanitized_key;
+            }
+        }
+
+        return '';
+    }
+
+    private function resolve_share_channel_label( array $candidate, array $existing_for_key, array $defaults_for_key, string $sanitized_key ): string {
+        $label_candidates = [
+            $candidate['label'] ?? null,
+            $existing_for_key['label'] ?? null,
+            $defaults_for_key['label'] ?? null,
+        ];
+
+        foreach ( $label_candidates as $label_candidate ) {
+            if ( ! is_string( $label_candidate ) ) {
+                continue;
+            }
+
+            $label = sanitize_text_field( $label_candidate );
+
+            if ( '' !== $label ) {
+                return $label;
+            }
+        }
+
+        return ucwords( str_replace( [ '-', '_' ], ' ', $sanitized_key ) );
+    }
+
+    private function resolve_share_channel_template( array $candidate, array $existing_for_key, array $defaults_for_key ): string {
+        $template_candidates = [
+            $candidate['template'] ?? null,
+            $existing_for_key['template'] ?? null,
+            $defaults_for_key['template'] ?? null,
+        ];
+
+        foreach ( $template_candidates as $template_candidate ) {
+            if ( null === $template_candidate ) {
+                continue;
+            }
+
+            $template = $this->sanitize_share_channel_template( (string) $template_candidate );
+
+            if ( '' !== $template ) {
+                return $template;
+            }
+        }
+
+        return '';
+    }
+
+    private function resolve_share_channel_icon( array $candidate, array $existing_for_key, array $defaults_for_key, string $sanitized_key ): string {
+        $icon_candidates = [
+            $candidate['icon'] ?? null,
+            $existing_for_key['icon'] ?? null,
+            $defaults_for_key['icon'] ?? null,
+        ];
+
+        foreach ( $icon_candidates as $icon_candidate ) {
+            if ( null === $icon_candidate ) {
+                continue;
+            }
+
+            $icon = $this->sanitize_share_channel_icon( (string) $icon_candidate );
+
+            if ( '' !== $icon ) {
+                return $icon;
+            }
+        }
+
+        return $this->sanitize_share_channel_icon( $sanitized_key, 'generic' );
+    }
+
+    private function resolve_share_channel_enabled( array $candidate, array $existing_for_key, array $defaults_for_key ): bool {
+        $enabled_default = $defaults_for_key['enabled'] ?? false;
+
+        if ( array_key_exists( 'enabled', $candidate ) ) {
+            return $this->normalize_checkbox_value( $candidate['enabled'], $enabled_default );
+        }
+
+        if ( array_key_exists( 'enabled', $existing_for_key ) ) {
+            return $this->normalize_checkbox_value( $existing_for_key['enabled'], $enabled_default );
+        }
+
+        return (bool) $enabled_default;
     }
 
     private function sanitize_share_channel_template( string $template ): string {
