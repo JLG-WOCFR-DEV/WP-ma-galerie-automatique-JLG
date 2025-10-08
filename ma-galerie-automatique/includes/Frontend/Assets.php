@@ -158,22 +158,145 @@ class Assets {
             );
         }
 
-        $accent_color = sanitize_hex_color( $settings['accent_color'] );
+        $style_rules = $this->build_dynamic_style_rules( $settings, $defaults );
 
-        if ( ! $accent_color ) {
-            $accent_color = $defaults['accent_color'];
+        /**
+         * Filters the dynamic CSS rules injected for the public gallery stylesheet.
+         *
+         * The filter expects an associative array where each key is a selector and each
+         * value is an associative array of property/value pairs. For example:
+         *
+         * ```php
+         * return [
+         *     ':root' => [
+         *         '--mga-thumb-size-desktop' => '96px',
+         *     ],
+         * ];
+         * ```
+         *
+         * @since 1.8.1 Allows third-parties to adjust the injected CSS variables.
+         *
+         * @param array $style_rules Prepared CSS rules keyed by selector.
+         * @param array $settings    Sanitized plugin settings.
+         * @param array $defaults    Default plugin settings.
+         */
+        $style_rules = apply_filters( 'mga_dynamic_style_rules', $style_rules, $settings, $defaults );
+
+        $css_chunks = [];
+
+        foreach ( $style_rules as $selector => $declarations ) {
+            if ( ! is_string( $selector ) ) {
+                continue;
+            }
+
+            $selector = trim( $selector );
+
+            if ( '' === $selector || ! is_array( $declarations ) || empty( $declarations ) ) {
+                continue;
+            }
+
+            $sanitized_declarations = [];
+
+            foreach ( $declarations as $property => $value ) {
+                if ( ! is_string( $property ) ) {
+                    continue;
+                }
+
+                $property = strtolower( trim( $property ) );
+
+                if ( '' === $property ) {
+                    continue;
+                }
+
+                $property = preg_replace( '/[^a-z0-9\-_]/i', '', $property );
+
+                if ( ! $property ) {
+                    continue;
+                }
+
+                if ( is_bool( $value ) || null === $value ) {
+                    continue;
+                }
+
+                if ( is_numeric( $value ) ) {
+                    $value = (string) $value;
+                } elseif ( is_string( $value ) ) {
+                    $value = trim( $value );
+                } else {
+                    continue;
+                }
+
+                if ( '' === $value ) {
+                    continue;
+                }
+
+                $sanitized_declarations[] = sprintf( '%s:%s', $property, wp_strip_all_tags( $value ) );
+            }
+
+            if ( empty( $sanitized_declarations ) ) {
+                continue;
+            }
+
+            $css_chunks[] = sprintf( '%s{%s}', $selector, implode( ';', $sanitized_declarations ) );
         }
 
-        $dynamic_styles = sprintf(
-            ':root {--mga-thumb-size-desktop:%1$spx;--mga-thumb-size-mobile:%2$spx;--mga-accent-color:%3$s;--mga-bg-opacity:%4$s;--mga-z-index:%5$s;}',
-            absint( $settings['thumb_size'] ),
-            absint( $settings['thumb_size_mobile'] ),
-            esc_html( $accent_color ),
-            esc_html( (string) floatval( $settings['bg_opacity'] ) ),
-            esc_html( (string) intval( $settings['z_index'] ) )
-        );
+        if ( ! empty( $css_chunks ) ) {
+            wp_add_inline_style( 'mga-gallery-style', implode( '', $css_chunks ) );
+        }
+    }
 
-        wp_add_inline_style( 'mga-gallery-style', $dynamic_styles );
+    private function build_dynamic_style_rules( array $settings, array $defaults ): array {
+        $thumb_size_desktop = isset( $settings['thumb_size'] ) ? absint( $settings['thumb_size'] ) : 0;
+        $thumb_size_mobile  = isset( $settings['thumb_size_mobile'] ) ? absint( $settings['thumb_size_mobile'] ) : 0;
+        $z_index            = isset( $settings['z_index'] ) ? intval( $settings['z_index'] ) : null;
+
+        if ( $thumb_size_desktop <= 0 && isset( $defaults['thumb_size'] ) ) {
+            $thumb_size_desktop = absint( $defaults['thumb_size'] );
+        }
+
+        if ( $thumb_size_mobile <= 0 && isset( $defaults['thumb_size_mobile'] ) ) {
+            $thumb_size_mobile = absint( $defaults['thumb_size_mobile'] );
+        }
+
+        if ( null === $z_index && isset( $defaults['z_index'] ) ) {
+            $z_index = intval( $defaults['z_index'] );
+        }
+
+        if ( null === $z_index ) {
+            $z_index = 99999;
+        }
+
+        $accent_color = isset( $settings['accent_color'] ) ? sanitize_hex_color( $settings['accent_color'] ) : null;
+
+        if ( ! $accent_color ) {
+            $accent_color = isset( $defaults['accent_color'] ) ? sanitize_hex_color( $defaults['accent_color'] ) : null;
+        }
+
+        if ( ! $accent_color ) {
+            $accent_color = '#ffffff';
+        }
+
+        $bg_opacity = isset( $settings['bg_opacity'] ) ? floatval( $settings['bg_opacity'] ) : null;
+
+        if ( null === $bg_opacity && isset( $defaults['bg_opacity'] ) ) {
+            $bg_opacity = floatval( $defaults['bg_opacity'] );
+        }
+
+        if ( null === $bg_opacity ) {
+            $bg_opacity = 0.95;
+        }
+
+        $bg_opacity = max( 0, min( 1, $bg_opacity ) );
+
+        return [
+            ':root' => [
+                '--mga-thumb-size-desktop' => $thumb_size_desktop . 'px',
+                '--mga-thumb-size-mobile'  => $thumb_size_mobile . 'px',
+                '--mga-accent-color'       => $accent_color,
+                '--mga-bg-opacity'         => rtrim( rtrim( sprintf( '%.4F', $bg_opacity ), '0' ), '.' ),
+                '--mga-z-index'            => (string) $z_index,
+            ],
+        ];
     }
 
     public function enqueue_block_editor_assets(): void {
