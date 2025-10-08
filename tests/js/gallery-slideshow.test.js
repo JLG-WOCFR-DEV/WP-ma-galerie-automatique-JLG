@@ -76,6 +76,7 @@ describe('resolveLinkGroupId rel token filtering', () => {
 
         window.mga_settings = {
             allowBodyFallback: true,
+            include_svg: true,
             groupAttribute: 'href',
         };
 
@@ -237,6 +238,7 @@ describe('start_on_clicked_image behaviour', () => {
 
         window.mga_settings = Object.assign({
             allowBodyFallback: true,
+            include_svg: true,
             loop: false,
             background_style: 'echo',
             autoplay_start: false,
@@ -361,6 +363,97 @@ describe('start_on_clicked_image behaviour', () => {
     });
 });
 
+describe('include_svg flag behaviour', () => {
+    const originalMatchMedia = window.matchMedia;
+    let instances;
+
+    function bootstrap(overrides = {}) {
+        jest.resetModules();
+
+        document.body.innerHTML = `
+            <main>
+                <a href="https://example.com/vector.svg" data-mga-gallery="set">
+                    <img src="https://example.com/vector-thumb.svg" alt="SVG" />
+                </a>
+                <a href="https://example.com/photo.jpg" data-mga-gallery="set">
+                    <img src="https://example.com/photo-thumb.jpg" alt="Photo" />
+                </a>
+            </main>
+        `;
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        const factory = createSwiperMockFactory();
+        instances = factory.instances;
+        global.Swiper = function(...args) {
+            const created = factory.SwiperMock(...args);
+            if (created.slides.length === 0 && created.el) {
+                created.slides = Array.from(created.el.querySelectorAll('.swiper-slide'));
+            }
+            return created;
+        };
+
+        window.mga_settings = Object.assign({
+            allowBodyFallback: true,
+            include_svg: true,
+            loop: false,
+            background_style: 'echo',
+            autoplay_start: false,
+            delay: 4,
+            groupAttribute: 'data-mga-gallery',
+            share_channels: {
+                facebook: {
+                    enabled: true,
+                    template: 'https://www.facebook.com/sharer/sharer.php?u=%url%',
+                },
+                twitter: {
+                    enabled: true,
+                    template: 'https://twitter.com/intent/tweet?url=%url%&text=%text%',
+                },
+            },
+            share_copy: true,
+            share_download: true,
+        }, overrides);
+
+        require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+    }
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        document.body.innerHTML = '';
+
+        if (typeof originalMatchMedia === 'undefined') {
+            delete window.matchMedia;
+        } else {
+            window.matchMedia = originalMatchMedia;
+        }
+    });
+
+    it('ignores SVG triggers when include_svg is disabled', () => {
+        bootstrap({ include_svg: false });
+
+        const links = document.querySelectorAll('a');
+        links[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(instances.main).toBeFalsy();
+
+        links[1].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(instances.main).toBeTruthy();
+    });
+});
+
 describe('autoplay accessibility handlers', () => {
     let testExports;
     let playPauseButton;
@@ -386,6 +479,7 @@ describe('autoplay accessibility handlers', () => {
 
         window.mga_settings = {
             allowBodyFallback: true,
+            include_svg: true,
             loop: false,
             background_style: 'echo',
             autoplay_start: false,
@@ -500,6 +594,7 @@ describe('thumbnail accessibility controls', () => {
 
         window.mga_settings = {
             allowBodyFallback: true,
+            include_svg: true,
             loop: false,
             background_style: 'echo',
             autoplay_start: false,
@@ -661,6 +756,7 @@ describe('thumbnail layout selection', () => {
 
         baseSettings = {
             allowBodyFallback: true,
+            include_svg: true,
             loop: false,
             background_style: 'echo',
             autoplay_start: false,
@@ -768,6 +864,7 @@ describe('download button integration', () => {
 
         window.mga_settings = {
             allowBodyFallback: true,
+            include_svg: true,
             loop: false,
             background_style: 'echo',
             autoplay_start: false,

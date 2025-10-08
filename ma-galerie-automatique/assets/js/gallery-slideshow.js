@@ -435,7 +435,6 @@
     function initGalleryViewer() {
         const settings = window.mga_settings || {};
         const thumbsLayout = sanitizeThumbsLayout(settings.thumbs_layout);
-        const IMAGE_FILE_PATTERN = /\.(jpe?g|png|gif|bmp|webp|avif|svg)(?:\?.*)?(?:#.*)?$/i;
         const noop = () => {};
         const normalizeFlag = (value, defaultValue = true) => {
             if (typeof value === 'undefined') {
@@ -460,6 +459,12 @@
 
             return Boolean(value);
         };
+
+        const includeSvg = normalizeFlag(settings.include_svg, true);
+        const baseImagePattern = 'jpe?g|png|gif|bmp|webp|avif';
+        const imagePatternSource = includeSvg ? `${baseImagePattern}|svg` : baseImagePattern;
+        const IMAGE_FILE_PATTERN = new RegExp(`\.(${imagePatternSource})(?:\\?.*)?(?:#.*)?$`, 'i');
+        const isSvgLikeUrl = (url) => typeof url === 'string' && /\.svg(?:\?.*)?(?:#.*)?$/i.test(url);
         const debug = window.mgaDebug || {
             enabled: false,
             init: noop,
@@ -2028,13 +2033,16 @@
             if (!linkElement) return null;
 
             const href = linkElement.getAttribute('href') || '';
+            if (!includeSvg && isSvgLikeUrl(href)) {
+                return null;
+            }
             const isMediaHref = IMAGE_FILE_PATTERN.test(href);
             const fallbackAllowed = isMediaHref || isExplicitFallbackAllowed(linkElement);
             const sanitizedHref = isMediaHref ? sanitizeHighResUrl(href) : null;
 
             if (fallbackAllowed && linkElement.dataset && linkElement.dataset.mgaHighres) {
                 const sanitizedDatasetUrl = sanitizeHighResUrl(linkElement.dataset.mgaHighres);
-                if (sanitizedDatasetUrl) {
+                if (sanitizedDatasetUrl && (includeSvg || !isSvgLikeUrl(sanitizedDatasetUrl))) {
                     return sanitizedDatasetUrl;
                 }
             }
@@ -2045,7 +2053,7 @@
             if (fallbackAllowed) {
                 const dataAttrUrl = getImageDataAttributes(innerImg);
                 const sanitizedDataAttrUrl = sanitizeHighResUrl(dataAttrUrl);
-                if (sanitizedDataAttrUrl) {
+                if (sanitizedDataAttrUrl && (includeSvg || !isSvgLikeUrl(sanitizedDataAttrUrl))) {
                     return sanitizedDataAttrUrl;
                 }
             }
@@ -2055,21 +2063,21 @@
             }
 
             const srcsetUrl = sanitizeHighResUrl(parseSrcset(innerImg));
-            if (srcsetUrl) {
+            if (srcsetUrl && (includeSvg || !isSvgLikeUrl(srcsetUrl))) {
                 return srcsetUrl;
             }
 
-            if (sanitizedHref) {
+            if (sanitizedHref && (includeSvg || !isSvgLikeUrl(sanitizedHref))) {
                 return sanitizedHref;
             }
 
             const currentSrc = sanitizeHighResUrl(innerImg.currentSrc);
-            if (currentSrc) {
+            if (currentSrc && (includeSvg || !isSvgLikeUrl(currentSrc))) {
                 return currentSrc;
             }
 
             const fallbackSrc = sanitizeHighResUrl(innerImg.src);
-            if (fallbackSrc) {
+            if (fallbackSrc && (includeSvg || !isSvgLikeUrl(fallbackSrc))) {
                 return fallbackSrc;
             }
 
@@ -2245,6 +2253,10 @@
 
                 const highResUrl = getHighResUrl(link);
                 if (!highResUrl) {
+                    return accumulator;
+                }
+
+                if (!includeSvg && isSvgLikeUrl(highResUrl)) {
                     return accumulator;
                 }
 

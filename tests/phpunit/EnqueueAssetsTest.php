@@ -148,6 +148,7 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
                 'loop'               => '',
                 'autoplay_start'     => '',
                 'allowBodyFallback'  => '',
+                'include_svg'        => '0',
                 'contentSelectors'   => [ ' .entry-content ', "\n", '.entry-content' ],
                 'debug_mode'         => true,
             ]
@@ -176,6 +177,8 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
         $this->assertSame( '#ffffff', $settings['accent_color'], 'Accent color should fall back to the default hex value.' );
         $this->assertSame( 0.0, $settings['bg_opacity'], 'Negative opacity values should clamp to zero in the script payload.' );
         $this->assertSame( 0, $settings['z_index'], 'Negative z-index values should be coerced to zero in the script payload.' );
+        $this->assertArrayHasKey( 'include_svg', $settings, 'The include_svg flag should be present in the script payload.' );
+        $this->assertFalse( $settings['include_svg'], 'The include_svg flag should cast to false when disabled.' );
     }
 
     /**

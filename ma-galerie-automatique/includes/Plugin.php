@@ -15,6 +15,7 @@ class Plugin {
         'tracked_post_types',
         'contentSelectors',
         'allowBodyFallback',
+        'include_svg',
         'groupAttribute',
     ];
     private string $plugin_file;
@@ -389,6 +390,8 @@ class Plugin {
 
                 return $normalized;
             case 'allowBodyFallback':
+                return (bool) $value;
+            case 'include_svg':
                 return (bool) $value;
             case 'groupAttribute':
                 if ( ! is_string( $value ) ) {
