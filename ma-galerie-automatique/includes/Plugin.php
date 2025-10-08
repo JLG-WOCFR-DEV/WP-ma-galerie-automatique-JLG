@@ -5,6 +5,8 @@ namespace MaGalerieAutomatique;
 use MaGalerieAutomatique\Admin\Settings;
 use MaGalerieAutomatique\Content\Detection;
 use MaGalerieAutomatique\Frontend\Assets;
+use const FILTER_NULL_ON_FAILURE;
+use const FILTER_VALIDATE_BOOLEAN;
 
 class Plugin {
     private const DETECTION_SETTING_KEYS = [
@@ -217,31 +219,118 @@ class Plugin {
     }
 
     public function prepare_block_settings( array $settings ): array {
-        $accent_color = isset( $settings['accent_color'] ) ? sanitize_hex_color( $settings['accent_color'] ) : null;
+        $defaults = $this->settings->get_default_settings();
+
+        $normalize_boolean = static function ( array $source, string $key, bool $default ): bool {
+            if ( array_key_exists( $key, $source ) ) {
+                $filtered = filter_var( $source[ $key ], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+
+                if ( null !== $filtered ) {
+                    return $filtered;
+                }
+
+                return $default;
+            }
+
+            return $default;
+        };
+
+        $accent_color = null;
+
+        if ( array_key_exists( 'accent_color', $settings ) ) {
+            $accent_color = sanitize_hex_color( $settings['accent_color'] );
+        }
+
+        if ( ! $accent_color && isset( $defaults['accent_color'] ) ) {
+            $accent_color = sanitize_hex_color( $defaults['accent_color'] );
+        }
 
         if ( ! $accent_color ) {
             $accent_color = '#ffffff';
         }
 
+        $allowed_background_styles = [ 'echo', 'blur', 'texture' ];
+        $background_style          = isset( $defaults['background_style'] ) ? (string) $defaults['background_style'] : 'echo';
+
+        if ( isset( $settings['background_style'] ) ) {
+            $candidate = is_string( $settings['background_style'] ) ? strtolower( $settings['background_style'] ) : '';
+
+            if ( in_array( $candidate, $allowed_background_styles, true ) ) {
+                $background_style = $candidate;
+            }
+        }
+
+        $delay = isset( $settings['delay'] ) ? (int) $settings['delay'] : (int) ( $defaults['delay'] ?? 4 );
+        $delay = max( 1, min( 30, $delay ) );
+
+        $speed = isset( $settings['speed'] ) ? (int) $settings['speed'] : (int) ( $defaults['speed'] ?? 600 );
+        $speed = max( 100, min( 5000, $speed ) );
+
+        $allowed_effects = [ 'slide', 'fade', 'cube', 'coverflow', 'flip' ];
+        $effect          = isset( $defaults['effect'] ) ? (string) $defaults['effect'] : 'slide';
+
+        if ( isset( $settings['effect'] ) ) {
+            $candidate = is_string( $settings['effect'] ) ? strtolower( $settings['effect'] ) : '';
+
+            if ( in_array( $candidate, $allowed_effects, true ) ) {
+                $effect = $candidate;
+            }
+        }
+
+        $allowed_easings = [ 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear' ];
+        $easing          = isset( $defaults['easing'] ) ? (string) $defaults['easing'] : 'ease-out';
+
+        if ( isset( $settings['easing'] ) ) {
+            $candidate = is_string( $settings['easing'] ) ? strtolower( $settings['easing'] ) : '';
+
+            if ( in_array( $candidate, $allowed_easings, true ) ) {
+                $easing = $candidate;
+            }
+        }
+
+        $bg_opacity = isset( $settings['bg_opacity'] ) ? (float) $settings['bg_opacity'] : (float) ( $defaults['bg_opacity'] ?? 0.95 );
+        $bg_opacity = max( 0, min( 1, $bg_opacity ) );
+
+        $allowed_thumb_layouts = [ 'bottom', 'left', 'hidden' ];
+        $thumbs_layout         = isset( $defaults['thumbs_layout'] ) ? (string) $defaults['thumbs_layout'] : 'bottom';
+
+        if ( isset( $settings['thumbs_layout'] ) ) {
+            $candidate = is_string( $settings['thumbs_layout'] ) ? strtolower( $settings['thumbs_layout'] ) : '';
+
+            if ( in_array( $candidate, $allowed_thumb_layouts, true ) ) {
+                $thumbs_layout = $candidate;
+            }
+        }
+
+        $autoplay = $normalize_boolean( $settings, 'autoplay_start', (bool) ( $defaults['autoplay_start'] ?? false ) );
+        $start_on_clicked_image = $normalize_boolean( $settings, 'start_on_clicked_image', (bool) ( $defaults['start_on_clicked_image'] ?? false ) );
+        $loop = $normalize_boolean( $settings, 'loop', (bool) ( $defaults['loop'] ?? true ) );
+        $show_thumbs_mobile = $normalize_boolean( $settings, 'show_thumbs_mobile', (bool) ( $defaults['show_thumbs_mobile'] ?? true ) );
+        $show_zoom          = $normalize_boolean( $settings, 'show_zoom', (bool) ( $defaults['show_zoom'] ?? true ) );
+        $show_download      = $normalize_boolean( $settings, 'show_download', (bool) ( $defaults['show_download'] ?? true ) );
+        $show_share         = $normalize_boolean( $settings, 'show_share', (bool) ( $defaults['show_share'] ?? true ) );
+        $show_cta           = $normalize_boolean( $settings, 'show_cta', (bool) ( $defaults['show_cta'] ?? true ) );
+        $show_fullscreen    = $normalize_boolean( $settings, 'show_fullscreen', (bool) ( $defaults['show_fullscreen'] ?? true ) );
+
         return [
-            'accentColor'      => $accent_color,
-            'backgroundStyle'  => isset( $settings['background_style'] ) ? (string) $settings['background_style'] : 'echo',
-            'autoplay'         => ! empty( $settings['autoplay_start'] ),
-            'startOnClickedImage' => ! empty( $settings['start_on_clicked_image'] ),
-            'loop'             => isset( $settings['loop'] ) ? (bool) $settings['loop'] : true,
-            'delay'            => isset( $settings['delay'] ) ? (int) $settings['delay'] : 4,
-            'speed'            => isset( $settings['speed'] ) ? (int) $settings['speed'] : 600,
-            'effect'           => isset( $settings['effect'] ) ? (string) $settings['effect'] : 'slide',
-            'easing'           => isset( $settings['easing'] ) ? (string) $settings['easing'] : 'ease-out',
-            'bgOpacity'        => isset( $settings['bg_opacity'] ) ? (float) $settings['bg_opacity'] : 0.95,
-            'thumbsLayout'     => isset( $settings['thumbs_layout'] ) ? (string) $settings['thumbs_layout'] : 'bottom',
-            'showThumbsMobile' => ! empty( $settings['show_thumbs_mobile'] ),
-            'showZoom'         => ! empty( $settings['show_zoom'] ),
-            'showDownload'     => ! empty( $settings['show_download'] ),
-            'showShare'        => ! empty( $settings['show_share'] ),
-            'showCta'          => ! empty( $settings['show_cta'] ),
-            'showFullscreen'   => ! empty( $settings['show_fullscreen'] ),
-            'noteText'         => __( 'Lightbox active', 'lightbox-jlg' ),
+            'accentColor'        => $accent_color,
+            'backgroundStyle'    => $background_style,
+            'autoplay'           => $autoplay,
+            'startOnClickedImage' => $start_on_clicked_image,
+            'loop'               => $loop,
+            'delay'              => $delay,
+            'speed'              => $speed,
+            'effect'             => $effect,
+            'easing'             => $easing,
+            'bgOpacity'          => $bg_opacity,
+            'thumbsLayout'       => $thumbs_layout,
+            'showThumbsMobile'   => $show_thumbs_mobile,
+            'showZoom'           => $show_zoom,
+            'showDownload'       => $show_download,
+            'showShare'          => $show_share,
+            'showCta'            => $show_cta,
+            'showFullscreen'     => $show_fullscreen,
+            'noteText'           => __( 'Lightbox active', 'lightbox-jlg' ),
         ];
     }
 

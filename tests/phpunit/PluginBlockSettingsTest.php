@@ -43,23 +43,23 @@ class PluginBlockSettingsTest extends WP_UnitTestCase {
         $plugin = $this->plugin();
 
         $input = [
-            'accent_color'          => '#ff00ff',
-            'background_style'      => 'texture',
-            'autoplay_start'        => 1,
-            'start_on_clicked_image'=> '1',
-            'loop'                  => 0,
-            'delay'                 => '7',
-            'speed'                 => '1500',
-            'effect'                => 'fade',
-            'easing'                => 'ease-in-out',
-            'bg_opacity'            => '0.6',
-            'thumbs_layout'         => 'left',
-            'show_thumbs_mobile'    => '',
-            'show_zoom'             => '0',
-            'show_download'         => true,
-            'show_share'            => '1',
-            'show_cta'              => 0,
-            'show_fullscreen'       => '0',
+            'accent_color'           => '#ff00ff',
+            'background_style'       => 'texture',
+            'autoplay_start'         => 1,
+            'start_on_clicked_image' => '1',
+            'loop'                   => 0,
+            'delay'                  => '7',
+            'speed'                  => '1500',
+            'effect'                 => 'FADE',
+            'easing'                 => 'EASE-IN-OUT',
+            'bg_opacity'             => '0.6',
+            'thumbs_layout'          => 'LEFT',
+            'show_thumbs_mobile'     => '',
+            'show_zoom'              => '0',
+            'show_download'          => true,
+            'show_share'             => '1',
+            'show_cta'               => 'false',
+            'show_fullscreen'        => '0',
         ];
 
         $result = $plugin->prepare_block_settings( $input );
@@ -71,16 +71,66 @@ class PluginBlockSettingsTest extends WP_UnitTestCase {
         $this->assertFalse( $result['loop'], 'Loop should be cast to boolean false for falsy payloads.' );
         $this->assertSame( 7, $result['delay'], 'Delay should be cast to integer.' );
         $this->assertSame( 1500, $result['speed'], 'Speed should be cast to integer.' );
-        $this->assertSame( 'fade', $result['effect'], 'Effect should propagate as a string.' );
-        $this->assertSame( 'ease-in-out', $result['easing'], 'Easing should propagate as a string.' );
+        $this->assertSame( 'fade', $result['effect'], 'Effect should propagate after case-normalisation.' );
+        $this->assertSame( 'ease-in-out', $result['easing'], 'Easing should propagate after case-normalisation.' );
         $this->assertSame( 0.6, $result['bgOpacity'], 'Opacity should be cast to float.' );
-        $this->assertSame( 'left', $result['thumbsLayout'], 'Thumbnail layout should propagate as provided.' );
+        $this->assertSame( 'left', $result['thumbsLayout'], 'Thumbnail layout should be normalised and preserved.' );
         $this->assertFalse( $result['showThumbsMobile'], 'Empty values should disable mobile thumbnails.' );
         $this->assertFalse( $result['showZoom'], 'String zero should disable the zoom control.' );
         $this->assertTrue( $result['showDownload'], 'Boolean true should keep the download control enabled.' );
         $this->assertTrue( $result['showShare'], 'String truthy values should enable the share control.' );
-        $this->assertFalse( $result['showCta'], 'Zero should disable the CTA control.' );
+        $this->assertFalse( $result['showCta'], 'Falsey string values should disable the CTA control.' );
         $this->assertFalse( $result['showFullscreen'], 'String zero should disable fullscreen support.' );
+    }
+
+    public function test_prepare_block_settings_clamps_out_of_range_values(): void {
+        $plugin = $this->plugin();
+
+        $below_min = $plugin->prepare_block_settings(
+            [
+                'delay'                 => 0,
+                'speed'                 => 50,
+                'bg_opacity'            => '-2',
+                'background_style'      => 'sparkle',
+                'thumbs_layout'         => 'diagonal',
+                'effect'                => 'warp',
+                'easing'                => 'bouncy',
+                'loop'                  => 'maybe',
+                'show_download'         => 'perhaps',
+                'show_thumbs_mobile'    => 'nope',
+                'show_zoom'             => 'no',
+                'show_share'            => 'false',
+                'show_cta'              => '',
+                'show_fullscreen'       => 'nah',
+            ]
+        );
+
+        $this->assertSame( 1, $below_min['delay'], 'Delay should clamp to the minimum supported interval.' );
+        $this->assertSame( 100, $below_min['speed'], 'Speed should clamp to the minimum supported value.' );
+        $this->assertSame( 0.0, $below_min['bgOpacity'], 'Opacity should not drop below zero.' );
+        $this->assertSame( 'echo', $below_min['backgroundStyle'], 'Unsupported background styles should fallback to the default.' );
+        $this->assertSame( 'bottom', $below_min['thumbsLayout'], 'Unsupported thumbnail layouts should fallback to the default.' );
+        $this->assertSame( 'slide', $below_min['effect'], 'Unsupported effects should fallback to the default transition.' );
+        $this->assertSame( 'ease-out', $below_min['easing'], 'Unsupported easings should fallback to the default curve.' );
+        $this->assertTrue( $below_min['loop'], 'Invalid loop values should fallback to the default.' );
+        $this->assertTrue( $below_min['showDownload'], 'Invalid download toggle values should fallback to the default.' );
+        $this->assertTrue( $below_min['showThumbsMobile'], 'Invalid thumb toggle values should fallback to the default.' );
+        $this->assertFalse( $below_min['showZoom'], 'Explicit negative zoom values should disable the control.' );
+        $this->assertFalse( $below_min['showShare'], 'Explicit negative share values should disable the control.' );
+        $this->assertFalse( $below_min['showCta'], 'Empty CTA values should disable the control.' );
+        $this->assertTrue( $below_min['showFullscreen'], 'Invalid fullscreen values should fallback to the default.' );
+
+        $above_max = $plugin->prepare_block_settings(
+            [
+                'delay'      => 99,
+                'speed'      => 9000,
+                'bg_opacity' => '2.5',
+            ]
+        );
+
+        $this->assertSame( 30, $above_max['delay'], 'Delay should clamp to the maximum supported interval.' );
+        $this->assertSame( 5000, $above_max['speed'], 'Speed should clamp to the maximum supported value.' );
+        $this->assertSame( 1.0, $above_max['bgOpacity'], 'Opacity should not exceed full opacity.' );
     }
 
     public function test_prepare_block_settings_recovers_from_invalid_accent_colour(): void {
