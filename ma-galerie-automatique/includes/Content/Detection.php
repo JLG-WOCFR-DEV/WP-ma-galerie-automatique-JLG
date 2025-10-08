@@ -779,7 +779,7 @@ class Detection {
             return false;
         }
 
-        $allowed_extensions = [ 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'avif' ];
+        $allowed_extensions = [ 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'avif', 'heic', 'heif', 'jxl' ];
         $settings           = $this->settings->get_sanitized_settings();
 
         $include_svg = true;
@@ -791,6 +791,24 @@ class Detection {
         if ( $include_svg ) {
             $allowed_extensions[] = 'svg';
         }
+
+        /**
+         * Filters the list of file extensions recognised as images by the detector.
+         *
+         * @param string[] $allowed_extensions Array of lowercase extensions (without dots).
+         * @param array    $settings           Sanitized plugin settings used during the check.
+         */
+        $allowed_extensions = apply_filters( 'mga_allowed_image_extensions', $allowed_extensions, $settings );
+
+        if ( ! is_array( $allowed_extensions ) ) {
+            $allowed_extensions = [];
+        }
+
+        $allowed_extensions = array_map( 'strval', $allowed_extensions );
+        $allowed_extensions = array_filter( $allowed_extensions, static function ( $value ): bool {
+            return '' !== trim( strtolower( (string) $value ) );
+        } );
+        $allowed_extensions = array_values( array_unique( array_map( 'strtolower', $allowed_extensions ) ) );
 
         return in_array( $extension, $allowed_extensions, true );
     }
@@ -1000,7 +1018,7 @@ class Detection {
             }
         }
 
-        return true;
+        return false;
     }
 
     private function fallback_regex_detects_linked_media( string $html ): bool {

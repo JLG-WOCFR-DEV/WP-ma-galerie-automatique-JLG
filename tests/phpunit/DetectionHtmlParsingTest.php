@@ -65,6 +65,15 @@ class DetectionHtmlParsingTest extends WP_UnitTestCase {
         );
     }
 
+    public function test_gallery_html_ignores_images_without_sources(): void {
+        $html = '<div class="wp-block-gallery"><a href="https://example.com/full.jpg"><img alt="Empty" /></a></div>';
+
+        $this->assertFalse(
+            $this->detection()->gallery_html_has_linked_media( $html ),
+            'Images without any usable source attribute should be ignored to avoid false positives.'
+        );
+    }
+
     public function test_ignores_links_without_embedded_media(): void {
         $html = '<p><a href="https://example.com/full.jpg">View image</a></p>';
 
@@ -72,6 +81,31 @@ class DetectionHtmlParsingTest extends WP_UnitTestCase {
             $this->detection()->gallery_html_has_linked_media( $html ),
             'Anchors without embedded media elements should be ignored even if the URL targets an image file.'
         );
+    }
+
+    public function test_is_image_url_supports_modern_formats(): void {
+        $detection = $this->detection();
+
+        $this->assertTrue( $detection->is_image_url( 'https://example.com/photo.heic' ), 'HEIC images should be recognised as valid media.' );
+        $this->assertTrue( $detection->is_image_url( 'https://example.com/photo.heif' ), 'HEIF images should be recognised as valid media.' );
+        $this->assertTrue( $detection->is_image_url( 'https://example.com/photo.jxl' ), 'JPEG XL images should be recognised as valid media.' );
+    }
+
+    public function test_is_image_url_respects_allowed_extensions_filter(): void {
+        $callback = static function ( array $extensions ): array {
+            return array_diff( $extensions, [ 'gif' ] );
+        };
+
+        add_filter( 'mga_allowed_image_extensions', $callback, 10, 1 );
+
+        try {
+            $this->assertFalse(
+                $this->detection()->is_image_url( 'https://example.com/image.gif' ),
+                'Filtered extensions should no longer be considered valid image URLs.'
+            );
+        } finally {
+            remove_filter( 'mga_allowed_image_extensions', $callback, 10 );
+        }
     }
 
     private function create_test_attachment(): int {
