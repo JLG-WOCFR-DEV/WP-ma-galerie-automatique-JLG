@@ -16,53 +16,37 @@ $style_presets     = mga_get_style_presets();
     <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
     <?php settings_errors( 'mga_settings_group' ); ?>
 
-    <div class="nav-tab-wrapper" role="tablist" aria-label="<?php echo esc_attr__( 'Sections de la page de réglages', 'lightbox-jlg' ); ?>">
-        <a
-            href="#settings"
-            class="nav-tab nav-tab-active"
-            id="mga-tab-link-settings"
-            role="tab"
-            aria-controls="settings"
-            aria-selected="true"
-            tabindex="0"
-        >
-            <?php echo esc_html__( 'Réglages', 'lightbox-jlg' ); ?>
-        </a>
-        <a
-            href="#share"
-            class="nav-tab"
-            id="mga-tab-link-share"
-            role="tab"
-            aria-controls="share"
-            aria-selected="false"
-            tabindex="-1"
-        >
-            <?php echo esc_html__( 'Partage', 'lightbox-jlg' ); ?>
-        </a>
-        <a
-            href="#tutorial"
-            class="nav-tab"
-            id="mga-tab-link-tutorial"
-            role="tab"
-            aria-controls="tutorial"
-            aria-selected="false"
-            tabindex="-1"
-        >
-            <?php echo esc_html__( 'Tutoriel', 'lightbox-jlg' ); ?>
-        </a>
-    </div>
-
-    <form action="options.php" method="post">
+    <form action="options.php" method="post" data-mga-settings-form>
         <?php settings_fields( 'mga_settings_group' ); ?>
 
-        <div
-            id="settings"
-            class="tab-content active"
-            role="tabpanel"
-            aria-labelledby="mga-tab-link-settings"
-            aria-hidden="false"
-            tabindex="0"
-        >
+        <div class="mga-wizard" data-mga-wizard>
+            <ol class="mga-wizard__progress" data-mga-stepper aria-label="<?php echo esc_attr__( 'Étapes de configuration', 'lightbox-jlg' ); ?>">
+                <li class="mga-wizard__progress-item is-active" data-mga-step-indicator data-step-index="0">
+                    <span class="mga-wizard__progress-number">1</span>
+                    <span class="mga-wizard__progress-label"><?php echo esc_html__( 'Préparer', 'lightbox-jlg' ); ?></span>
+                </li>
+                <li class="mga-wizard__progress-item" data-mga-step-indicator data-step-index="1">
+                    <span class="mga-wizard__progress-number">2</span>
+                    <span class="mga-wizard__progress-label"><?php echo esc_html__( 'Partager', 'lightbox-jlg' ); ?></span>
+                </li>
+                <li class="mga-wizard__progress-item" data-mga-step-indicator data-step-index="2">
+                    <span class="mga-wizard__progress-number">3</span>
+                    <span class="mga-wizard__progress-label"><?php echo esc_html__( 'Récapitulatif', 'lightbox-jlg' ); ?></span>
+                </li>
+            </ol>
+
+            <div class="mga-wizard__panels">
+                <section
+                    class="mga-wizard__panel is-active"
+                    data-mga-step-panel
+                    data-step-index="0"
+                    aria-hidden="false"
+                >
+                    <header class="mga-step__header">
+                        <h2 class="mga-step__title" data-mga-step-title><?php echo esc_html__( 'Réglages essentiels de la visionneuse', 'lightbox-jlg' ); ?></h2>
+                        <p class="mga-step__intro"><?php echo esc_html__( 'Définissez les fondations : rythme du diaporama, navigation et apparence globale avant d’affiner le reste.', 'lightbox-jlg' ); ?></p>
+                    </header>
+                    <div class="mga-step__body">
                         <div class="mga-settings-layout" data-mga-settings-layout>
                 <aside class="mga-settings-layout__sidebar">
                     <div class="mga-settings-toolbar">
@@ -788,19 +772,22 @@ $style_presets     = mga_get_style_presets();
                             </div>
                         </div>
                     </section>
-                </div>
-            </div>
-        </div>
+                        </div>
+                    </div>
+                </section>
 
-        <div
-            id="share"
-            class="tab-content"
-            role="tabpanel"
-            aria-labelledby="mga-tab-link-share"
-            aria-hidden="true"
-            tabindex="0"
-            hidden
-        >
+                <section
+                    class="mga-wizard__panel"
+                    data-mga-step-panel
+                    data-step-index="1"
+                    aria-hidden="true"
+                    hidden
+                >
+                    <header class="mga-step__header">
+                        <h2 class="mga-step__title" data-mga-step-title><?php echo esc_html__( 'Canaux de partage et options sociales', 'lightbox-jlg' ); ?></h2>
+                        <p class="mga-step__intro"><?php echo esc_html__( 'Sélectionnez les réseaux, icônes et actions complémentaires proposés dans la modale de partage.', 'lightbox-jlg' ); ?></p>
+                    </header>
+                    <div class="mga-step__body">
             <table class="form-table">
                 <tr>
                     <th scope="row"><?php echo esc_html__( 'Canaux de partage', 'lightbox-jlg' ); ?></th>
@@ -1027,41 +1014,77 @@ $style_presets     = mga_get_style_presets();
                     </td>
                 </tr>
             </table>
+                    </div>
+                </section>
+
+                <section
+                    class="mga-wizard__panel"
+                    data-mga-step-panel
+                    data-step-index="2"
+                    aria-hidden="true"
+                    hidden
+                >
+                    <header class="mga-step__header">
+                        <h2 class="mga-step__title" data-mga-step-title><?php echo esc_html__( 'Récapitulatif & mise en ligne', 'lightbox-jlg' ); ?></h2>
+                        <p class="mga-step__intro"><?php echo esc_html__( 'Vérifiez les points clés avant d’enregistrer les réglages et de publier votre galerie.', 'lightbox-jlg' ); ?></p>
+                    </header>
+                    <div class="mga-step__body mga-step__body--summary">
+                        <div class="mga-summary" data-mga-summary-panel>
+                            <dl class="mga-summary__list">
+                                <div class="mga-summary__item">
+                                    <dt><?php echo esc_html__( 'Preset sélectionné', 'lightbox-jlg' ); ?></dt>
+                                    <dd data-mga-summary-preset>—</dd>
+                                </div>
+                                <div class="mga-summary__item">
+                                    <dt><?php echo esc_html__( 'Lecture & transitions', 'lightbox-jlg' ); ?></dt>
+                                    <dd data-mga-summary-timing>—</dd>
+                                </div>
+                                <div class="mga-summary__item">
+                                    <dt><?php echo esc_html__( 'Boutons de la barre d’outils', 'lightbox-jlg' ); ?></dt>
+                                    <dd data-mga-summary-toolbar>—</dd>
+                                </div>
+                                <div class="mga-summary__item">
+                                    <dt><?php echo esc_html__( 'Partage et actions', 'lightbox-jlg' ); ?></dt>
+                                    <dd data-mga-summary-share>—</dd>
+                                </div>
+                            </dl>
+                        </div>
+                        <div class="mga-summary__tutorial">
+                            <h3 class="mga-summary__heading"><?php echo esc_html__( 'Tutoriel express', 'lightbox-jlg' ); ?></h3>
+                            <p><?php echo esc_html__( "Cette extension est conçue pour s'intégrer naturellement à WordPress. Le principe est simple : seules les images que vous décidez de lier deviendront des déclencheurs pour la galerie.", 'lightbox-jlg' ); ?></p>
+                            <ol class="mga-summary__steps">
+                                <li><?php echo wp_kses_post( __( "<strong>Éditez un article ou une page :</strong> Allez dans l'éditeur de blocs de WordPress.", 'lightbox-jlg' ) ); ?></li>
+                                <li><?php echo wp_kses_post( __( '<strong>Sélectionnez une image :</strong> Cliquez sur un bloc image que vous souhaitez inclure dans la galerie.', 'lightbox-jlg' ) ); ?></li>
+                                <li><?php echo wp_kses_post( __( "<strong>Activez le lien :</strong> Dans la barre d'outils du bloc image, cliquez sur l'icône de lien (ressemble à un maillon de chaîne).", 'lightbox-jlg' ) ); ?></li>
+                                <li><?php echo wp_kses_post( __( '<strong>Choisissez la bonne destination :</strong> Dans la fenêtre, sélectionnez <strong>&quot;Fichier média&quot;</strong> pour ouvrir l’image originale.', 'lightbox-jlg' ) ); ?></li>
+                                <li><?php echo wp_kses_post( __( "<strong>Répétez pour d'autres images :</strong> Faites de même pour toutes les images que vous voulez afficher dans la même galerie.", 'lightbox-jlg' ) ); ?></li>
+                            </ol>
+                            <p><?php echo esc_html__( "C'est tout ! Vos visiteurs peuvent maintenant parcourir la galerie directement depuis les images liées au fichier média.", 'lightbox-jlg' ); ?></p>
+                            <h4 class="mga-summary__heading"><?php echo esc_html__( 'Bloc de prévisualisation Gutenberg', 'lightbox-jlg' ); ?></h4>
+                            <p><?php echo wp_kses_post( __( 'Besoin de vérifier vos réglages sans quitter l’éditeur&nbsp;? Ajoutez le bloc <strong>«&nbsp;Lightbox – Aperçu&nbsp;»</strong> pour simuler la visionneuse et partager facilement vos choix avec vos clients.', 'lightbox-jlg' ) ); ?></p>
+                            <h4 class="mga-summary__heading"><?php echo esc_html__( 'Compatibilité et légendes', 'lightbox-jlg' ); ?></h4>
+                            <p><?php echo wp_kses_post( __( 'La détection automatique couvre les blocs médias natifs et affiche une pastille «&nbsp;Lightbox active&nbsp;». Les légendes de la galerie reprennent le champ <strong>« Légende »</strong> de la médiathèque ou, à défaut, le <strong>texte alternatif</strong>.', 'lightbox-jlg' ) ); ?></p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="mga-wizard__actions">
+                <button type="button" class="button button-secondary mga-wizard__button" data-mga-step-prev><?php echo esc_html__( 'Étape précédente', 'lightbox-jlg' ); ?></button>
+                <button type="button" class="button button-primary mga-wizard__button" data-mga-step-next><?php echo esc_html__( 'Étape suivante', 'lightbox-jlg' ); ?></button>
+                <?php
+                submit_button(
+                    __( 'Enregistrer les réglages', 'lightbox-jlg' ),
+                    'primary mga-wizard__button',
+                    'submit',
+                    false,
+                    [
+                        'data-mga-step-submit' => 'true',
+                    ]
+                );
+                ?>
+                <span class="mga-wizard__status" data-mga-save-status aria-live="polite"></span>
+            </div>
         </div>
-
-        <div
-            id="tutorial"
-            class="tab-content"
-            role="tabpanel"
-            aria-labelledby="mga-tab-link-tutorial"
-            aria-hidden="true"
-            tabindex="0"
-            hidden
-        >
-            <h2><span class="dashicons dashicons-editor-help"></span> <?php echo esc_html__( 'Comment faire fonctionner la galerie ?', 'lightbox-jlg' ); ?></h2>
-            <p><?php echo esc_html__( "Cette extension est conçue pour s'intégrer naturellement à WordPress. Le principe est simple : seules les images que vous décidez de lier deviendront des déclencheurs pour la galerie.", 'lightbox-jlg' ); ?></p>
-            <ol style="list-style-type: decimal; margin-left: 20px;">
-                <li><?php echo wp_kses_post( __( "<strong>Éditez un article ou une page :</strong> Allez dans l'éditeur de blocs de WordPress.", 'lightbox-jlg' ) ); ?></li>
-                <li><?php echo wp_kses_post( __( '<strong>Sélectionnez une image :</strong> Cliquez sur un bloc image que vous souhaitez inclure dans la galerie.', 'lightbox-jlg' ) ); ?></li>
-                <li><?php echo wp_kses_post( __( "<strong>Activez le lien :</strong> Dans la barre d'outils du bloc image, cliquez sur l'icône de lien (ressemble à un maillon de chaîne).", 'lightbox-jlg' ) ); ?></li>
-                <li style="margin-top: 10px;"><?php echo wp_kses_post( __( '<strong>Choisissez la bonne destination :</strong> Une petite fenêtre apparaît. Cliquez sur l’option <strong>&quot;Fichier média&quot;</strong>. C’est l’étape la plus importante ! Elle indique que le clic sur l’image doit ouvrir le fichier image original.', 'lightbox-jlg' ) ); ?></li>
-                <li style="margin-top: 10px;"><?php echo wp_kses_post( __( "<strong>Répétez pour d'autres images :</strong> Faites de même pour toutes les images de l'article que vous voulez voir apparaître dans la même galerie.", 'lightbox-jlg' ) ); ?></li>
-            </ol>
-            <h3><?php echo esc_html__( "C'est tout !", 'lightbox-jlg' ); ?></h3>
-            <p><?php echo esc_html__( "Désormais, sur votre site, lorsque qu'un visiteur cliquera sur l'une de ces images, la visionneuse (lightbox) s'ouvrira et affichera toutes les autres images de l'article qui ont également été liées à leur &quot;Fichier média&quot;.", 'lightbox-jlg' ); ?></p>
-
-            <h3><?php echo esc_html__( 'Bloc de prévisualisation Gutenberg', 'lightbox-jlg' ); ?></h3>
-            <p><?php echo wp_kses_post( __( 'Besoin de vérifier vos réglages sans quitter l’éditeur&nbsp;? Ajoutez le bloc <strong>«&nbsp;Lightbox – Aperçu&nbsp;»</strong> depuis l’onglet <em>Médias</em>. Il simule la visionneuse avec vos paramètres (lecture automatique, contrôles, style d’arrière-plan, etc.) directement dans Gutenberg.', 'lightbox-jlg' ) ); ?></p>
-            <p><?php echo wp_kses_post( __( 'Chaque option clé est disponible dans la colonne latérale du bloc. Ajustez l’autoplay, choisissez les boutons à afficher, modifiez la couleur d’accent ou l’opacité du fond&nbsp;: l’aperçu se met à jour immédiatement pour refléter le rendu réel.', 'lightbox-jlg' ) ); ?></p>
-            <p><?php echo wp_kses_post( __( 'Le bloc est purement éditorial&nbsp;: il n’ajoute aucun contenu supplémentaire sur le site publié. Il vous aide simplement à présenter la lightbox à vos clients ou collaborateurs depuis l’éditeur.', 'lightbox-jlg' ) ); ?></p>
-
-            <h4><?php echo esc_html__( 'Compatibilité avec les blocs natifs', 'lightbox-jlg' ); ?></h4>
-            <p><?php echo wp_kses_post( __( 'La détection automatique reste active sur les blocs <code>core/gallery</code>, <code>core/image</code>, <code>core/media-text</code> ou <code>core/cover</code> lorsque les images renvoient vers leur fichier média. Les blocs mis en évidence dans Gutenberg portent une pastille «&nbsp;Lightbox active&nbsp;», confirmant que la visionneuse se déclenchera à la publication.', 'lightbox-jlg' ) ); ?></p>
-
-            <h4><?php echo esc_html__( 'Astuce pour les légendes', 'lightbox-jlg' ); ?></h4>
-            <p><?php echo wp_kses_post( __( 'La légende affichée dans la galerie est récupérée automatiquement depuis le champ <strong>&quot;Légende&quot;</strong> de votre image dans l’éditeur, ou, si celui-ci est vide, depuis le champ <strong>&quot;Texte alternatif&quot;</strong>. Pensez à les remplir !', 'lightbox-jlg' ) ); ?></p>
-        </div>
-
-        <?php submit_button( __( 'Enregistrer les modifications', 'lightbox-jlg' ) ); ?>
     </form>
 </div>
