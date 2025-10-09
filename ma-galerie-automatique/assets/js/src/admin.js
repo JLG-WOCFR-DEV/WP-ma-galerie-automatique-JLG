@@ -66,7 +66,114 @@ import {
 
     doc.addEventListener('DOMContentLoaded', function() {
         const form = doc.querySelector('[data-mga-settings-form]') || doc.querySelector('.mga-admin-wrap form');
+        const adminRoot = doc.querySelector('.mga-admin-wrap');
         let scheduleSummaryRefresh = () => {};
+
+        const THEME_STORAGE_KEY = 'mgaAdminThemePreference';
+        const THEME_OPTIONS = ['light', 'dark', 'system'];
+        const themeSelect = adminRoot ? adminRoot.querySelector('[data-mga-theme-select]') : null;
+        const systemThemeQuery = typeof global.matchMedia === 'function'
+            ? global.matchMedia('(prefers-color-scheme: dark)')
+            : null;
+
+        const readStoredTheme = () => {
+            try {
+                return global.localStorage ? global.localStorage.getItem(THEME_STORAGE_KEY) : null;
+            } catch (error) {
+                return null;
+            }
+        };
+
+        const writeStoredTheme = (value) => {
+            try {
+                if (!global.localStorage) {
+                    return;
+                }
+                if (!value) {
+                    global.localStorage.removeItem(THEME_STORAGE_KEY);
+                    return;
+                }
+                global.localStorage.setItem(THEME_STORAGE_KEY, value);
+            } catch (error) {
+                // Silently ignore storage errors (quota, private mode, etc.).
+            }
+        };
+
+        const normalizeThemePreference = (value) => {
+            if (typeof value !== 'string') {
+                return 'system';
+            }
+
+            const trimmed = value.trim().toLowerCase();
+            return THEME_OPTIONS.includes(trimmed) ? trimmed : 'system';
+        };
+
+        let currentThemePreference = normalizeThemePreference(readStoredTheme());
+
+        const resolveAppliedTheme = (preference) => {
+            if (preference === 'dark') {
+                return 'dark';
+            }
+            if (preference === 'light') {
+                return 'light';
+            }
+
+            const prefersDark = systemThemeQuery && typeof systemThemeQuery.matches === 'boolean'
+                ? systemThemeQuery.matches
+                : false;
+
+            return prefersDark ? 'dark' : 'light';
+        };
+
+        const applyThemePreference = (preference, options = {}) => {
+            if (!adminRoot) {
+                return;
+            }
+
+            const normalizedPreference = normalizeThemePreference(preference);
+            const resolvedTheme = resolveAppliedTheme(normalizedPreference);
+
+            adminRoot.setAttribute('data-mga-theme-preference', normalizedPreference);
+            adminRoot.setAttribute('data-mga-theme', resolvedTheme);
+            adminRoot.classList.toggle('is-theme-dark', resolvedTheme === 'dark');
+            adminRoot.classList.toggle('is-theme-light', resolvedTheme !== 'dark');
+
+            if (themeSelect && themeSelect.value !== normalizedPreference) {
+                themeSelect.value = normalizedPreference;
+            }
+
+            if (!options.skipStorage) {
+                writeStoredTheme(normalizedPreference === 'system' ? '' : normalizedPreference);
+            }
+
+            currentThemePreference = normalizedPreference;
+        };
+
+        if (adminRoot) {
+            applyThemePreference(currentThemePreference, { skipStorage: true });
+        }
+
+        if (themeSelect) {
+            themeSelect.value = currentThemePreference;
+            themeSelect.addEventListener('change', (event) => {
+                const nextPreference = normalizeThemePreference(event.target ? event.target.value : null);
+                applyThemePreference(nextPreference);
+            });
+        }
+
+        const handleSystemThemeChange = () => {
+            if (currentThemePreference === 'system') {
+                applyThemePreference('system', { skipStorage: true });
+            }
+        };
+
+        if (systemThemeQuery) {
+            if (typeof systemThemeQuery.addEventListener === 'function') {
+                systemThemeQuery.addEventListener('change', handleSystemThemeChange);
+            } else if (typeof systemThemeQuery.addListener === 'function') {
+                systemThemeQuery.addListener(handleSystemThemeChange);
+            }
+        }
 
         const initializeWizard = (targetForm) => {
             const wizard = doc.querySelector('[data-mga-wizard]');

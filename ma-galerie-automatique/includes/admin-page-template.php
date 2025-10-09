@@ -49,7 +49,7 @@ $style_presets     = mga_get_style_presets();
                     <div class="mga-step__body">
                         <div class="mga-settings-layout" data-mga-settings-layout>
                 <aside class="mga-settings-layout__sidebar">
-                    <div class="mga-settings-toolbar">
+                    <div class="mga-settings-toolbar card">
                         <label class="screen-reader-text" for="mga-settings-search"><?php echo esc_html__( 'Rechercher un réglage', 'lightbox-jlg' ); ?></label>
                         <input
                             type="search"
@@ -68,6 +68,16 @@ $style_presets     = mga_get_style_presets();
                             </select>
                             <p class="description"><?php echo esc_html__( 'Masquez les réglages techniques tant que vous configurez l’essentiel.', 'lightbox-jlg' ); ?></p>
                         </div>
+
+                        <div class="mga-settings-toolbar__theme" data-mga-theme-picker>
+                            <label for="mga-settings-theme"><?php echo esc_html__( 'Thème de l’interface', 'lightbox-jlg' ); ?></label>
+                            <select id="mga-settings-theme" data-mga-theme-select>
+                                <option value="system"><?php echo esc_html__( 'Système', 'lightbox-jlg' ); ?></option>
+                                <option value="light"><?php echo esc_html__( 'Clair', 'lightbox-jlg' ); ?></option>
+                                <option value="dark"><?php echo esc_html__( 'Sombre', 'lightbox-jlg' ); ?></option>
+                            </select>
+                            <p class="description"><?php echo esc_html__( 'Adaptez les contrastes de l’interface en fonction de vos préférences.', 'lightbox-jlg' ); ?></p>
+                        </div>
                     </div>
 
                     <ul class="mga-settings-layout__nav" data-mga-settings-nav>
@@ -84,7 +94,7 @@ $style_presets     = mga_get_style_presets();
                 </aside>
 
                 <div class="mga-settings-layout__content">
-                    <div class="mga-live-preview" data-mga-live-preview>
+                    <div class="mga-live-preview card" data-mga-live-preview>
                         <div class="mga-live-preview__header">
                             <h2><?php echo esc_html__( 'Prévisualisation en direct', 'lightbox-jlg' ); ?></h2>
                             <p class="description"><?php echo esc_html__( 'Les ajustements majeurs (presets, animations, couleurs) s’illustrent immédiatement dans cette vignette.', 'lightbox-jlg' ); ?></p>
@@ -117,7 +127,7 @@ $style_presets     = mga_get_style_presets();
                     </div>
                     <section
                         id="mga-section-style"
-                        class="mga-settings-section"
+                        class="mga-settings-section card"
                         data-mga-settings-section
                         data-mga-visibility="essential"
                         aria-labelledby="mga-section-style-title"
@@ -168,7 +178,7 @@ $style_presets     = mga_get_style_presets();
 
                     <section
                         id="mga-section-playback"
-                        class="mga-settings-section"
+                        class="mga-settings-section card"
                         data-mga-settings-section
                         data-mga-visibility="essential"
                         aria-labelledby="mga-section-playback-title"
@@ -258,7 +268,7 @@ $style_presets     = mga_get_style_presets();
 
                     <section
                         id="mga-section-thumbnails"
-                        class="mga-settings-section"
+                        class="mga-settings-section card"
                         data-mga-settings-section
                         data-mga-visibility="essential"
                         aria-labelledby="mga-section-thumbnails-title"
@@ -353,7 +363,7 @@ $style_presets     = mga_get_style_presets();
 
                     <section
                         id="mga-section-appearance"
-                        class="mga-settings-section"
+                        class="mga-settings-section card"
                         data-mga-settings-section
                         data-mga-visibility="essential"
                         aria-labelledby="mga-section-appearance-title"
@@ -426,7 +436,7 @@ $style_presets     = mga_get_style_presets();
 
                     <section
                         id="mga-section-toolbar"
-                        class="mga-settings-section"
+                        class="mga-settings-section card"
                         data-mga-settings-section
                         data-mga-visibility="essential"
                         aria-labelledby="mga-section-toolbar-title"
@@ -507,7 +517,7 @@ $style_presets     = mga_get_style_presets();
 
                     <section
                         id="mga-section-detection"
-                        class="mga-settings-section"
+                        class="mga-settings-section card"
                         data-mga-settings-section
                         data-mga-visibility="advanced"
                         aria-labelledby="mga-section-detection-title"
@@ -745,7 +755,7 @@ $style_presets     = mga_get_style_presets();
 
                     <section
                         id="mga-section-maintenance"
-                        class="mga-settings-section"
+                        class="mga-settings-section card"
                         data-mga-settings-section
                         data-mga-visibility="advanced"
                         aria-labelledby="mga-section-maintenance-title"
