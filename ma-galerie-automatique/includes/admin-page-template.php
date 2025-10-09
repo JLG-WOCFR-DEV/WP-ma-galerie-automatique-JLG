@@ -16,53 +16,37 @@ $style_presets     = mga_get_style_presets();
     <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
     <?php settings_errors( 'mga_settings_group' ); ?>
 
-    <div class="nav-tab-wrapper" role="tablist" aria-label="<?php echo esc_attr__( 'Sections de la page de réglages', 'lightbox-jlg' ); ?>">
-        <a
-            href="#settings"
-            class="nav-tab nav-tab-active"
-            id="mga-tab-link-settings"
-            role="tab"
-            aria-controls="settings"
-            aria-selected="true"
-            tabindex="0"
-        >
-            <?php echo esc_html__( 'Réglages', 'lightbox-jlg' ); ?>
-        </a>
-        <a
-            href="#share"
-            class="nav-tab"
-            id="mga-tab-link-share"
-            role="tab"
-            aria-controls="share"
-            aria-selected="false"
-            tabindex="-1"
-        >
-            <?php echo esc_html__( 'Partage', 'lightbox-jlg' ); ?>
-        </a>
-        <a
-            href="#tutorial"
-            class="nav-tab"
-            id="mga-tab-link-tutorial"
-            role="tab"
-            aria-controls="tutorial"
-            aria-selected="false"
-            tabindex="-1"
-        >
-            <?php echo esc_html__( 'Tutoriel', 'lightbox-jlg' ); ?>
-        </a>
-    </div>
-
-    <form action="options.php" method="post">
+    <form action="options.php" method="post" data-mga-settings-form>
         <?php settings_fields( 'mga_settings_group' ); ?>
 
-        <div
-            id="settings"
-            class="tab-content active"
-            role="tabpanel"
-            aria-labelledby="mga-tab-link-settings"
-            aria-hidden="false"
-            tabindex="0"
-        >
+        <div class="mga-wizard" data-mga-wizard>
+            <ol class="mga-wizard__progress" data-mga-stepper aria-label="<?php echo esc_attr__( 'Étapes de configuration', 'lightbox-jlg' ); ?>">
+                <li class="mga-wizard__progress-item is-active" data-mga-step-indicator data-step-index="0">
+                    <span class="mga-wizard__progress-number">1</span>
+                    <span class="mga-wizard__progress-label"><?php echo esc_html__( 'Préparer', 'lightbox-jlg' ); ?></span>
+                </li>
+                <li class="mga-wizard__progress-item" data-mga-step-indicator data-step-index="1">
+                    <span class="mga-wizard__progress-number">2</span>
+                    <span class="mga-wizard__progress-label"><?php echo esc_html__( 'Partager', 'lightbox-jlg' ); ?></span>
+                </li>
+                <li class="mga-wizard__progress-item" data-mga-step-indicator data-step-index="2">
+                    <span class="mga-wizard__progress-number">3</span>
+                    <span class="mga-wizard__progress-label"><?php echo esc_html__( 'Récapitulatif', 'lightbox-jlg' ); ?></span>
+                </li>
+            </ol>
+
+            <div class="mga-wizard__panels">
+                <section
+                    class="mga-wizard__panel is-active"
+                    data-mga-step-panel
+                    data-step-index="0"
+                    aria-hidden="false"
+                >
+                    <header class="mga-step__header">
+                        <h2 class="mga-step__title" data-mga-step-title><?php echo esc_html__( 'Réglages essentiels de la visionneuse', 'lightbox-jlg' ); ?></h2>
+                        <p class="mga-step__intro"><?php echo esc_html__( 'Définissez les fondations : rythme du diaporama, navigation et apparence globale avant d’affiner le reste.', 'lightbox-jlg' ); ?></p>
+                    </header>
+                    <div class="mga-step__body">
                         <div class="mga-settings-layout" data-mga-settings-layout>
                 <aside class="mga-settings-layout__sidebar">
                     <div class="mga-settings-toolbar">
@@ -87,13 +71,34 @@ $style_presets     = mga_get_style_presets();
                     </div>
 
                     <ul class="mga-settings-layout__nav" data-mga-settings-nav>
-                        <li data-mga-visibility="essential"><a href="#mga-section-style" data-mga-section-link><?php echo esc_html__( 'Presets & raccourcis', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="essential"><a href="#mga-section-playback" data-mga-section-link><?php echo esc_html__( 'Lecture & transitions', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="essential"><a href="#mga-section-thumbnails" data-mga-section-link><?php echo esc_html__( 'Miniatures & navigation', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="essential"><a href="#mga-section-appearance" data-mga-section-link><?php echo esc_html__( 'Apparence de la visionneuse', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="essential"><a href="#mga-section-toolbar" data-mga-section-link><?php echo esc_html__( 'Barre d’outils & actions', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="advanced"><a href="#mga-section-detection" data-mga-section-link><?php echo esc_html__( 'Détection & intégration', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="advanced"><a href="#mga-section-maintenance" data-mga-section-link><?php echo esc_html__( 'Maintenance & support', 'lightbox-jlg' ); ?></a></li>
+                        <li data-mga-visibility="essential">
+                            <a href="#mga-section-style" data-mga-section-link><?php echo esc_html__( 'Presets & raccourcis', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="essential">
+                            <a href="#mga-section-playback" data-mga-section-link><?php echo esc_html__( 'Lecture & transitions', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="essential">
+                            <a href="#mga-section-thumbnails" data-mga-section-link><?php echo esc_html__( 'Miniatures & navigation', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="essential">
+                            <a href="#mga-section-appearance" data-mga-section-link><?php echo esc_html__( 'Apparence de la visionneuse', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="essential">
+                            <a href="#mga-section-toolbar" data-mga-section-link><?php echo esc_html__( 'Barre d’outils & actions', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="advanced">
+                            <a href="#mga-section-detection" data-mga-section-link><?php echo esc_html__( 'Détection & intégration', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="advanced">
+                            <a href="#mga-section-maintenance" data-mga-section-link><?php echo esc_html__( 'Maintenance & support', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
                     </ul>
 
                     <p class="mga-settings-layout__empty" data-mga-search-empty hidden><?php echo esc_html__( 'Aucun réglage ne correspond à votre recherche.', 'lightbox-jlg' ); ?></p>
@@ -105,31 +110,68 @@ $style_presets     = mga_get_style_presets();
                             <h2><?php echo esc_html__( 'Prévisualisation en direct', 'lightbox-jlg' ); ?></h2>
                             <p class="description"><?php echo esc_html__( 'Les ajustements majeurs (presets, animations, couleurs) s’illustrent immédiatement dans cette vignette.', 'lightbox-jlg' ); ?></p>
                         </div>
-                        <div class="mga-live-preview__stage" data-mga-live-preview-stage>
-                            <div class="mga-live-preview__mock" data-mga-live-preview-mock data-preview-style="echo">
-                                <div class="mga-live-preview__frame" role="group" aria-label="<?php echo esc_attr__( 'Aperçu simplifié de la visionneuse', 'lightbox-jlg' ); ?>">
-                                    <div class="mga-live-preview__image" aria-hidden="true"></div>
-                                    <div class="mga-live-preview__toolbar" data-mga-preview-toolbar>
-                                        <span class="mga-live-preview__action" data-preview-action="zoom" aria-hidden="true">&#128269;</span>
-                                        <span class="mga-live-preview__action" data-preview-action="download" aria-hidden="true">&#8681;</span>
-                                        <span class="mga-live-preview__action" data-preview-action="share" aria-hidden="true">&#128257;</span>
-                                        <span class="mga-live-preview__action" data-preview-action="cta" aria-hidden="true">&#9733;</span>
-                                        <span class="mga-live-preview__action" data-preview-action="fullscreen" aria-hidden="true">&#9974;</span>
-                                    </div>
-                                    <div class="mga-live-preview__caption">
-                                        <span class="mga-live-preview__effect" data-mga-preview-effect><?php echo esc_html__( 'Transition : glissement', 'lightbox-jlg' ); ?></span>
-                                        <h3 class="mga-live-preview__title"><?php echo esc_html__( 'Tirage photographique mis en avant', 'lightbox-jlg' ); ?></h3>
-                                        <p class="mga-live-preview__text"><?php echo esc_html__( 'Une lumière douce et des détails précis pour valoriser vos images.', 'lightbox-jlg' ); ?></p>
+                    <div class="mga-live-preview__stage" data-mga-live-preview-stage>
+                        <p class="screen-reader-text" data-mga-preview-status aria-live="polite" aria-atomic="true"></p>
+                        <div class="mga-live-preview__mock" data-mga-live-preview-mock data-preview-style="echo">
+                            <div class="mga-live-preview__frame" role="group" aria-label="<?php echo esc_attr__( 'Aperçu interactif de la visionneuse', 'lightbox-jlg' ); ?>">
+                                <div
+                                    class="swiper mga-preview-swiper"
+                                    data-mga-preview-swiper
+                                    aria-roledescription="<?php echo esc_attr__( 'diaporama miniature', 'lightbox-jlg' ); ?>"
+                                >
+                                    <div class="swiper-wrapper">
+                                        <div class="swiper-slide">
+                                            <div class="mga-live-preview__slide">
+                                                <div class="mga-live-preview__image" aria-hidden="true"></div>
+                                                <div class="mga-live-preview__caption">
+                                                    <span class="mga-live-preview__effect" data-mga-preview-effect><?php echo esc_html__( 'Transition : glissement', 'lightbox-jlg' ); ?></span>
+                                                    <h3 class="mga-live-preview__title"><?php echo esc_html__( 'Tirage photographique mis en avant', 'lightbox-jlg' ); ?></h3>
+                                                    <p class="mga-live-preview__text"><?php echo esc_html__( 'Une lumière douce et des détails précis pour valoriser vos images.', 'lightbox-jlg' ); ?></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="swiper-slide">
+                                            <div class="mga-live-preview__slide">
+                                                <div class="mga-live-preview__image mga-live-preview__image--secondary" aria-hidden="true"></div>
+                                                <div class="mga-live-preview__caption">
+                                                    <span class="mga-live-preview__effect" aria-hidden="true"><?php echo esc_html__( 'Focus sur vos collections', 'lightbox-jlg' ); ?></span>
+                                                    <h3 class="mga-live-preview__title"><?php echo esc_html__( 'Collection studio', 'lightbox-jlg' ); ?></h3>
+                                                    <p class="mga-live-preview__text"><?php echo esc_html__( 'Montrez l’étendue de votre savoir-faire sur chaque série.', 'lightbox-jlg' ); ?></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="swiper-slide">
+                                            <div class="mga-live-preview__slide">
+                                                <div class="mga-live-preview__image mga-live-preview__image--tertiary" aria-hidden="true"></div>
+                                                <div class="mga-live-preview__caption">
+                                                    <span class="mga-live-preview__effect" aria-hidden="true"><?php echo esc_html__( 'Miniatures harmonisées', 'lightbox-jlg' ); ?></span>
+                                                    <h3 class="mga-live-preview__title"><?php echo esc_html__( 'Zoom sur les détails', 'lightbox-jlg' ); ?></h3>
+                                                    <p class="mga-live-preview__text"><?php echo esc_html__( 'Un aperçu rapide de la palette et des textures de votre galerie.', 'lightbox-jlg' ); ?></p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="mga-live-preview__thumbs" data-mga-preview-thumbs>
-                                    <span aria-hidden="true"></span>
-                                    <span aria-hidden="true"></span>
-                                    <span aria-hidden="true"></span>
-                                    <span aria-hidden="true"></span>
+                                <div class="mga-live-preview__toolbar" data-mga-preview-toolbar>
+                                    <span class="mga-live-preview__action" data-preview-action="zoom" aria-hidden="true">&#128269;</span>
+                                    <span class="mga-live-preview__action" data-preview-action="download" aria-hidden="true">&#8681;</span>
+                                    <span class="mga-live-preview__action" data-preview-action="share" aria-hidden="true">&#128257;</span>
+                                    <span class="mga-live-preview__action" data-preview-action="cta" aria-hidden="true">&#9733;</span>
+                                    <span class="mga-live-preview__action" data-preview-action="fullscreen" aria-hidden="true">&#9974;</span>
                                 </div>
+                                <div class="mga-live-preview__pagination" data-mga-preview-pagination aria-hidden="true"></div>
+                                <button type="button" class="mga-live-preview__nav mga-live-preview__nav--prev" data-mga-preview-prev aria-label="<?php echo esc_attr__( 'Image précédente dans l’aperçu', 'lightbox-jlg' ); ?>">&#10094;</button>
+                                <button type="button" class="mga-live-preview__nav mga-live-preview__nav--next" data-mga-preview-next aria-label="<?php echo esc_attr__( 'Image suivante dans l’aperçu', 'lightbox-jlg' ); ?>">&#10095;</button>
+                            </div>
+                            <div class="mga-live-preview__thumbs" data-mga-preview-thumbs>
+                                <span aria-hidden="true"></span>
+                                <span aria-hidden="true"></span>
+                                <span aria-hidden="true"></span>
+                                <span aria-hidden="true"></span>
                             </div>
                         </div>
+                        <p class="mga-live-preview__fallback" data-mga-preview-fallback hidden><?php echo esc_html__( 'Aperçu interactif indisponible. Veuillez recharger la page.', 'lightbox-jlg' ); ?></p>
+                    </div>
                     </div>
                     <section
                         id="mga-section-style"
@@ -394,6 +436,23 @@ $style_presets     = mga_get_style_presets();
                                         data-default-color="<?php echo esc_attr( $defaults['accent_color'] ); ?>"
                                     />
                                     <span id="mga_accent_color_preview" class="mga-color-preview" aria-hidden="true"></span>
+                                    <div class="mga-contrast-check" data-mga-contrast-inspector hidden>
+                                        <div class="mga-contrast-check__row" data-mga-contrast-row="light">
+                                            <span class="mga-contrast-check__swatch" data-mga-contrast-swatch="light" aria-hidden="true"></span>
+                                            <div class="mga-contrast-check__details">
+                                                <span class="mga-contrast-check__label"><?php echo esc_html__( 'Fond clair', 'lightbox-jlg' ); ?></span>
+                                                <span class="mga-contrast-check__value" data-mga-contrast-value="light">—</span>
+                                            </div>
+                                        </div>
+                                        <div class="mga-contrast-check__row" data-mga-contrast-row="dark">
+                                            <span class="mga-contrast-check__swatch" data-mga-contrast-swatch="dark" aria-hidden="true"></span>
+                                            <div class="mga-contrast-check__details">
+                                                <span class="mga-contrast-check__label"><?php echo esc_html__( 'Fond sombre', 'lightbox-jlg' ); ?></span>
+                                                <span class="mga-contrast-check__value" data-mga-contrast-value="dark">—</span>
+                                            </div>
+                                        </div>
+                                        <p class="mga-contrast-check__message" data-mga-contrast-message></p>
+                                    </div>
                                     <p class="description"><?php echo esc_html__( 'Couleur des boutons, flèches et de la bordure de la miniature active.', 'lightbox-jlg' ); ?></p>
                                 </div>
                             </div>
@@ -788,19 +847,22 @@ $style_presets     = mga_get_style_presets();
                             </div>
                         </div>
                     </section>
-                </div>
-            </div>
-        </div>
+                        </div>
+                    </div>
+                </section>
 
-        <div
-            id="share"
-            class="tab-content"
-            role="tabpanel"
-            aria-labelledby="mga-tab-link-share"
-            aria-hidden="true"
-            tabindex="0"
-            hidden
-        >
+                <section
+                    class="mga-wizard__panel"
+                    data-mga-step-panel
+                    data-step-index="1"
+                    aria-hidden="true"
+                    hidden
+                >
+                    <header class="mga-step__header">
+                        <h2 class="mga-step__title" data-mga-step-title><?php echo esc_html__( 'Canaux de partage et options sociales', 'lightbox-jlg' ); ?></h2>
+                        <p class="mga-step__intro"><?php echo esc_html__( 'Sélectionnez les réseaux, icônes et actions complémentaires proposés dans la modale de partage.', 'lightbox-jlg' ); ?></p>
+                    </header>
+                    <div class="mga-step__body">
             <table class="form-table">
                 <tr>
                     <th scope="row"><?php echo esc_html__( 'Canaux de partage', 'lightbox-jlg' ); ?></th>
@@ -1027,41 +1089,84 @@ $style_presets     = mga_get_style_presets();
                     </td>
                 </tr>
             </table>
+                    </div>
+                </section>
+
+                <section
+                    class="mga-wizard__panel"
+                    data-mga-step-panel
+                    data-step-index="2"
+                    aria-hidden="true"
+                    hidden
+                >
+                    <header class="mga-step__header">
+                        <h2 class="mga-step__title" data-mga-step-title><?php echo esc_html__( 'Récapitulatif & mise en ligne', 'lightbox-jlg' ); ?></h2>
+                        <p class="mga-step__intro"><?php echo esc_html__( 'Vérifiez les points clés avant d’enregistrer les réglages et de publier votre galerie.', 'lightbox-jlg' ); ?></p>
+                    </header>
+                    <div class="mga-step__body mga-step__body--summary">
+                        <div class="mga-summary" data-mga-summary-panel>
+                            <dl class="mga-summary__list">
+                                <div class="mga-summary__item">
+                                    <dt><?php echo esc_html__( 'Preset sélectionné', 'lightbox-jlg' ); ?></dt>
+                                    <dd data-mga-summary-preset>—</dd>
+                                </div>
+                                <div class="mga-summary__item">
+                                    <dt><?php echo esc_html__( 'Lecture & transitions', 'lightbox-jlg' ); ?></dt>
+                                    <dd data-mga-summary-timing>—</dd>
+                                </div>
+                                <div class="mga-summary__item">
+                                    <dt><?php echo esc_html__( 'Boutons de la barre d’outils', 'lightbox-jlg' ); ?></dt>
+                                    <dd data-mga-summary-toolbar>—</dd>
+                                </div>
+                                <div class="mga-summary__item">
+                                    <dt><?php echo esc_html__( 'Partage et actions', 'lightbox-jlg' ); ?></dt>
+                                    <dd data-mga-summary-share>—</dd>
+                                </div>
+                            </dl>
+                            <div class="mga-summary__alerts" data-mga-summary-validations hidden aria-live="polite" aria-atomic="false"></div>
+                            <div class="mga-summary__diff" data-mga-summary-diff hidden>
+                                <h3 class="mga-summary__heading"><?php echo esc_html__( 'Modifications par rapport au preset', 'lightbox-jlg' ); ?></h3>
+                                <p class="mga-summary__diff-baseline" data-mga-summary-diff-baseline></p>
+                                <ul class="mga-summary__diff-list" data-mga-summary-diff-list></ul>
+                                <p class="mga-summary__diff-empty" data-mga-summary-diff-empty hidden><?php echo esc_html__( 'Aucun écart détecté : vos réglages correspondent au preset de référence.', 'lightbox-jlg' ); ?></p>
+                            </div>
+                        </div>
+                        <div class="mga-summary__tutorial">
+                            <h3 class="mga-summary__heading"><?php echo esc_html__( 'Tutoriel express', 'lightbox-jlg' ); ?></h3>
+                            <p><?php echo esc_html__( "Cette extension est conçue pour s'intégrer naturellement à WordPress. Le principe est simple : seules les images que vous décidez de lier deviendront des déclencheurs pour la galerie.", 'lightbox-jlg' ); ?></p>
+                            <ol class="mga-summary__steps">
+                                <li><?php echo wp_kses_post( __( "<strong>Éditez un article ou une page :</strong> Allez dans l'éditeur de blocs de WordPress.", 'lightbox-jlg' ) ); ?></li>
+                                <li><?php echo wp_kses_post( __( '<strong>Sélectionnez une image :</strong> Cliquez sur un bloc image que vous souhaitez inclure dans la galerie.', 'lightbox-jlg' ) ); ?></li>
+                                <li><?php echo wp_kses_post( __( "<strong>Activez le lien :</strong> Dans la barre d'outils du bloc image, cliquez sur l'icône de lien (ressemble à un maillon de chaîne).", 'lightbox-jlg' ) ); ?></li>
+                                <li><?php echo wp_kses_post( __( '<strong>Choisissez la bonne destination :</strong> Dans la fenêtre, sélectionnez <strong>&quot;Fichier média&quot;</strong> pour ouvrir l’image originale.', 'lightbox-jlg' ) ); ?></li>
+                                <li><?php echo wp_kses_post( __( "<strong>Répétez pour d'autres images :</strong> Faites de même pour toutes les images que vous voulez afficher dans la même galerie.", 'lightbox-jlg' ) ); ?></li>
+                            </ol>
+                            <p><?php echo esc_html__( "C'est tout ! Vos visiteurs peuvent maintenant parcourir la galerie directement depuis les images liées au fichier média.", 'lightbox-jlg' ); ?></p>
+                            <h4 class="mga-summary__heading"><?php echo esc_html__( 'Bloc de prévisualisation Gutenberg', 'lightbox-jlg' ); ?></h4>
+                            <p><?php echo wp_kses_post( __( 'Besoin de vérifier vos réglages sans quitter l’éditeur&nbsp;? Ajoutez le bloc <strong>«&nbsp;Lightbox – Aperçu&nbsp;»</strong> pour simuler la visionneuse et partager facilement vos choix avec vos clients.', 'lightbox-jlg' ) ); ?></p>
+                            <h4 class="mga-summary__heading"><?php echo esc_html__( 'Compatibilité et légendes', 'lightbox-jlg' ); ?></h4>
+                            <p><?php echo wp_kses_post( __( 'La détection automatique couvre les blocs médias natifs et affiche une pastille «&nbsp;Lightbox active&nbsp;». Les légendes de la galerie reprennent le champ <strong>« Légende »</strong> de la médiathèque ou, à défaut, le <strong>texte alternatif</strong>.', 'lightbox-jlg' ) ); ?></p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="mga-wizard__actions">
+                <button type="button" class="button button-secondary mga-wizard__button" data-mga-step-prev><?php echo esc_html__( 'Étape précédente', 'lightbox-jlg' ); ?></button>
+                <button type="button" class="button button-primary mga-wizard__button" data-mga-step-next><?php echo esc_html__( 'Étape suivante', 'lightbox-jlg' ); ?></button>
+                <?php
+                submit_button(
+                    __( 'Enregistrer les réglages', 'lightbox-jlg' ),
+                    'primary mga-wizard__button',
+                    'submit',
+                    false,
+                    [
+                        'data-mga-step-submit' => 'true',
+                    ]
+                );
+                ?>
+                <span class="mga-wizard__status" data-mga-save-status aria-live="polite"></span>
+            </div>
         </div>
-
-        <div
-            id="tutorial"
-            class="tab-content"
-            role="tabpanel"
-            aria-labelledby="mga-tab-link-tutorial"
-            aria-hidden="true"
-            tabindex="0"
-            hidden
-        >
-            <h2><span class="dashicons dashicons-editor-help"></span> <?php echo esc_html__( 'Comment faire fonctionner la galerie ?', 'lightbox-jlg' ); ?></h2>
-            <p><?php echo esc_html__( "Cette extension est conçue pour s'intégrer naturellement à WordPress. Le principe est simple : seules les images que vous décidez de lier deviendront des déclencheurs pour la galerie.", 'lightbox-jlg' ); ?></p>
-            <ol style="list-style-type: decimal; margin-left: 20px;">
-                <li><?php echo wp_kses_post( __( "<strong>Éditez un article ou une page :</strong> Allez dans l'éditeur de blocs de WordPress.", 'lightbox-jlg' ) ); ?></li>
-                <li><?php echo wp_kses_post( __( '<strong>Sélectionnez une image :</strong> Cliquez sur un bloc image que vous souhaitez inclure dans la galerie.', 'lightbox-jlg' ) ); ?></li>
-                <li><?php echo wp_kses_post( __( "<strong>Activez le lien :</strong> Dans la barre d'outils du bloc image, cliquez sur l'icône de lien (ressemble à un maillon de chaîne).", 'lightbox-jlg' ) ); ?></li>
-                <li style="margin-top: 10px;"><?php echo wp_kses_post( __( '<strong>Choisissez la bonne destination :</strong> Une petite fenêtre apparaît. Cliquez sur l’option <strong>&quot;Fichier média&quot;</strong>. C’est l’étape la plus importante ! Elle indique que le clic sur l’image doit ouvrir le fichier image original.', 'lightbox-jlg' ) ); ?></li>
-                <li style="margin-top: 10px;"><?php echo wp_kses_post( __( "<strong>Répétez pour d'autres images :</strong> Faites de même pour toutes les images de l'article que vous voulez voir apparaître dans la même galerie.", 'lightbox-jlg' ) ); ?></li>
-            </ol>
-            <h3><?php echo esc_html__( "C'est tout !", 'lightbox-jlg' ); ?></h3>
-            <p><?php echo esc_html__( "Désormais, sur votre site, lorsque qu'un visiteur cliquera sur l'une de ces images, la visionneuse (lightbox) s'ouvrira et affichera toutes les autres images de l'article qui ont également été liées à leur &quot;Fichier média&quot;.", 'lightbox-jlg' ); ?></p>
-
-            <h3><?php echo esc_html__( 'Bloc de prévisualisation Gutenberg', 'lightbox-jlg' ); ?></h3>
-            <p><?php echo wp_kses_post( __( 'Besoin de vérifier vos réglages sans quitter l’éditeur&nbsp;? Ajoutez le bloc <strong>«&nbsp;Lightbox – Aperçu&nbsp;»</strong> depuis l’onglet <em>Médias</em>. Il simule la visionneuse avec vos paramètres (lecture automatique, contrôles, style d’arrière-plan, etc.) directement dans Gutenberg.', 'lightbox-jlg' ) ); ?></p>
-            <p><?php echo wp_kses_post( __( 'Chaque option clé est disponible dans la colonne latérale du bloc. Ajustez l’autoplay, choisissez les boutons à afficher, modifiez la couleur d’accent ou l’opacité du fond&nbsp;: l’aperçu se met à jour immédiatement pour refléter le rendu réel.', 'lightbox-jlg' ) ); ?></p>
-            <p><?php echo wp_kses_post( __( 'Le bloc est purement éditorial&nbsp;: il n’ajoute aucun contenu supplémentaire sur le site publié. Il vous aide simplement à présenter la lightbox à vos clients ou collaborateurs depuis l’éditeur.', 'lightbox-jlg' ) ); ?></p>
-
-            <h4><?php echo esc_html__( 'Compatibilité avec les blocs natifs', 'lightbox-jlg' ); ?></h4>
-            <p><?php echo wp_kses_post( __( 'La détection automatique reste active sur les blocs <code>core/gallery</code>, <code>core/image</code>, <code>core/media-text</code> ou <code>core/cover</code> lorsque les images renvoient vers leur fichier média. Les blocs mis en évidence dans Gutenberg portent une pastille «&nbsp;Lightbox active&nbsp;», confirmant que la visionneuse se déclenchera à la publication.', 'lightbox-jlg' ) ); ?></p>
-
-            <h4><?php echo esc_html__( 'Astuce pour les légendes', 'lightbox-jlg' ); ?></h4>
-            <p><?php echo wp_kses_post( __( 'La légende affichée dans la galerie est récupérée automatiquement depuis le champ <strong>&quot;Légende&quot;</strong> de votre image dans l’éditeur, ou, si celui-ci est vide, depuis le champ <strong>&quot;Texte alternatif&quot;</strong>. Pensez à les remplir !', 'lightbox-jlg' ) ); ?></p>
-        </div>
-
-        <?php submit_button( __( 'Enregistrer les modifications', 'lightbox-jlg' ) ); ?>
     </form>
 </div>
