@@ -270,7 +270,7 @@
             transitionDuration = defaultSpeed;
         }
 
-        var viewerClasses = [ 'mga-viewer', 'mga-block-preview__viewer' ];
+        var viewerClasses = [ 'mga-viewer', 'mga-viewer--compact', 'mga-block-preview__viewer' ];
 
         if ( 'blur' === backgroundStyle ) {
             viewerClasses.push( 'mga-has-blur' );

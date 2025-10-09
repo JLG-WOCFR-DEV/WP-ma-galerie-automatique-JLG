@@ -2260,7 +2260,7 @@ import {
 
                 viewer = document.createElement('div');
                 viewer.id = 'mga-viewer';
-                viewer.className = 'mga-viewer';
+                viewer.className = 'mga-viewer mga-viewer--compact';
                 viewer.classList.toggle('mga-has-caption', false);
                 viewer.style.display = 'none';
                 viewer.setAttribute('role', 'dialog');
@@ -3100,7 +3100,7 @@ import {
                 replaceOriginal: historyOptionsRaw.replaceOriginal,
             };
 
-            viewer.className = 'mga-viewer';
+            viewer.className = 'mga-viewer mga-viewer--compact';
             viewer.classList.toggle('mga-has-caption', false);
             if (thumbsLayout === 'left') {
                 viewer.classList.add('mga-thumbs-left');

@@ -67,626 +67,114 @@ import {
 
     doc.addEventListener('DOMContentLoaded', function() {
         const form = doc.querySelector('[data-mga-settings-form]') || doc.querySelector('.mga-admin-wrap form');
+        const adminRoot = doc.querySelector('.mga-admin-wrap');
         let scheduleSummaryRefresh = () => {};
 
-        const EFFECT_LABELS = {
-            slide: mgaAdmin__('glissement', 'lightbox-jlg'),
-            fade: mgaAdmin__('fondu', 'lightbox-jlg'),
-            cube: mgaAdmin__('cube 3D', 'lightbox-jlg'),
-            coverflow: mgaAdmin__('coverflow 3D', 'lightbox-jlg'),
-            flip: mgaAdmin__('flip 3D', 'lightbox-jlg'),
-        };
+        const THEME_STORAGE_KEY = 'mgaAdminThemePreference';
+        const THEME_OPTIONS = ['light', 'dark', 'system'];
+        const themeSelect = adminRoot ? adminRoot.querySelector('[data-mga-theme-select]') : null;
+        const systemThemeQuery = typeof global.matchMedia === 'function'
+            ? global.matchMedia('(prefers-color-scheme: dark)')
+            : null;
 
-        const THUMB_LAYOUT_LABELS = {
-            bottom: mgaAdmin__('Barre inférieure', 'lightbox-jlg'),
-            left: mgaAdmin__('Colonne latérale', 'lightbox-jlg'),
-            hidden: mgaAdmin__('Miniatures masquées', 'lightbox-jlg'),
-        };
-
-        const BACKGROUND_STYLE_LABELS = {
-            echo: mgaAdmin__('Flou d’écho d’image', 'lightbox-jlg'),
-            texture: mgaAdmin__('Texture verre dépoli', 'lightbox-jlg'),
-            blur: mgaAdmin__('Flou en temps réel', 'lightbox-jlg'),
-        };
-
-        const EASING_LABELS = {
-            'ease-out': mgaAdmin__('Décélération (par défaut)', 'lightbox-jlg'),
-            'ease-in-out': mgaAdmin__('Douce (aller-retour)', 'lightbox-jlg'),
-            'ease-in': mgaAdmin__('Accélération progressive', 'lightbox-jlg'),
-            ease: mgaAdmin__('Standard CSS', 'lightbox-jlg'),
-            linear: mgaAdmin__('Linéaire', 'lightbox-jlg'),
-        };
-
-        const BOOLEAN_LABELS = {
-            true: mgaAdmin__('Activé', 'lightbox-jlg'),
-            false: mgaAdmin__('Désactivé', 'lightbox-jlg'),
-        };
-
-        const formatBooleanLabel = (value) => BOOLEAN_LABELS[value ? 'true' : 'false'];
-
-        const DEFAULT_LIGHT_BACKGROUND = '#ffffff';
-        const DEFAULT_DARK_BACKGROUND = '#0f172a';
-
-        const parseHexColor = (value) => {
-            if (!isValidHexColor(value)) {
+        const readStoredTheme = () => {
+            try {
+                return global.localStorage ? global.localStorage.getItem(THEME_STORAGE_KEY) : null;
+            } catch (error) {
                 return null;
             }
-
-            let hex = value.trim().replace('#', '');
-
-            if (hex.length === 3) {
-                hex = hex.split('').map((char) => char + char).join('');
-            }
-
-            const numeric = parseInt(hex, 16);
-
-            return [
-                (numeric >> 16) & 255,
-                (numeric >> 8) & 255,
-                numeric & 255,
-            ];
         };
 
-        const srgbChannelToLinear = (channel) => {
-            const normalized = channel / 255;
-
-            if (normalized <= 0.03928) {
-                return normalized / 12.92;
+        const writeStoredTheme = (value) => {
+            try {
+                if (!global.localStorage) {
+                    return;
+                }
+                if (!value) {
+                    global.localStorage.removeItem(THEME_STORAGE_KEY);
+                    return;
+                }
+                global.localStorage.setItem(THEME_STORAGE_KEY, value);
+            } catch (error) {
+                // Silently ignore storage errors (quota, private mode, etc.).
             }
-
-            return Math.pow((normalized + 0.055) / 1.055, 2.4);
         };
 
-        const computeRelativeLuminance = (hex) => {
-            const rgb = parseHexColor(hex);
-
-            if (!rgb) {
-                return null;
+        const normalizeThemePreference = (value) => {
+            if (typeof value !== 'string') {
+                return 'system';
             }
 
-            const [r, g, b] = rgb.map((channel) => srgbChannelToLinear(channel));
-
-            return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+            const trimmed = value.trim().toLowerCase();
+            return THEME_OPTIONS.includes(trimmed) ? trimmed : 'system';
         };
 
-        const computeContrastRatio = (foreground, background) => {
-            const foregroundLuminance = computeRelativeLuminance(foreground);
-            const backgroundLuminance = computeRelativeLuminance(background);
+        let currentThemePreference = normalizeThemePreference(readStoredTheme());
 
-            if (foregroundLuminance === null || backgroundLuminance === null) {
-                return null;
+        const resolveAppliedTheme = (preference) => {
+            if (preference === 'dark') {
+                return 'dark';
+            }
+            if (preference === 'light') {
+                return 'light';
             }
 
-            const lighter = Math.max(foregroundLuminance, backgroundLuminance);
-            const darker = Math.min(foregroundLuminance, backgroundLuminance);
+            const prefersDark = systemThemeQuery && typeof systemThemeQuery.matches === 'boolean'
+                ? systemThemeQuery.matches
+                : false;
 
-            return (lighter + 0.05) / (darker + 0.05);
+            return prefersDark ? 'dark' : 'light';
         };
 
-        const describeContrastRatio = (ratio) => {
-            if (typeof ratio !== 'number' || Number.isNaN(ratio)) {
-                return {
-                    grade: '—',
-                    severity: 'warning',
-                    target: '4,5',
-                };
+        const applyThemePreference = (preference, options = {}) => {
+            if (!adminRoot) {
+                return;
             }
 
-            if (ratio >= 7) {
-                return {
-                    grade: 'AAA',
-                    severity: 'success',
-                    target: '7,0',
-                };
+            const normalizedPreference = normalizeThemePreference(preference);
+            const resolvedTheme = resolveAppliedTheme(normalizedPreference);
+
+            adminRoot.setAttribute('data-mga-theme-preference', normalizedPreference);
+            adminRoot.setAttribute('data-mga-theme', resolvedTheme);
+            adminRoot.classList.toggle('is-theme-dark', resolvedTheme === 'dark');
+            adminRoot.classList.toggle('is-theme-light', resolvedTheme !== 'dark');
+
+            if (themeSelect && themeSelect.value !== normalizedPreference) {
+                themeSelect.value = normalizedPreference;
             }
 
-            if (ratio >= 4.5) {
-                return {
-                    grade: 'AA',
-                    severity: 'success',
-                    target: '4,5',
-                };
+            if (!options.skipStorage) {
+                writeStoredTheme(normalizedPreference === 'system' ? '' : normalizedPreference);
             }
 
-            if (ratio >= 3) {
-                return {
-                    grade: mgaAdmin__('AA (gros texte)', 'lightbox-jlg'),
-                    severity: 'warning',
-                    target: '4,5',
-                };
-            }
-
-            return {
-                grade: mgaAdmin__('Insuffisant', 'lightbox-jlg'),
-                severity: 'error',
-                target: '3,0',
-            };
+            currentThemePreference = normalizedPreference;
         };
 
-        const formatRatio = (ratio) => {
-            if (typeof ratio !== 'number' || Number.isNaN(ratio)) {
-                return '—';
+        if (adminRoot) {
+            applyThemePreference(currentThemePreference, { skipStorage: true });
+        }
+
+        if (themeSelect) {
+            themeSelect.value = currentThemePreference;
+            themeSelect.addEventListener('change', (event) => {
+                const nextPreference = normalizeThemePreference(event.target ? event.target.value : null);
+                applyThemePreference(nextPreference);
+            });
+        }
+
+        const handleSystemThemeChange = () => {
+            if (currentThemePreference === 'system') {
+                applyThemePreference('system', { skipStorage: true });
             }
-
-            return ratio.toFixed(2).replace('.', ',');
         };
 
-        const createContrastInspector = () => {
-            const inspector = doc.querySelector('[data-mga-contrast-inspector]');
-            const accentInput = doc.getElementById('mga_accent_color');
-
-            if (!inspector || !accentInput) {
-                return {
-                    update: () => null,
-                    readAudit: () => null,
-                };
+        if (systemThemeQuery) {
+            if (typeof systemThemeQuery.addEventListener === 'function') {
+                systemThemeQuery.addEventListener('change', handleSystemThemeChange);
+            } else if (typeof systemThemeQuery.addListener === 'function') {
+                systemThemeQuery.addListener(handleSystemThemeChange);
             }
-
-            const message = inspector.querySelector('[data-mga-contrast-message]');
-            const valueNodes = {
-                light: inspector.querySelector('[data-mga-contrast-value="light"]'),
-                dark: inspector.querySelector('[data-mga-contrast-value="dark"]'),
-            };
-            const swatches = {
-                light: inspector.querySelector('[data-mga-contrast-swatch="light"]'),
-                dark: inspector.querySelector('[data-mga-contrast-swatch="dark"]'),
-            };
-
-            let lastAudit = null;
-
-            const update = (rawColor) => {
-                const normalizedColor = isValidHexColor(rawColor) ? rawColor.toLowerCase() : null;
-
-                if (!normalizedColor) {
-                    inspector.setAttribute('hidden', 'hidden');
-                    lastAudit = null;
-                    return null;
-                }
-
-                inspector.removeAttribute('hidden');
-
-                const entries = [
-                    {
-                        key: 'light',
-                        label: mgaAdmin__('Fond clair', 'lightbox-jlg'),
-                        background: DEFAULT_LIGHT_BACKGROUND,
-                    },
-                    {
-                        key: 'dark',
-                        label: mgaAdmin__('Fond sombre', 'lightbox-jlg'),
-                        background: DEFAULT_DARK_BACKGROUND,
-                    },
-                ].map((entry) => {
-                    const ratio = computeContrastRatio(normalizedColor, entry.background);
-                    const descriptor = describeContrastRatio(ratio);
-                    const ratioText = formatRatio(ratio);
-
-                    if (valueNodes[entry.key]) {
-                        valueNodes[entry.key].textContent = `${ratioText} (${descriptor.grade})`;
-                    }
-
-                    if (swatches[entry.key]) {
-                        swatches[entry.key].style.setProperty('--mga-contrast-background', entry.background);
-                        swatches[entry.key].style.setProperty('--mga-contrast-foreground', normalizedColor);
-                    }
-
-                    return {
-                        key: entry.key,
-                        label: entry.label,
-                        background: entry.background,
-                        ratio,
-                        ratioText,
-                        severity: descriptor.severity,
-                        grade: descriptor.grade,
-                        target: descriptor.target,
-                    };
-                });
-
-                const severityRank = { success: 0, warning: 1, error: 2 };
-                const dominant = entries.reduce((current, next) => {
-                    if (!current) {
-                        return next;
-                    }
-
-                    return severityRank[next.severity] > severityRank[current.severity] ? next : current;
-                }, null);
-
-                inspector.setAttribute('data-mga-severity', dominant ? dominant.severity : 'success');
-
-                if (message) {
-                    message.textContent = entries
-                        .map((entry) => mgaAdminSprintf(
-                            mgaAdmin__('%1$s : %2$s (%3$s)', 'lightbox-jlg'),
-                            entry.label,
-                            entry.ratioText,
-                            entry.grade
-                        ))
-                        .join(' · ');
-                }
-
-                lastAudit = {
-                    color: normalizedColor,
-                    entries,
-                };
-
-                return lastAudit;
-            };
-
-            const readAudit = () => lastAudit;
-
-            const handleInput = (event) => {
-                const color = event && event.target ? event.target.value : accentInput.value;
-                update(color);
-            };
-
-            accentInput.addEventListener('input', handleInput);
-            accentInput.addEventListener('change', handleInput);
-            handleInput();
-
-            return {
-                update,
-                readAudit,
-            };
-        };
-
-        const createPresetDiffTracker = (defaultSettings = {}) => {
-            const SECTION_MAP = {
-                playback: 'mga-section-playback',
-                thumbnails: 'mga-section-thumbnails',
-                appearance: 'mga-section-appearance',
-                toolbar: 'mga-section-toolbar',
-            };
-
-            const fieldMeta = {
-                delay: {
-                    id: 'mga_delay',
-                    type: 'int',
-                    section: SECTION_MAP.playback,
-                    label: mgaAdmin__('Vitesse du diaporama', 'lightbox-jlg'),
-                    format: (value) => `${value} s`,
-                },
-                speed: {
-                    id: 'mga_speed',
-                    type: 'int',
-                    section: SECTION_MAP.playback,
-                    label: mgaAdmin__('Vitesse de transition', 'lightbox-jlg'),
-                    format: (value) => `${value} ms`,
-                },
-                effect: {
-                    id: 'mga_effect',
-                    type: 'select',
-                    section: SECTION_MAP.playback,
-                    label: mgaAdmin__('Effet de transition', 'lightbox-jlg'),
-                    format: (value) => EFFECT_LABELS[value] || mgaAdmin__('personnalisée', 'lightbox-jlg'),
-                },
-                easing: {
-                    id: 'mga_easing',
-                    type: 'select',
-                    section: SECTION_MAP.playback,
-                    label: mgaAdmin__('Courbe d’animation', 'lightbox-jlg'),
-                    format: (value) => EASING_LABELS[value] || value,
-                },
-                thumb_size: {
-                    id: 'mga_thumb_size',
-                    type: 'int',
-                    section: SECTION_MAP.thumbnails,
-                    label: mgaAdmin__('Miniatures (bureau)', 'lightbox-jlg'),
-                    format: (value) => mgaAdminSprintf(mgaAdmin__('%spx', 'lightbox-jlg'), value),
-                },
-                thumb_size_mobile: {
-                    id: 'mga_thumb_size_mobile',
-                    type: 'int',
-                    section: SECTION_MAP.thumbnails,
-                    label: mgaAdmin__('Miniatures (mobile)', 'lightbox-jlg'),
-                    format: (value) => mgaAdminSprintf(mgaAdmin__('%spx', 'lightbox-jlg'), value),
-                },
-                thumbs_layout: {
-                    id: 'mga_thumbs_layout',
-                    type: 'select',
-                    section: SECTION_MAP.thumbnails,
-                    label: mgaAdmin__('Disposition des miniatures', 'lightbox-jlg'),
-                    format: (value) => THUMB_LAYOUT_LABELS[value] || value,
-                },
-                accent_color: {
-                    id: 'mga_accent_color',
-                    type: 'color',
-                    section: SECTION_MAP.appearance,
-                    label: mgaAdmin__('Couleur d’accentuation', 'lightbox-jlg'),
-                    format: (value) => (value ? value.toUpperCase() : '—'),
-                },
-                bg_opacity: {
-                    id: 'mga_bg_opacity',
-                    type: 'float',
-                    section: SECTION_MAP.appearance,
-                    label: mgaAdmin__('Opacité de l’arrière-plan', 'lightbox-jlg'),
-                    format: (value) => formatRatio(value),
-                },
-                background_style: {
-                    id: 'mga_background_style',
-                    type: 'select',
-                    section: SECTION_MAP.appearance,
-                    label: mgaAdmin__('Effet d’arrière-plan', 'lightbox-jlg'),
-                    format: (value) => BACKGROUND_STYLE_LABELS[value] || value,
-                },
-                show_thumbs_mobile: {
-                    id: 'mga_show_thumbs_mobile',
-                    type: 'boolean',
-                    section: SECTION_MAP.thumbnails,
-                    label: mgaAdmin__('Miniatures sur mobile', 'lightbox-jlg'),
-                    format: formatBooleanLabel,
-                },
-                autoplay_start: {
-                    id: 'mga_autoplay_start',
-                    type: 'boolean',
-                    section: SECTION_MAP.playback,
-                    label: mgaAdmin__('Lecture auto. au chargement', 'lightbox-jlg'),
-                    format: formatBooleanLabel,
-                },
-                loop: {
-                    id: 'mga_loop',
-                    type: 'boolean',
-                    section: SECTION_MAP.playback,
-                    label: mgaAdmin__('Lecture en boucle', 'lightbox-jlg'),
-                    format: formatBooleanLabel,
-                },
-                show_zoom: {
-                    id: 'mga_show_zoom',
-                    type: 'boolean',
-                    section: SECTION_MAP.toolbar,
-                    label: mgaAdmin__('Bouton Zoom', 'lightbox-jlg'),
-                    format: formatBooleanLabel,
-                },
-                show_download: {
-                    id: 'mga_show_download',
-                    type: 'boolean',
-                    section: SECTION_MAP.toolbar,
-                    label: mgaAdmin__('Bouton Téléchargement', 'lightbox-jlg'),
-                    format: formatBooleanLabel,
-                },
-                show_share: {
-                    id: 'mga_show_share',
-                    type: 'boolean',
-                    section: SECTION_MAP.toolbar,
-                    label: mgaAdmin__('Bouton Partage', 'lightbox-jlg'),
-                    format: formatBooleanLabel,
-                },
-                show_cta: {
-                    id: 'mga_show_cta',
-                    type: 'boolean',
-                    section: SECTION_MAP.toolbar,
-                    label: mgaAdmin__('Bouton Appel à l’action', 'lightbox-jlg'),
-                    format: formatBooleanLabel,
-                },
-                show_fullscreen: {
-                    id: 'mga_show_fullscreen',
-                    type: 'boolean',
-                    section: SECTION_MAP.toolbar,
-                    label: mgaAdmin__('Bouton Plein écran', 'lightbox-jlg'),
-                    format: formatBooleanLabel,
-                },
-            };
-
-            const normalizeSettingValue = (key, value) => {
-                const meta = fieldMeta[key];
-
-                if (!meta) {
-                    return null;
-                }
-
-                switch (meta.type) {
-                    case 'boolean':
-                        return Boolean(value);
-                    case 'int': {
-                        const numeric = typeof value === 'number' ? value : parseFloat(value);
-                        return Number.isNaN(numeric) ? null : Math.round(numeric);
-                    }
-                    case 'float': {
-                        const numeric = typeof value === 'number' ? value : parseFloat(value);
-                        return Number.isNaN(numeric)
-                            ? null
-                            : Math.round(numeric * 100) / 100;
-                    }
-                    case 'color': {
-                        const candidate = typeof value === 'string' ? value : '';
-                        return isValidHexColor(candidate) ? candidate.toLowerCase() : null;
-                    }
-                    case 'select':
-                        return typeof value === 'string' ? value : '';
-                    default:
-                        return value;
-                }
-            };
-
-            const normalizeSettings = (settings) => {
-                const normalized = {};
-
-                if (!settings || typeof settings !== 'object') {
-                    return normalized;
-                }
-
-                Object.keys(fieldMeta).forEach((key) => {
-                    if (Object.prototype.hasOwnProperty.call(settings, key)) {
-                        normalized[key] = normalizeSettingValue(key, settings[key]);
-                    }
-                });
-
-                return normalized;
-            };
-
-            const defaultNormalized = normalizeSettings(defaultSettings);
-            const trackedSections = Array.from(new Set(Object.values(fieldMeta).map((meta) => meta.section)));
-
-            let baseline = { ...defaultNormalized };
-            let baselineLabel = mgaAdmin__('Valeurs par défaut', 'lightbox-jlg');
-            let baselineKey = '';
-            let navigationApi = null;
-            let lastDiff = [];
-
-            const readCurrentValue = (key) => {
-                const meta = fieldMeta[key];
-
-                if (!meta) {
-                    return null;
-                }
-
-                const element = doc.getElementById(meta.id);
-
-                if (!element) {
-                    return null;
-                }
-
-                switch (meta.type) {
-                    case 'boolean':
-                        return element.type === 'checkbox'
-                            ? element.checked
-                            : element.value === '1';
-                    case 'int':
-                    case 'float': {
-                        const numeric = parseFloat(element.value);
-
-                        if (Number.isNaN(numeric)) {
-                            return null;
-                        }
-
-                        if (meta.type === 'int') {
-                            return Math.round(numeric);
-                        }
-
-                        return Math.round(numeric * 100) / 100;
-                    }
-                    case 'color':
-                        return typeof element.value === 'string'
-                            ? element.value.toLowerCase()
-                            : null;
-                    default:
-                        return element.value;
-                }
-            };
-
-            const valuesAreEqual = (meta, a, b) => {
-                if (a === b) {
-                    return true;
-                }
-
-                if ((a === null && b !== null) || (a !== null && b === null)) {
-                    return false;
-                }
-
-                if (a === null && b === null) {
-                    return true;
-                }
-
-                if ((meta.type === 'int' || meta.type === 'float') && typeof a === 'number' && typeof b === 'number') {
-                    return Math.abs(a - b) < 0.01;
-                }
-
-                return false;
-            };
-
-            const formatValue = (key, value) => {
-                const meta = fieldMeta[key];
-
-                if (!meta) {
-                    return '';
-                }
-
-                if (value === null || typeof value === 'undefined') {
-                    return '—';
-                }
-
-                if (typeof meta.format === 'function') {
-                    return meta.format(value);
-                }
-
-                return value.toString();
-            };
-
-            const computeDiff = () => {
-                const diff = [];
-
-                Object.keys(fieldMeta).forEach((key) => {
-                    const meta = fieldMeta[key];
-                    const currentValue = readCurrentValue(key);
-                    const baselineValue = Object.prototype.hasOwnProperty.call(baseline, key)
-                        ? baseline[key]
-                        : defaultNormalized[key];
-
-                    if (valuesAreEqual(meta, currentValue, baselineValue)) {
-                        return;
-                    }
-
-                    diff.push({
-                        key,
-                        label: meta.label,
-                        section: meta.section,
-                        currentLabel: formatValue(key, currentValue),
-                        baselineLabel: formatValue(key, baselineValue),
-                    });
-                });
-
-                return diff;
-            };
-
-            const updateSectionIndicators = (diff) => {
-                const state = new Map();
-
-                diff.forEach((item) => {
-                    if (!state.has(item.section)) {
-                        state.set(item.section, true);
-                    }
-                });
-
-                trackedSections.forEach((sectionId) => {
-                    const sectionEl = sectionId ? doc.getElementById(sectionId) : null;
-                    const isModified = state.get(sectionId) === true;
-
-                    if (sectionEl) {
-                        if (isModified) {
-                            sectionEl.setAttribute('data-mga-modified', 'true');
-                        } else {
-                            sectionEl.removeAttribute('data-mga-modified');
-                        }
-                    }
-
-                    if (navigationApi && typeof navigationApi.setSectionModified === 'function' && sectionEl) {
-                        navigationApi.setSectionModified(sectionEl, isModified);
-                    }
-                });
-            };
-
-            const refresh = () => {
-                lastDiff = computeDiff();
-                updateSectionIndicators(lastDiff);
-                return lastDiff;
-            };
-
-            const setBaseline = ({ key = '', label = '', settings = {} }) => {
-                baseline = { ...defaultNormalized, ...normalizeSettings(settings) };
-                baselineLabel = label && label.trim() !== '' ? label : mgaAdmin__('Valeurs par défaut', 'lightbox-jlg');
-                baselineKey = key || '';
-                refresh();
-            };
-
-            const setNavigationApi = (api) => {
-                navigationApi = api;
-                updateSectionIndicators(lastDiff);
-            };
-
-            setBaseline({ settings: defaultSettings, label: mgaAdmin__('Valeurs par défaut', 'lightbox-jlg'), key: '' });
-
-            return {
-                setBaseline,
-                refresh,
-                getDiff: () => lastDiff.slice(),
-                getBaselineInfo: () => ({ key: baselineKey, label: baselineLabel }),
-                setNavigationApi,
-                getDefaultLabel: () => mgaAdmin__('Valeurs par défaut', 'lightbox-jlg'),
-            };
-        };
-
-        let contrastInspector = null;
-        let presetDiffTracker = null;
-
+        }
 
         const initializeWizard = (targetForm) => {
             const wizard = doc.querySelector('[data-mga-wizard]');
