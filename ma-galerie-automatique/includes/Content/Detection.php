@@ -779,7 +779,7 @@ class Detection {
             return false;
         }
 
-        $allowed_extensions = [ 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'avif', 'heic', 'heif', 'jxl' ];
+        $allowed_extensions = [ 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'avif', 'heic', 'heif', 'jxl', 'jpegxl' ];
         $settings           = $this->settings->get_sanitized_settings();
 
         $include_svg = true;
@@ -1011,14 +1011,74 @@ class Detection {
         $attributes_to_check = [ 'src', 'data-src', 'data-original', 'data-lazy-src', 'data-srcset', 'srcset' ];
 
         foreach ( $attributes_to_check as $attribute ) {
-            $value = trim( (string) $image->getAttribute( $attribute ) );
+            if ( ! $image->hasAttribute( $attribute ) ) {
+                continue;
+            }
 
-            if ( '' !== $value ) {
+            $raw_value = (string) $image->getAttribute( $attribute );
+            $value     = trim( $raw_value );
+
+            if ( '' === $value ) {
+                continue;
+            }
+
+            if ( in_array( $attribute, [ 'srcset', 'data-srcset' ], true ) ) {
+                $candidates = preg_split( '/\s*,\s*/', $value );
+
+                if ( ! is_array( $candidates ) ) {
+                    continue;
+                }
+
+                foreach ( $candidates as $candidate ) {
+                    $candidate_url = trim( (string) $candidate );
+
+                    if ( '' === $candidate_url ) {
+                        continue;
+                    }
+
+                    $parts                 = preg_split( '/\s+/', $candidate_url );
+                    $url_without_descriptor = is_array( $parts ) ? trim( (string) ( $parts[0] ?? '' ) ) : '';
+
+                    if ( '' === $url_without_descriptor ) {
+                        continue;
+                    }
+
+                    if ( $this->image_source_candidate_is_valid( $url_without_descriptor ) ) {
+                        return true;
+                    }
+                }
+
+                continue;
+            }
+
+            if ( $this->image_source_candidate_is_valid( $value ) ) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private function image_source_candidate_is_valid( string $value ): bool {
+        $value = trim( $value );
+
+        if ( '' === $value ) {
+            return false;
+        }
+
+        if ( preg_match( '/^(javascript:|about:blank|#)/i', $value ) ) {
+            return false;
+        }
+
+        if ( 0 === strpos( $value, 'data:image' ) ) {
+            return true;
+        }
+
+        if ( 0 === strpos( $value, '//' ) ) {
+            $value = 'https:' . $value;
+        }
+
+        return $this->is_image_url( $value );
     }
 
     private function fallback_regex_detects_linked_media( string $html ): bool {
