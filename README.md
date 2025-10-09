@@ -29,16 +29,16 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 - **Démarrage sur l’image cliquée** : lancez le diaporama directement sur la miniature sélectionnée pour respecter le contexte de lecture.【F:ma-galerie-automatique/includes/admin-page-template.php†L250-L256】
 
 ### Barre d’outils et actions utilisateur
-- **Zoom progressif** : basculez le zoom Swiper pour inspecter une image dans ses moindres détails.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L458-L603】
-- **Téléchargement rapide** : déclenchez le téléchargement du visuel en haute résolution via un simple bouton.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L605-L780】
-- **Plein écran natif** : activez le mode plein écran des navigateurs et offrez une expérience cinématographique.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L629-L667】
+- **Zoom progressif** : basculez le zoom Swiper pour inspecter une image dans ses moindres détails.【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L482-L520】
+- **Téléchargement rapide** : déclenchez le téléchargement du visuel en haute résolution via un simple bouton.【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L496-L514】
+- **Plein écran natif** : activez le mode plein écran des navigateurs et offrez une expérience cinématographique.【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L520-L558】
 - **Affichage sélectif** : chaque bouton (zoom, téléchargement, partage, plein écran, miniatures mobiles) peut être activé ou masqué depuis l’interface d’administration.【F:ma-galerie-automatique/includes/Admin/Settings.php†L282-L288】【F:ma-galerie-automatique/includes/admin-page-template.php†L297-L333】
 
 ### Partage avancé
-- **Bouton de partage contextuel** : la barre d’outils ajoute automatiquement un bouton si au moins une action est disponible (canal social, copie, téléchargement rapide ou partage natif).【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L458-L528】
-- **Modale de partage accessible** : la fenêtre dédiée gère le focus clavier, fournit des retours visuels et propose les options actives pour l’image en cours.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L827-L1070】
-- **Canaux entièrement configurables** : l’interface d’administration permet d’ajouter, réordonner, activer/désactiver et personnaliser icône, libellé ou modèle d’URL de chaque canal.【F:ma-galerie-automatique/includes/admin-page-template.php†L336-L520】
-- **Copie, téléchargement et partage natif** : au-delà des réseaux sociaux, les actions de copie dans le presse-papiers, de téléchargement et d’appel à `navigator.share` peuvent être activées individuellement.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L469-L528】
+- **Bouton de partage contextuel** : la barre d’outils ajoute automatiquement un bouton si au moins une action est disponible (canal social, copie, téléchargement rapide ou partage natif).【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L400-L520】
+- **Modale de partage accessible** : la fenêtre dédiée gère le focus clavier, fournit des retours visuels et propose les options actives pour l’image en cours.【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L780-L900】
+- **Canaux entièrement configurables** : l’interface d’administration permet d’ajouter, réordonner, activer/désactiver et personnaliser icône, libellé ou modèle d’URL de chaque canal.【F:ma-galerie-automatique/includes/admin-page-template.php†L330-L520】【F:ma-galerie-automatique/assets/js/src/admin.js†L1368-L1416】
+- **Copie, téléchargement et partage natif** : au-delà des réseaux sociaux, les actions de copie dans le presse-papiers, de téléchargement et d’appel à `navigator.share` peuvent être activées individuellement.【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L400-L520】【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L780-L900】
 
 ### Détection et compatibilité
 - **Analyse Gutenberg et HTML brut** : le moteur détecte les images liées au média à partir des blocs WordPress (galerie, image, cover, requête, etc.) ou via une expression régulière sur le contenu filtré.【F:ma-galerie-automatique/includes/Content/Detection.php†L142-L200】
@@ -76,10 +76,10 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 ## Comparaison avec les solutions professionnelles
 
 ### Forces actuelles
-- **Expérience utilisateur riche** : le module de partage entièrement configurable, la gestion du zoom, du téléchargement et du plein écran couvrent la plupart des usages rencontrés dans les extensions haut de gamme (par ex. Envira Gallery, Modula Pro).【F:ma-galerie-automatique/includes/admin-page-template.php†L297-L520】【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L458-L1070】
+- **Expérience utilisateur riche** : le module de partage entièrement configurable, la gestion du zoom, du téléchargement et du plein écran couvrent la plupart des usages rencontrés dans les extensions haut de gamme (par ex. Envira Gallery, Modula Pro).【F:ma-galerie-automatique/includes/admin-page-template.php†L297-L520】【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L400-L900】
 - **Intégration Gutenberg poussée** : la synchronisation des réglages entre le front et le bloc d’aperçu limite les surprises visuelles et accélère les phases de maquettage.【F:ma-galerie-automatique/includes/Plugin.php†L157-L245】
 - **Outils de diagnostic** : le mode débogage embarqué fournit des métriques et des journaux que l’on retrouve rarement en standard dans les plugins de lightbox commerciaux.【F:ma-galerie-automatique/assets/js/debug.js†L200-L323】
-- **Respect de l’accessibilité** : le panneau de partage gère la navigation clavier et le focus de manière explicite, un point que seuls les éditeurs premium comme FooGallery ou NextGEN soignent systématiquement.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L827-L1070】
+- **Respect de l’accessibilité** : le panneau de partage gère la navigation clavier et le focus de manière explicite, un point que seuls les éditeurs premium comme FooGallery ou NextGEN soignent systématiquement.【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L780-L900】
 
 ### Axes d’amélioration inspirés des offres pro
 - **Analyse de contenu plus robuste** : la détection repose sur une expression régulière générique et des parcours bloc par bloc ; l’adoption d’un parseur DOM tolérant (comme le font Envira ou NextGEN), d’heuristiques par bloc et d’un cache différencié réduirait les faux positifs tout en améliorant les performances sur les gros sites.【F:ma-galerie-automatique/includes/Content/Detection.php†L142-L200】【F:ma-galerie-automatique/includes/Content/Detection.php†L265-L323】
@@ -144,7 +144,7 @@ Les scénarios Playwright (par exemple `tests/e2e/gallery-viewer.spec.ts`) gén�
 
 ### Presets graphiques inspirés de bibliothèques UI
 
-Pour gagner du temps lors du maquettage, voici six presets de réglages qui s’inspirent de bibliothèques/UI kits populaires. Chacun s’appuie sur les options natives du plugin : effets, easing, dispositions des miniatures, couleurs d’accent et opacité de fond peuvent être ajustés depuis l’interface d’administration.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L422-L504】 Depuis **Réglages → Ma Galerie Automatique**, sélectionnez un preset dans le champ « Preset graphique », cliquez sur **Appliquer ce preset** puis affinez librement chaque option ou revenez aux valeurs par défaut en un clic.【F:ma-galerie-automatique/includes/admin-page-template.php†L20-L73】【F:ma-galerie-automatique/assets/js/admin-script.js†L400-L532】 Adaptez librement les valeurs proposées pour coller à votre direction artistique.
+Pour gagner du temps lors du maquettage, voici six presets de réglages qui s’inspirent de bibliothèques/UI kits populaires. Chacun s’appuie sur les options natives du plugin : effets, easing, dispositions des miniatures, couleurs d’accent et opacité de fond peuvent être ajustés depuis l’interface d’administration.【F:ma-galerie-automatique/includes/Admin/Settings.php†L271-L406】【F:ma-galerie-automatique/includes/Admin/Settings.php†L422-L504】 Depuis **Réglages → Ma Galerie Automatique**, sélectionnez un preset dans le champ « Preset graphique », cliquez sur **Appliquer ce preset** puis affinez librement chaque option ou revenez aux valeurs par défaut en un clic.【F:ma-galerie-automatique/includes/admin-page-template.php†L20-L73】【F:ma-galerie-automatique/assets/js/src/admin.js†L1082-L1345】 Adaptez librement les valeurs proposées pour coller à votre direction artistique.
 
 ### Filtre `mga_dynamic_style_rules`
 

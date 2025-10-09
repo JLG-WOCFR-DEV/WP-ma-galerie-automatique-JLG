@@ -6,6 +6,7 @@ use MaGalerieAutomatique\Admin\Settings;
 use MaGalerieAutomatique\Content\Detection;
 use MaGalerieAutomatique\Plugin;
 use WP_Post;
+use function __;
 
 class Assets {
     private Plugin $plugin;
@@ -111,6 +112,37 @@ class Assets {
             wp_script_add_data( 'mga-swiper-js', $attribute, $value );
         }
 
+        $loader_attempts = [
+            [
+                'key'    => 'cdn',
+                'label'  => __( 'CDN jsDelivr', 'lightbox-jlg' ),
+                'inject' => 'local' === $asset_sources['js'],
+                'js'     => [
+                    'src'        => $cdn_swiper_js,
+                    'integrity'  => MGA_SWIPER_JS_SRI_HASH,
+                    'crossOrigin' => 'anonymous',
+                ],
+                'css'    => [
+                    'href'        => $cdn_swiper_css,
+                    'integrity'   => MGA_SWIPER_CSS_SRI_HASH,
+                    'crossOrigin' => 'anonymous',
+                ],
+            ],
+        ];
+
+        $loader_config = [
+            'version'  => $swiper_version,
+            'attempts' => $loader_attempts,
+        ];
+
+        $loader_config_json = wp_json_encode( $loader_config );
+
+        if ( false !== $loader_config_json ) {
+            $loader_inline = 'window.mgaSwiperMetrics = window.mgaSwiperMetrics || { events: [] };';
+            $loader_inline .= 'window.mgaSwiperLoaderConfig = ' . $loader_config_json . ';';
+            wp_add_inline_script( 'mga-swiper-js', $loader_inline, 'before' );
+        }
+
         wp_enqueue_style( 'mga-gallery-style', $this->plugin->get_plugin_dir_url() . 'assets/css/gallery-slideshow.css', [], MGA_VERSION );
 
         $script_dependencies = [ 'mga-swiper-js', 'wp-i18n' ];
@@ -121,7 +153,7 @@ class Assets {
             if ( $can_view_debug ) {
                 wp_register_script(
                     'mga-debug-script',
-                    $this->plugin->get_plugin_dir_url() . 'assets/js/debug.js',
+                    $this->plugin->get_plugin_dir_url() . 'assets/js/dist/debug.js',
                     [ 'wp-i18n' ],
                     MGA_VERSION,
                     true
@@ -138,7 +170,7 @@ class Assets {
 
         wp_enqueue_script(
             'mga-gallery-script',
-            $this->plugin->get_plugin_dir_url() . 'assets/js/gallery-slideshow.js',
+            $this->plugin->get_plugin_dir_url() . 'assets/js/dist/gallery-slideshow.js',
             $script_dependencies,
             MGA_VERSION,
             true

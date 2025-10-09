@@ -1,84 +1,22 @@
 /* eslint-disable no-underscore-dangle */
+import {
+    createIconPreview,
+    createSprintf,
+    createTranslate,
+    detectFocusOptionsSupport,
+    ensureSwiper,
+    exposeOnWindow,
+    resolveI18n,
+    safeFocus,
+    sanitizeIconKey,
+} from './shared';
+
 (function(global) {
-    const mgaAdminI18n = global.wp && global.wp.i18n ? global.wp.i18n : null;
-    const mgaAdmin__ = mgaAdminI18n && typeof mgaAdminI18n.__ === 'function' ? mgaAdminI18n.__ : ( text ) => text;
-    const TOKEN_REGEX = /%(\d+\$)?[sd]/g;
-    const fallbackSprintf = ( format, ...args ) => {
-        let autoIndex = 0;
+    exposeOnWindow();
 
-        return String(format).replace(TOKEN_REGEX, (match, position) => {
-            let argIndex;
-            const type = match.charAt(match.length - 1);
-
-            if (position) {
-                const numericIndex = parseInt(position.slice(0, -1), 10);
-
-                if (Number.isNaN(numericIndex) || numericIndex <= 0) {
-                    return '';
-                }
-
-                argIndex = numericIndex - 1;
-            } else {
-                argIndex = autoIndex;
-                autoIndex += 1;
-            }
-
-            const value = argIndex >= 0 && argIndex < args.length ? args[argIndex] : undefined;
-
-            if (type === 'd') {
-                const coerced = parseInt(value, 10);
-                return Number.isNaN(coerced) ? '' : String(coerced);
-            }
-
-            if (typeof value === 'undefined') {
-                return '';
-            }
-
-            return String(value);
-        });
-    };
-
-    const mgaAdminSprintf = mgaAdminI18n && typeof mgaAdminI18n.sprintf === 'function'
-        ? mgaAdminI18n.sprintf
-        : fallbackSprintf;
-
-    const resolveFocusUtils = () => {
-        if (global.mgaFocusUtils && typeof global.mgaFocusUtils === 'object') {
-            return global.mgaFocusUtils;
-        }
-
-        if (typeof require === 'function') {
-            try {
-                return require('./utils/focus-utils');
-            } catch (error) {
-                // Ignore resolution errors in non-CommonJS environments.
-            }
-        }
-
-        return null;
-    };
-
-    const focusUtils = resolveFocusUtils();
-
-    const fallbackSafeFocus = (element) => {
-        if (!element || typeof element.focus !== 'function') {
-            return;
-        }
-
-        try {
-            element.focus();
-        } catch (error) {
-            // Ignore focus errors in environments without focus support.
-        }
-    };
-
-    const safeFocus = focusUtils && typeof focusUtils.safeFocus === 'function'
-        ? focusUtils.safeFocus
-        : fallbackSafeFocus;
-
-    const detectFocusOptionsSupport = focusUtils && typeof focusUtils.detectFocusOptionsSupport === 'function'
-        ? focusUtils.detectFocusOptionsSupport
-        : () => false;
+    const mgaAdminI18n = resolveI18n(global);
+    const mgaAdmin__ = createTranslate(mgaAdminI18n);
+    const mgaAdminSprintf = createSprintf(mgaAdminI18n);
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = {
@@ -88,112 +26,17 @@
     }
 
     const doc = global.document;
-    const SVG_NS = 'http://www.w3.org/2000/svg';
-    const SHARE_ICON_LIBRARY = {
-        facebook: {
-            viewBox: '0 0 24 24',
-            paths: [
-                { d: 'M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.99 3.66 9.12 8.44 9.88v-6.99H8.08V12h2.36V9.88c0-2.33 1.38-3.62 3.5-3.62 0.72 0 1.48 0.13 1.48 0.13v1.63h-0.83c-0.82 0-1.08 0.51-1.08 1.04V12h1.84l-0.29 1.89h-1.55v6.99C18.34 21.12 22 16.99 22 12z' },
-            ],
-        },
-        twitter: {
-            viewBox: '0 0 24 24',
-            paths: [
-                { d: 'M22.46 6c-0.77 0.35-1.6 0.59-2.46 0.69a4.29 4.29 0 0 0 1.88-2.37 8.59 8.59 0 0 1-2.72 1.04 4.28 4.28 0 0 0-7.3 3.9 12.13 12.13 0 0 1-8.82-4.47 4.28 4.28 0 0 0 1.33 5.72 4.25 4.25 0 0 1-1.94-0.54v0.05a4.28 4.28 0 0 0 3.43 4.2 4.3 4.3 0 0 1-1.93 0.07 4.28 4.28 0 0 0 4 2.97 8.58 8.58 0 0 1-5.3 1.83 12.1 12.1 0 0 0 6.56 1.92c7.88 0 12.2-6.53 12.2-12.2 0-0.19-0.01-0.39-0.01-0.58A8.7 8.7 0 0 0 22.46 6z' },
-            ],
-        },
-        linkedin: {
-            viewBox: '0 0 24 24',
-            paths: [
-                { d: 'M20.45 3H3.55A1.55 1.55 0 0 0 2 4.55v14.9C2 20.3 2.7 21 3.55 21h16.9c0.85 0 1.55-0.7 1.55-1.55V4.55C22 3.7 21.3 3 20.45 3zM8.34 18H5.67V9.67h2.67V18zM7 8.5a1.55 1.55 0 1 1 0-3.1 1.55 1.55 0 0 1 0 3.1zM18.33 18h-2.67v-4.1c0-0.98-0.02-2.24-1.36-2.24-1.36 0-1.56 1.06-1.56 2.16V18h-2.67V9.67h2.56v1.14h0.04c0.36-0.68 1.24-1.4 2.56-1.4 2.74 0 3.25 1.8 3.25 4.13V18z' },
-            ],
-        },
-        pinterest: {
-            viewBox: '0 0 24 24',
-            paths: [
-                { d: 'M12 2C6.48 2 2 6.31 2 11.42c0 3.89 2.68 7.23 6.44 8.41-0.09-0.71-0.17-1.8 0.03-2.58 0.18-0.77 1.15-4.9 1.15-4.9s-0.29-0.58-0.29-1.45c0-1.36 0.79-2.37 1.78-2.37 0.84 0 1.24 0.63 1.24 1.38 0 0.84-0.53 2.09-0.8 3.25-0.23 1 0.5 1.81 1.48 1.81 1.78 0 3.14-1.87 3.14-4.57 0-2.39-1.72-4.07-4.18-4.07-2.85 0-4.52 2.14-4.52 4.35 0 0.86 0.33 1.79 0.74 2.29 0.08 0.1 0.09 0.19 0.07 0.29-0.07 0.31-0.23 1-0.26 1.13-0.04 0.18-0.14 0.22-0.32 0.13-1.2-0.56-1.95-2.29-1.95-3.68 0-3 2.18-5.76 6.29-5.76 3.3 0 5.87 2.35 5.87 5.5 0 3.28-2.06 5.93-4.92 5.93-0.96 0-1.86-0.5-2.17-1.08l-0.59 2.24c-0.21 0.83-0.78 1.87-1.16 2.5 0.87 0.27 1.78 0.42 2.72 0.42 5.52 0 10-4.31 10-9.42C22 6.31 17.52 2 12 2z' },
-            ],
-        },
-        whatsapp: {
-            viewBox: '0 0 24 24',
-            paths: [
-                { d: 'M20.52 3.48A10.5 10.5 0 0 0 2.47 13.3l-1.45 5.28 5.4-1.41A10.5 10.5 0 1 0 20.52 3.48zm-8.5 17.54a8.75 8.75 0 0 1-4.46-1.22l-0.32-0.19-3.21 0.84 0.86-3.13-0.2-0.32a8.75 8.75 0 1 1 7.33 3.99zm4.78-6.53c-0.26-0.13-1.53-0.76-1.77-0.84-0.24-0.09-0.41-0.13-0.58 0.13-0.17 0.26-0.66 0.84-0.8 1.02-0.15 0.17-0.29 0.2-0.55 0.07-0.26-0.13-1.09-0.4-2.07-1.3-0.76-0.68-1.27-1.52-1.42-1.78-0.15-0.26-0.02-0.4 0.11-0.53 0.11-0.11 0.26-0.29 0.39-0.43 0.13-0.15 0.17-0.26 0.26-0.43 0.09-0.17 0.04-0.32-0.02-0.45-0.07-0.13-0.58-1.39-0.8-1.91-0.21-0.5-0.43-0.43-0.58-0.43-0.15 0-0.32-0.02-0.49-0.02-0.17 0-0.43 0.06-0.66 0.32-0.24 0.26-0.89 0.87-0.89 2.13s0.91 2.47 1.03 2.64c0.13 0.17 1.79 2.73 4.34 3.83 0.61 0.26 1.08 0.41 1.45 0.53 0.61 0.19 1.16 0.16 1.6 0.1 0.49-0.07 1.53-0.62 1.75-1.22 0.21-0.6 0.21-1.11 0.15-1.22-0.06-0.1-0.24-0.16-0.5-0.29z' },
-            ],
-        },
-        telegram: {
-            viewBox: '0 0 24 24',
-            paths: [
-                { d: 'M21.5 2.5l-19 7.5c-1.3 0.52-1.29 2.35 0.02 2.85l4.8 1.9 1.9 4.8c0.5 1.31 2.34 1.32 2.85 0.02l7.5-19c0.42-1.06-0.64-2.12-1.67-1.67zM10 14l-1 4-1.5-3.8 8.3-6.2-5.8 6z' },
-            ],
-        },
-        email: {
-            viewBox: '0 0 24 24',
-            paths: [
-                { d: 'M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 2-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z' },
-            ],
-        },
-        link: {
-            viewBox: '0 0 24 24',
-            paths: [
-                { d: 'M10.59 13.41a1 1 0 0 1 0-1.41l2-2a1 1 0 1 1 1.41 1.41l-2 2a1 1 0 0 1-1.41 0zm-2.83 2.83a3 3 0 0 1 0-4.24l2-2a3 3 0 0 1 4.24 0 1 1 0 0 1-1.41 1.41 1 1 0 0 0-1.41 0l-2 2a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l1-1a1 1 0 1 1 1.41 1.41l-1 1a3 3 0 0 1-4.24 0zm8.48-8.48a3 3 0 0 0-4.24 0l-1 1a1 1 0 0 1-1.41-1.41l1-1a5 5 0 1 1 7.07 7.07l-2 2a5 5 0 0 1-7.07 0 1 1 0 0 1 1.41-1.41 3 3 0 0 0 4.24 0l2-2a3 3 0 0 0 0-4.24z' },
-            ],
-        },
-        generic: {
-            viewBox: '0 0 24 24',
-            paths: [
-                { d: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z' },
-                { d: 'M13 17h-2v-2h2zm0-4h-2V7h2z' },
-            ],
-        },
-    };
-
-    const sanitizeIconKey = (value) => {
-        if (typeof value !== 'string') {
-            return '';
-        }
-
-        return value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
-    };
-
-    const createSvgElement = (tag, attributes = {}) => {
-        if (!doc || typeof doc.createElementNS !== 'function') {
-            return null;
-        }
-
-        const element = doc.createElementNS(SVG_NS, tag);
-
-        Object.keys(attributes).forEach((attr) => {
-            element.setAttribute(attr, attributes[attr]);
-        });
-
-        return element;
-    };
 
     const createShareIconPreview = (iconKey) => {
-        const sanitizedKey = sanitizeIconKey(iconKey);
-        const definition = SHARE_ICON_LIBRARY[sanitizedKey] || SHARE_ICON_LIBRARY.generic;
-        const svg = createSvgElement('svg', {
-            viewBox: definition.viewBox,
-            fill: 'currentColor',
-            'aria-hidden': 'true',
-            focusable: 'false',
-        });
+        const preview = createIconPreview(doc, sanitizeIconKey(iconKey));
 
-        if (!svg) {
+        if (!preview) {
             return null;
         }
 
-        if (Array.isArray(definition.paths)) {
-            definition.paths.forEach((pathDefinition) => {
-                const path = createSvgElement('path', pathDefinition);
+        const svg = preview.querySelector('svg');
 
-                if (path) {
-                    svg.appendChild(path);
-                }
-            });
-        }
-
-        return svg;
+        return svg || preview;
     };
 
     const SHARE_TEMPLATE_SAMPLE = {
@@ -223,91 +66,413 @@
     }
 
     doc.addEventListener('DOMContentLoaded', function() {
-        const navTabs = Array.from(doc.querySelectorAll('.mga-admin-wrap .nav-tab'));
-        const tabContents = Array.from(doc.querySelectorAll('.mga-admin-wrap .tab-content'));
+        const form = doc.querySelector('[data-mga-settings-form]') || doc.querySelector('.mga-admin-wrap form');
+        let scheduleSummaryRefresh = () => {};
 
-        const activateTab = (tab, focusTab = true) => {
-            if (!tab) {
-                return;
+        const initializeWizard = (targetForm) => {
+            const wizard = doc.querySelector('[data-mga-wizard]');
+
+            if (!wizard) {
+                return null;
             }
 
-            navTabs.forEach((t) => {
-                t.classList.remove('nav-tab-active');
-                t.setAttribute('aria-selected', 'false');
-                t.setAttribute('tabindex', '-1');
-            });
+            const stepPanels = Array.from(wizard.querySelectorAll('[data-mga-step-panel]'));
+            const indicators = Array.from(wizard.querySelectorAll('[data-mga-step-indicator]'));
+            const prevButton = wizard.querySelector('[data-mga-step-prev]');
+            const nextButton = wizard.querySelector('[data-mga-step-next]');
+            const submitButton = wizard.querySelector('[data-mga-step-submit]');
+            const statusElement = wizard.querySelector('[data-mga-save-status]');
+            const summaryIndex = stepPanels.length - 1;
+            let currentIndex = stepPanels.findIndex((panel) => panel.classList.contains('is-active'));
 
-            tabContents.forEach((panel) => {
-                panel.classList.remove('active');
-                panel.setAttribute('aria-hidden', 'true');
-                panel.setAttribute('hidden', 'hidden');
-            });
-
-            tab.classList.add('nav-tab-active');
-            tab.setAttribute('aria-selected', 'true');
-            tab.setAttribute('tabindex', '0');
-
-            const targetSelector = tab.getAttribute('href');
-            const targetPanel = targetSelector ? doc.querySelector(targetSelector) : null;
-
-            if (targetPanel) {
-                targetPanel.classList.add('active');
-                targetPanel.setAttribute('aria-hidden', 'false');
-                targetPanel.removeAttribute('hidden');
+            if (currentIndex < 0) {
+                currentIndex = 0;
             }
 
-            if (focusTab) {
-                safeFocus(tab);
-            }
-        };
+            const getMessages = () => (global.mgaAdminConfig && global.mgaAdminConfig.messages) || {};
 
-        const focusAdjacentTab = (currentTab, direction) => {
-            const currentIndex = navTabs.indexOf(currentTab);
-
-            if (currentIndex === -1) {
-                return;
-            }
-
-            const targetIndex = (currentIndex + direction + navTabs.length) % navTabs.length;
-            activateTab(navTabs[targetIndex]);
-        };
-
-        navTabs.forEach((tab) => {
-            tab.addEventListener('click', (event) => {
-                event.preventDefault();
-                activateTab(tab, false);
-            });
-
-            tab.addEventListener('keydown', (event) => {
-                switch (event.key) {
-                    case 'ArrowRight':
-                    case 'ArrowDown':
-                        event.preventDefault();
-                        focusAdjacentTab(tab, 1);
-                        break;
-                    case 'ArrowLeft':
-                    case 'ArrowUp':
-                        event.preventDefault();
-                        focusAdjacentTab(tab, -1);
-                        break;
-                    case 'Home':
-                        event.preventDefault();
-                        activateTab(navTabs[0]);
-                        break;
-                    case 'End':
-                        event.preventDefault();
-                        activateTab(navTabs[navTabs.length - 1]);
-                        break;
-                    case ' ':
-                    case 'Enter':
-                        event.preventDefault();
-                        activateTab(tab);
-                        break;
-                    default:
-                        break;
+            const setStatusMessage = (state, message) => {
+                if (!statusElement) {
+                    return;
                 }
+
+                const statusMessage = message || getMessages()[state] || '';
+
+                statusElement.textContent = statusMessage;
+                statusElement.setAttribute('data-mga-status-state', state);
+            };
+
+            const updateControls = () => {
+                if (prevButton) {
+                    prevButton.disabled = currentIndex === 0;
+                }
+
+                if (nextButton) {
+                    nextButton.hidden = currentIndex >= summaryIndex;
+                }
+
+                if (submitButton) {
+                    submitButton.hidden = currentIndex < summaryIndex;
+                }
+            };
+
+            const focusPanel = (panel) => {
+                if (!panel) {
+                    return;
+                }
+
+                const focusTarget = panel.querySelector('[data-mga-step-title]') || panel;
+                const focusOptions = detectFocusOptionsSupport() ? { preventScroll: true } : undefined;
+
+                global.requestAnimationFrame(() => {
+                    safeFocus(focusTarget, focusOptions);
+                });
+            };
+
+            const deactivatePanel = (panel) => {
+                panel.classList.remove('is-active');
+                panel.setAttribute('hidden', 'hidden');
+                panel.setAttribute('aria-hidden', 'true');
+            };
+
+            const activatePanel = (panel) => {
+                panel.classList.add('is-active');
+                panel.removeAttribute('hidden');
+                panel.setAttribute('aria-hidden', 'false');
+            };
+
+            const updateIndicators = () => {
+                indicators.forEach((indicator, index) => {
+                    indicator.classList.toggle('is-active', index === currentIndex);
+                    indicator.classList.toggle('is-completed', index < currentIndex);
+                    indicator.setAttribute('aria-current', index === currentIndex ? 'step' : 'false');
+                });
+            };
+
+            const updateSummaryContainers = (() => {
+                let timeoutId = null;
+
+                const presetTarget = wizard.querySelector('[data-mga-summary-preset]');
+                const timingTarget = wizard.querySelector('[data-mga-summary-timing]');
+                const toolbarTarget = wizard.querySelector('[data-mga-summary-toolbar]');
+                const shareTarget = wizard.querySelector('[data-mga-summary-share]');
+
+                const renderToolbarSummary = () => {
+                    if (!toolbarTarget) {
+                        return;
+                    }
+
+                    const toolbarToggles = [
+                        { id: 'mga_show_zoom', label: mgaAdmin__('Zoom', 'lightbox-jlg') },
+                        { id: 'mga_show_download', label: mgaAdmin__('Téléchargement', 'lightbox-jlg') },
+                        { id: 'mga_show_share', label: mgaAdmin__('Partage', 'lightbox-jlg') },
+                        { id: 'mga_show_cta', label: mgaAdmin__('Appel à l’action', 'lightbox-jlg') },
+                        { id: 'mga_show_fullscreen', label: mgaAdmin__('Plein écran', 'lightbox-jlg') },
+                    ];
+
+                    const active = toolbarToggles.filter((toggle) => {
+                        const input = doc.getElementById(toggle.id);
+                        return input ? input.checked : false;
+                    });
+
+                    toolbarTarget.textContent = active.length > 0
+                        ? active.map((toggle) => toggle.label).join(', ')
+                        : mgaAdmin__('Aucun bouton affiché', 'lightbox-jlg');
+                };
+
+                const renderPresetSummary = () => {
+                    if (!presetTarget) {
+                        return;
+                    }
+
+                    const presetSelect = doc.getElementById('mga_style_preset');
+                    const value = presetSelect ? presetSelect.value : '';
+
+                    if (!presetSelect) {
+                        presetTarget.textContent = mgaAdmin__('Réglages personnalisés', 'lightbox-jlg');
+                        return;
+                    }
+
+                    const fallback = Array.from(presetSelect.options).find((option) => option.value === value);
+                    let label = fallback ? fallback.textContent : mgaAdmin__('Réglages personnalisés', 'lightbox-jlg');
+
+                    if (global.mgaStylePresets && global.mgaStylePresets.presets) {
+                        const preset = global.mgaStylePresets.presets[value];
+
+                        if (preset && preset.label) {
+                            label = preset.label;
+                        }
+                    }
+
+                    if (!value) {
+                        label = global.mgaStylePresets && global.mgaStylePresets.customDescription
+                            ? global.mgaStylePresets.customDescription
+                            : label;
+                    }
+
+                    presetTarget.textContent = label;
+                };
+
+                const renderTimingSummary = () => {
+                    if (!timingTarget) {
+                        return;
+                    }
+
+                    const delayInput = doc.getElementById('mga_delay');
+                    const effectSelect = doc.getElementById('mga_effect');
+                    const delayValue = delayInput && delayInput.value ? delayInput.value : '—';
+                    let effectLabel = mgaAdmin__('Transition personnalisée', 'lightbox-jlg');
+
+                    if (effectSelect) {
+                        const selectedOption = Array.from(effectSelect.options).find((option) => option.selected);
+                        effectLabel = selectedOption ? selectedOption.textContent : effectLabel;
+                    }
+
+                    timingTarget.textContent = mgaAdminSprintf(
+                        mgaAdmin__('Diaporama : %1$s s · Effet : %2$s', 'lightbox-jlg'),
+                        delayValue,
+                        effectLabel
+                    );
+                };
+
+                const renderShareSummary = () => {
+                    if (!shareTarget) {
+                        return;
+                    }
+
+                    const items = Array.from(doc.querySelectorAll('[data-share-repeater-item]'));
+                    const activeLabels = items
+                        .filter((item) => {
+                            const enabledField = item.querySelector('[data-share-field="enabled"]');
+                            return enabledField ? enabledField.checked : false;
+                        })
+                        .map((item) => {
+                            const labelField = item.querySelector('[data-share-field="label"]');
+                            const keyField = item.querySelector('[data-share-field="key"]');
+                            const labelValue = labelField && labelField.value ? labelField.value.trim() : '';
+                            const keyValue = keyField && keyField.value ? keyField.value.trim() : '';
+
+                            return labelValue || (keyValue ? keyValue.toUpperCase() : mgaAdmin__('Canal sans titre', 'lightbox-jlg'));
+                        });
+
+                    if (activeLabels.length > 0) {
+                        shareTarget.textContent = mgaAdminSprintf(
+                            mgaAdmin__('%1$d canaux actifs : %2$s', 'lightbox-jlg'),
+                            activeLabels.length,
+                            activeLabels.join(', ')
+                        );
+                    } else {
+                        shareTarget.textContent = mgaAdmin__('Aucun canal actif', 'lightbox-jlg');
+                    }
+                };
+
+                const update = () => {
+                    renderPresetSummary();
+                    renderTimingSummary();
+                    renderToolbarSummary();
+                    renderShareSummary();
+                };
+
+                return () => {
+                    if (timeoutId) {
+                        global.clearTimeout(timeoutId);
+                    }
+
+                    timeoutId = global.setTimeout(() => {
+                        timeoutId = null;
+                        update();
+                    }, 120);
+                };
+            })();
+
+            const goToStep = (targetIndex) => {
+                const normalizedIndex = Math.max(0, Math.min(stepPanels.length - 1, targetIndex));
+
+                if (normalizedIndex === currentIndex) {
+                    return;
+                }
+
+                const currentPanel = stepPanels[currentIndex];
+                const nextPanel = stepPanels[normalizedIndex];
+
+                if (currentPanel) {
+                    deactivatePanel(currentPanel);
+                }
+
+                if (nextPanel) {
+                    activatePanel(nextPanel);
+                    focusPanel(nextPanel);
+                }
+
+                currentIndex = normalizedIndex;
+                updateIndicators();
+                updateControls();
+
+                if (currentIndex === summaryIndex) {
+                    updateSummaryContainers();
+                }
+            };
+
+            const handleNext = () => {
+                if (targetForm && typeof targetForm.reportValidity === 'function' && !targetForm.reportValidity()) {
+                    return;
+                }
+
+                goToStep(currentIndex + 1);
+            };
+
+            const handlePrev = () => {
+                goToStep(currentIndex - 1);
+            };
+
+            const attachIndicatorNavigation = () => {
+                indicators.forEach((indicator, index) => {
+                    indicator.addEventListener('click', (event) => {
+                        event.preventDefault();
+
+                        if (index < currentIndex && index >= 0) {
+                            goToStep(index);
+                        } else if (index > currentIndex && index <= summaryIndex) {
+                            if (targetForm && typeof targetForm.reportValidity === 'function' && !targetForm.reportValidity()) {
+                                return;
+                            }
+
+                            goToStep(index);
+                        }
+                    });
+                });
+            };
+
+            if (prevButton) {
+                prevButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    handlePrev();
+                });
+            }
+
+            if (nextButton) {
+                nextButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    handleNext();
+                });
+            }
+
+            attachIndicatorNavigation();
+            updateIndicators();
+            updateControls();
+
+            if (currentIndex === summaryIndex) {
+                updateSummaryContainers();
+            }
+
+            const handleFormInput = () => {
+                updateSummaryContainers();
+            };
+
+            if (targetForm) {
+                targetForm.addEventListener('change', handleFormInput);
+                targetForm.addEventListener('input', handleFormInput);
+            }
+
+            return {
+                scheduleSummaryUpdate: updateSummaryContainers,
+                setStatusMessage,
+                goToSummary: () => goToStep(summaryIndex),
+            };
+        };
+
+        const wizardApi = initializeWizard(form);
+
+        if (wizardApi && typeof wizardApi.scheduleSummaryUpdate === 'function') {
+            scheduleSummaryRefresh = wizardApi.scheduleSummaryUpdate;
+        }
+
+        const initializeAsyncSave = (targetForm, wizard) => {
+            if (!targetForm) {
+                return;
+            }
+
+            const config = global.mgaAdminConfig || {};
+            const ajaxUrl = typeof config.ajaxUrl === 'string' && config.ajaxUrl ? config.ajaxUrl : global.ajaxurl;
+            const nonce = typeof config.nonce === 'string' ? config.nonce : '';
+            const submitButton = targetForm.querySelector('[data-mga-step-submit]');
+
+            if (!ajaxUrl || !nonce) {
+                return;
+            }
+
+            const setStatus = (state, explicitMessage) => {
+                if (wizard && typeof wizard.setStatusMessage === 'function') {
+                    wizard.setStatusMessage(state, explicitMessage);
+                }
+            };
+
+            const setSavingState = (isSaving) => {
+                if (submitButton) {
+                    submitButton.disabled = isSaving;
+                    submitButton.setAttribute('aria-busy', isSaving ? 'true' : 'false');
+                }
+
+                if (isSaving) {
+                    setStatus('saving');
+                }
+            };
+
+            targetForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+
+                if (typeof targetForm.reportValidity === 'function' && !targetForm.reportValidity()) {
+                    return;
+                }
+
+                const formData = new FormData(targetForm);
+                formData.append('action', 'mga_save_settings');
+                formData.append('_ajax_nonce', nonce);
+
+                setSavingState(true);
+
+                fetch(ajaxUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    body: formData,
+                })
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error(response.statusText || 'HTTP error');
+                        }
+
+                        return response.json();
+                    })
+                    .then((payload) => {
+                        if (!payload || payload.success !== true) {
+                            const message = payload && payload.data && payload.data.message
+                                ? payload.data.message
+                                : null;
+
+                            throw new Error(message || (config.messages && config.messages.error) || mgaAdmin__('Impossible d’enregistrer les réglages.', 'lightbox-jlg'));
+                        }
+
+                        const successMessage = payload.data && payload.data.message
+                            ? payload.data.message
+                            : (config.messages && config.messages.success) || mgaAdmin__('Réglages enregistrés.', 'lightbox-jlg');
+
+                        setStatus('success', successMessage);
+                        scheduleSummaryRefresh();
+                    })
+                    .catch((error) => {
+                        const fallbackMessage = (config.messages && config.messages.error)
+                            ? config.messages.error
+                            : mgaAdmin__('Impossible d’enregistrer les réglages.', 'lightbox-jlg');
+
+                        setStatus('error', error && error.message ? error.message : fallbackMessage);
+                    })
+                    .finally(() => {
+                        setSavingState(false);
+                    });
             });
-        });
+        };
+
+        initializeAsyncSave(form, wizardApi);
 
         const initSettingsNavigation = () => {
             const layout = doc.querySelector('[data-mga-settings-layout]');
@@ -782,12 +947,19 @@
             const previewMock = previewContainer.querySelector('[data-mga-live-preview-mock]');
             const effectLabel = previewContainer.querySelector('[data-mga-preview-effect]');
             const thumbsContainer = previewContainer.querySelector('[data-mga-preview-thumbs]');
+            const statusRegion = previewContainer.querySelector('[data-mga-preview-status]');
+            const fallbackMessage = previewContainer.querySelector('[data-mga-preview-fallback]');
+            const mainSwiperEl = previewContainer.querySelector('[data-mga-preview-swiper]');
+            const paginationEl = previewContainer.querySelector('[data-mga-preview-pagination]');
+            const nextButton = previewContainer.querySelector('[data-mga-preview-next]');
+            const prevButton = previewContainer.querySelector('[data-mga-preview-prev]');
+
             const toolbarActions = {
-                zoom: previewContainer.querySelector('[data-preview-action="zoom"]'),
-                download: previewContainer.querySelector('[data-preview-action="download"]'),
-                share: previewContainer.querySelector('[data-preview-action="share"]'),
-                cta: previewContainer.querySelector('[data-preview-action="cta"]'),
-                fullscreen: previewContainer.querySelector('[data-preview-action="fullscreen"]'),
+                zoom: Array.from(previewContainer.querySelectorAll('[data-preview-action="zoom"]')),
+                download: Array.from(previewContainer.querySelectorAll('[data-preview-action="download"]')),
+                share: Array.from(previewContainer.querySelectorAll('[data-preview-action="share"]')),
+                cta: Array.from(previewContainer.querySelectorAll('[data-preview-action="cta"]')),
+                fullscreen: Array.from(previewContainer.querySelectorAll('[data-preview-action="fullscreen"]')),
             };
 
             const effectNameMap = {
@@ -798,16 +970,179 @@
                 flip: mgaAdmin__('flip 3D', 'lightbox-jlg'),
             };
 
-            const setAccent = (value) => {
+            let previewSwiper = null;
+
+            const shouldAnnounce = (event) => {
+                if (!event || typeof event !== 'object') {
+                    return false;
+                }
+
+                if (event.type === 'init') {
+                    return false;
+                }
+
+                return event.type !== 'input';
+            };
+
+            const announce = (message) => {
+                if (!statusRegion || typeof message !== 'string' || message.trim() === '') {
+                    return;
+                }
+
+                statusRegion.textContent = message;
+            };
+
+            const setPreviewState = (state) => {
+                if (!previewContainer) {
+                    return;
+                }
+
+                previewContainer.setAttribute('data-mga-preview-state', state);
+            };
+
+            const showFallback = (message) => {
+                setPreviewState('error');
+
+                if (fallbackMessage) {
+                    fallbackMessage.hidden = false;
+
+                    if (typeof message === 'string' && message.trim() !== '') {
+                        fallbackMessage.textContent = message;
+                    }
+                }
+
+                if (message) {
+                    announce(message);
+                }
+            };
+
+            const destroyPreviewSwiper = () => {
+                if (previewSwiper && typeof previewSwiper.destroy === 'function') {
+                    previewSwiper.destroy(true, true);
+                }
+
+                previewSwiper = null;
+            };
+
+            const parseNumber = (value, fallbackValue) => {
+                const numeric = typeof value === 'number' ? value : parseFloat(value);
+
+                if (Number.isNaN(numeric)) {
+                    return fallbackValue;
+                }
+
+                return numeric;
+            };
+
+            const buildSwiperConfig = () => {
+                const effectSelect = doc.getElementById('mga_effect');
+                const delayInput = doc.getElementById('mga_delay');
+                const speedInput = doc.getElementById('mga_speed');
+                const effectValue = effectSelect ? effectSelect.value : 'slide';
+                const delaySeconds = parseNumber(delayInput ? delayInput.value : null, 4);
+                const speedValue = parseNumber(speedInput ? speedInput.value : null, 600);
+
+                const autoplayDelay = Math.max(Math.round(delaySeconds * 1000), 1000);
+                const speed = Math.max(Math.round(speedValue), 100);
+
+                const config = {
+                    allowTouchMove: false,
+                    simulateTouch: false,
+                    centeredSlides: true,
+                    effect: effectValue || 'slide',
+                    loop: true,
+                    slidesPerView: 1,
+                    speed,
+                };
+
+                if (paginationEl) {
+                    config.pagination = {
+                        el: paginationEl,
+                        clickable: false,
+                    };
+                }
+
+                if (nextButton && prevButton) {
+                    config.navigation = {
+                        nextEl: nextButton,
+                        prevEl: prevButton,
+                    };
+                }
+
+                if (!Number.isNaN(autoplayDelay) && autoplayDelay > 0) {
+                    config.autoplay = {
+                        delay: autoplayDelay,
+                        disableOnInteraction: false,
+                    };
+                }
+
+                if (config.effect === 'fade') {
+                    config.fadeEffect = { crossFade: true };
+                }
+
+                config.on = {
+                    init(swiper) {
+                        if (swiper && typeof swiper.slideToLoop === 'function') {
+                            swiper.slideToLoop(0, 0, false);
+                        }
+                    },
+                };
+
+                return config;
+            };
+
+            const rebuildPreviewSwiper = () => {
+                if (!mainSwiperEl || typeof global.Swiper !== 'function') {
+                    return;
+                }
+
+                destroyPreviewSwiper();
+
+                try {
+                    previewSwiper = new global.Swiper(mainSwiperEl, buildSwiperConfig());
+                    setPreviewState('ready');
+                } catch (error) {
+                    showFallback(mgaAdmin__('Impossible d’initialiser l’aperçu Swiper.', 'lightbox-jlg'));
+                }
+            };
+
+            if (!mainSwiperEl) {
+                showFallback(mgaAdmin__('Prévisualisation indisponible : conteneur Swiper manquant.', 'lightbox-jlg'));
+            } else {
+                if (fallbackMessage) {
+                    fallbackMessage.hidden = true;
+                }
+
+                setPreviewState('loading');
+                announce(mgaAdmin__('Préparation de la prévisualisation…', 'lightbox-jlg'));
+
+                ensureSwiper(global, { namespace: 'admin-preview' })
+                    .then(() => {
+                        rebuildPreviewSwiper();
+                        if (previewSwiper && typeof previewSwiper.update === 'function') {
+                            previewSwiper.update();
+                        }
+                        announce(mgaAdmin__('Prévisualisation prête.', 'lightbox-jlg'));
+                    })
+                    .catch(() => {
+                        showFallback(mgaAdmin__('Impossible de charger Swiper. La prévisualisation interactive est désactivée.', 'lightbox-jlg'));
+                    });
+            }
+
+            const setAccent = (value, _element, event) => {
                 if (!previewMock) {
                     return;
                 }
 
                 const color = isValidHexColor(value) ? value : '#6366f1';
                 previewMock.style.setProperty('--mga-preview-accent', color);
+
+                if (shouldAnnounce(event)) {
+                    announce(mgaAdmin__('Couleur d’accent mise à jour.', 'lightbox-jlg'));
+                }
             };
 
-            const setOverlay = (value) => {
+            const setOverlay = (value, _element, event) => {
                 if (!previewMock) {
                     return;
                 }
@@ -820,29 +1155,52 @@
 
                 const clamped = Math.min(Math.max(numeric, 0), 1);
                 previewMock.style.setProperty('--mga-preview-overlay', `rgba(15, 23, 42, ${clamped})`);
+
+                if (shouldAnnounce(event)) {
+                    announce(mgaAdmin__('Opacité de l’arrière-plan mise à jour.', 'lightbox-jlg'));
+                }
             };
 
-            const setBackgroundStyle = (style) => {
+            const setBackgroundStyle = (style, _element, event) => {
                 if (!previewMock) {
                     return;
                 }
 
                 const normalized = typeof style === 'string' && style ? style : 'echo';
                 previewMock.setAttribute('data-preview-style', normalized);
-            };
 
-            const toggleAction = (name, enabled) => {
-                const action = toolbarActions[name];
-
-                if (!action) {
-                    return;
+                if (shouldAnnounce(event)) {
+                    announce(mgaAdmin__('Style d’arrière-plan actualisé.', 'lightbox-jlg'));
                 }
-
-                action.setAttribute('data-preview-hidden', enabled ? 'false' : 'true');
-                action.setAttribute('aria-hidden', enabled ? 'false' : 'true');
             };
 
-            const setThumbScale = (value) => {
+            const toggleAction = (name, enabled, _element, event) => {
+                const actions = toolbarActions[name] || [];
+
+                actions.forEach((action) => {
+                    action.setAttribute('data-preview-hidden', enabled ? 'false' : 'true');
+                    action.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+                });
+
+                if (shouldAnnounce(event)) {
+                    const label = {
+                        zoom: mgaAdmin__('Zoom', 'lightbox-jlg'),
+                        download: mgaAdmin__('Téléchargement', 'lightbox-jlg'),
+                        share: mgaAdmin__('Partage', 'lightbox-jlg'),
+                        cta: mgaAdmin__('Appel à l’action', 'lightbox-jlg'),
+                        fullscreen: mgaAdmin__('Plein écran', 'lightbox-jlg'),
+                    }[name] || name;
+
+                    announce(mgaAdminSprintf(
+                        enabled
+                            ? mgaAdmin__('%s activé dans l’aperçu.', 'lightbox-jlg')
+                            : mgaAdmin__('%s masqué dans l’aperçu.', 'lightbox-jlg'),
+                        label
+                    ));
+                }
+            };
+
+            const setThumbScale = (value, _element, event) => {
                 if (!thumbsContainer) {
                     return;
                 }
@@ -851,14 +1209,17 @@
 
                 if (Number.isNaN(numeric)) {
                     thumbsContainer.style.setProperty('--mga-preview-thumb-scale', '1');
-                    return;
+                } else {
+                    const normalized = Math.min(Math.max(numeric / 90, 0.6), 1.4);
+                    thumbsContainer.style.setProperty('--mga-preview-thumb-scale', normalized.toString());
                 }
 
-                const normalized = Math.min(Math.max(numeric / 90, 0.6), 1.4);
-                thumbsContainer.style.setProperty('--mga-preview-thumb-scale', normalized.toString());
+                if (shouldAnnounce(event)) {
+                    announce(mgaAdmin__('Taille des miniatures mise à jour.', 'lightbox-jlg'));
+                }
             };
 
-            const updateEffectLabel = () => {
+            const updateEffectLabel = (_value, _element, event) => {
                 if (!effectLabel) {
                     return;
                 }
@@ -877,6 +1238,16 @@
                     delayValue,
                     speedValue
                 );
+
+                if (shouldAnnounce(event)) {
+                    announce(mgaAdminSprintf(
+                        mgaAdmin__('Transition mise à jour : %1$s, rythme de %2$ss.', 'lightbox-jlg'),
+                        effectLabelText,
+                        delayValue
+                    ));
+                }
+
+                rebuildPreviewSwiper();
             };
 
             const bindPreviewControl = (id, handler, events = ['change']) => {
@@ -886,30 +1257,27 @@
                     return;
                 }
 
-                const invoke = () => {
-                    if (element.type === 'checkbox') {
-                        handler(element.checked, element);
-                    } else {
-                        handler(element.value, element);
-                    }
+                const invoke = (event) => {
+                    const payload = element.type === 'checkbox' ? element.checked : element.value;
+                    handler(payload, element, event || { type: 'init' });
                 };
 
                 events.forEach((eventName) => {
                     element.addEventListener(eventName, invoke);
                 });
 
-                invoke();
+                invoke({ type: 'init' });
             };
 
             bindPreviewControl('mga_accent_color', setAccent, ['input', 'change']);
             bindPreviewControl('mga_bg_opacity', setOverlay, ['input', 'change']);
             bindPreviewControl('mga_background_style', setBackgroundStyle);
             bindPreviewControl('mga_thumb_size', setThumbScale, ['input', 'change']);
-            bindPreviewControl('mga_show_zoom', (checked) => toggleAction('zoom', checked));
-            bindPreviewControl('mga_show_download', (checked) => toggleAction('download', checked));
-            bindPreviewControl('mga_show_share', (checked) => toggleAction('share', checked));
-            bindPreviewControl('mga_show_cta', (checked) => toggleAction('cta', checked));
-            bindPreviewControl('mga_show_fullscreen', (checked) => toggleAction('fullscreen', checked));
+            bindPreviewControl('mga_show_zoom', (checked, element, event) => toggleAction('zoom', checked, element, event));
+            bindPreviewControl('mga_show_download', (checked, element, event) => toggleAction('download', checked, element, event));
+            bindPreviewControl('mga_show_share', (checked, element, event) => toggleAction('share', checked, element, event));
+            bindPreviewControl('mga_show_cta', (checked, element, event) => toggleAction('cta', checked, element, event));
+            bindPreviewControl('mga_show_fullscreen', (checked, element, event) => toggleAction('fullscreen', checked, element, event));
             bindPreviewControl('mga_effect', updateEffectLabel);
             bindPreviewControl('mga_delay', updateEffectLabel, ['input', 'change']);
             bindPreviewControl('mga_speed', updateEffectLabel, ['input', 'change']);
@@ -1675,6 +2043,8 @@
                         urlElement.removeAttribute('title');
                     }
                 }
+
+                scheduleSummaryRefresh();
             };
 
             const validateShareItems = () => {
@@ -1753,6 +2123,8 @@
                 });
 
                 validateShareItems();
+
+                scheduleSummaryRefresh();
             };
 
             const focusItemField = (item) => {
@@ -1829,6 +2201,7 @@
                     }
 
                     updateItemNames();
+                    scheduleSummaryRefresh();
 
                     if (nextFocusItem) {
                         focusItemField(nextFocusItem);
@@ -1844,6 +2217,7 @@
                         list.insertBefore(item, previous);
                         updateItemNames();
                         focusItemField(item);
+                        scheduleSummaryRefresh();
                     }
 
                     return;
@@ -1856,6 +2230,7 @@
                         list.insertBefore(next, item);
                         updateItemNames();
                         focusItemField(item);
+                        scheduleSummaryRefresh();
                     }
                 }
             });
@@ -1874,10 +2249,12 @@
                     list.appendChild(newItem);
                     updateItemNames();
                     focusItemField(newItem);
+                    scheduleSummaryRefresh();
                 });
             }
 
             updateItemNames();
+            scheduleSummaryRefresh();
         }
     });
 })(typeof window !== 'undefined' ? window : globalThis);

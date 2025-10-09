@@ -261,7 +261,7 @@
 .mga-live-preview__stage {
     margin-top: 18px;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
 }
 
@@ -279,9 +279,31 @@
 
 .mga-live-preview__frame {
     position: relative;
-    padding: 28px 26px 90px;
+    padding: 24px 24px 86px;
+}
+
+.mga-preview-swiper {
+    width: 100%;
+    height: 230px;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.mga-preview-swiper .swiper-slide {
+    height: auto;
+}
+
+.mga-live-preview__slide {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 230px;
+    border-radius: 20px;
+    overflow: hidden;
     background: var(--mga-preview-overlay);
-    transition: background 0.3s ease;
 }
 
 .mga-live-preview__image {
@@ -294,9 +316,21 @@
     pointer-events: none;
 }
 
+.mga-live-preview__image--secondary {
+    background: linear-gradient(140deg, rgba(59, 130, 246, 0.42), rgba(165, 85, 247, 0.12)),
+        url('data:image/svg+xml,%3Csvg width="400" height="280" xmlns="http://www.w3.org/2000/svg"%3E%3Cdefs%3E%3CradialGradient id="b" cx="50%25" cy="50%25" r="70%25"%3E%3Cstop offset="0%25" stop-color="%233b82f6"/%3E%3Cstop offset="100%25" stop-color="%230f172a"/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width="400" height="280" fill="url(%23b)"/%3E%3C/svg%3E') center/cover;
+}
+
+.mga-live-preview__image--tertiary {
+    background: linear-gradient(160deg, rgba(20, 184, 166, 0.45), rgba(14, 165, 233, 0.12)),
+        url('data:image/svg+xml,%3Csvg width="400" height="280" xmlns="http://www.w3.org/2000/svg"%3E%3Cdefs%3E%3ClinearGradient id="c" x1="0%25" y1="0%25" x2="100%25" y2="0%25"%3E%3Cstop offset="0%25" stop-color="%230ea5e9"/%3E%3Cstop offset="100%25" stop-color="%2314b8a6"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="400" height="280" fill="url(%23c)"/%3E%3C/svg%3E') center/cover;
+}
+
 .mga-live-preview__toolbar {
-    position: relative;
-    z-index: 1;
+    position: absolute;
+    top: 26px;
+    right: 26px;
+    z-index: 2;
     display: inline-flex;
     gap: 10px;
     padding: 8px 10px;
@@ -333,7 +367,8 @@
 .mga-live-preview__caption {
     position: relative;
     z-index: 1;
-    margin-top: 18px;
+    margin-top: auto;
+    padding: 0 26px 30px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -416,6 +451,80 @@
 
 .mga-live-preview__mock[data-preview-style="blur"] .mga-live-preview__toolbar {
     backdrop-filter: blur(24px);
+}
+
+[data-mga-live-preview][data-mga-preview-state="loading"] .mga-preview-swiper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    z-index: 3;
+    backdrop-filter: blur(2px);
+}
+
+.mga-live-preview__pagination {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+}
+
+.mga-live-preview__pagination .swiper-pagination-bullet {
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.55);
+    opacity: 1;
+    margin: 0 4px !important;
+}
+
+.mga-live-preview__pagination .swiper-pagination-bullet-active {
+    background: var(--mga-preview-accent);
+}
+
+.mga-live-preview__nav {
+    position: absolute;
+    top: 50%;
+    width: 38px;
+    height: 38px;
+    margin-top: -19px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(15, 23, 42, 0.55);
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.mga-live-preview__nav--prev {
+    left: 20px;
+}
+
+.mga-live-preview__nav--next {
+    right: 20px;
+}
+
+.mga-live-preview__nav:hover {
+    background: rgba(15, 23, 42, 0.75);
+    transform: translateY(-2px);
+}
+
+.mga-live-preview__nav:focus-visible {
+    outline: 2px solid var(--mga-preview-accent);
+    outline-offset: 2px;
+}
+
+.mga-live-preview__fallback {
+    margin-top: 12px;
+    font-size: 0.9rem;
+    text-align: center;
+    color: #1f2937;
 }
 
 .mga-settings-section {

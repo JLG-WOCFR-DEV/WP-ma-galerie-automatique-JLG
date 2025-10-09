@@ -14,6 +14,7 @@ class Settings {
 
         if ( function_exists( 'add_action' ) ) {
             add_action( 'switch_blog', [ $this, 'handle_switch_blog' ], 10, 2 );
+            add_action( 'wp_ajax_mga_save_settings', [ $this, 'handle_ajax_save_settings' ] );
         }
     }
 
@@ -407,23 +408,52 @@ class Settings {
         wp_enqueue_script( 'wp-color-picker' );
 
         wp_register_script(
-            'mga-focus-utils',
-            $this->plugin->get_plugin_dir_url() . 'assets/js/utils/focus-utils.js',
-            [],
-            MGA_VERSION,
-            true
-        );
-
-        wp_register_script(
             'mga-admin-script',
-            $this->plugin->get_plugin_dir_url() . 'assets/js/admin-script.js',
-            [ 'wp-i18n', 'mga-focus-utils', 'wp-color-picker' ],
+            $this->plugin->get_plugin_dir_url() . 'assets/js/dist/admin.js',
+            [ 'wp-i18n', 'wp-color-picker' ],
             MGA_VERSION,
             true
         );
 
-        wp_enqueue_script( 'mga-focus-utils' );
         wp_enqueue_script( 'mga-admin-script' );
+
+        $swiper_version  = '11.1.4';
+        $local_swiper_js = $this->plugin->get_plugin_dir_url() . 'assets/vendor/swiper/swiper-bundle.min.js';
+        $local_swiper_css = $this->plugin->get_plugin_dir_url() . 'assets/vendor/swiper/swiper-bundle.min.css';
+        $cdn_swiper_js   = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.js';
+        $cdn_swiper_css  = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.css';
+
+        $admin_swiper_loader = [
+            'version'  => $swiper_version,
+            'attempts' => [
+                [
+                    'key'    => 'local',
+                    'label'  => __( 'Bibliothèque locale', 'lightbox-jlg' ),
+                    'inject' => true,
+                    'js'     => [
+                        'src' => $local_swiper_js,
+                    ],
+                    'css'    => [
+                        'href' => $local_swiper_css,
+                    ],
+                ],
+                [
+                    'key'    => 'cdn',
+                    'label'  => __( 'CDN jsDelivr', 'lightbox-jlg' ),
+                    'inject' => true,
+                    'js'     => [
+                        'src'        => $cdn_swiper_js,
+                        'integrity'  => MGA_SWIPER_JS_SRI_HASH,
+                        'crossOrigin' => 'anonymous',
+                    ],
+                    'css'    => [
+                        'href'        => $cdn_swiper_css,
+                        'integrity'   => MGA_SWIPER_CSS_SRI_HASH,
+                        'crossOrigin' => 'anonymous',
+                    ],
+                ],
+            ],
+        ];
 
         $style_presets_for_js = [];
 
@@ -456,6 +486,21 @@ class Settings {
                 'presets'           => $style_presets_for_js,
                 'customDescription' => __( 'Réglages personnalisés actifs.', 'lightbox-jlg' ),
                 'defaults'          => $this->normalize_style_preset_settings_for_js( $this->get_default_settings() ),
+            ]
+        );
+
+        wp_localize_script(
+            'mga-admin-script',
+            'mgaAdminConfig',
+            [
+                'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+                'nonce'    => wp_create_nonce( 'mga_save_settings' ),
+                'messages' => [
+                    'saving'  => __( 'Enregistrement en cours…', 'lightbox-jlg' ),
+                    'success' => __( 'Réglages enregistrés.', 'lightbox-jlg' ),
+                    'error'   => __( 'Impossible d’enregistrer les réglages.', 'lightbox-jlg' ),
+                ],
+                'swiper'   => $admin_swiper_loader,
             ]
         );
 
@@ -856,6 +901,40 @@ class Settings {
         }
 
         return $output;
+    }
+
+    public function handle_ajax_save_settings(): void {
+        if ( ! check_ajax_referer( 'mga_save_settings', '_ajax_nonce', false ) ) {
+            wp_send_json_error(
+                [ 'message' => __( 'Jeton de sécurité invalide.', 'lightbox-jlg' ) ],
+                400
+            );
+        }
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error(
+                [ 'message' => __( 'Vous n’avez pas les permissions nécessaires pour modifier ces réglages.', 'lightbox-jlg' ) ],
+                403
+            );
+        }
+
+        $raw_settings = [];
+
+        if ( isset( $_POST['mga_settings'] ) && is_array( $_POST['mga_settings'] ) ) {
+            $raw_settings = wp_unslash( $_POST['mga_settings'] );
+        }
+
+        $existing_settings  = get_option( 'mga_settings', $this->get_default_settings() );
+        $sanitized_settings = $this->sanitize_settings( $raw_settings, $existing_settings );
+
+        update_option( 'mga_settings', $sanitized_settings );
+
+        wp_send_json_success(
+            [
+                'message'  => __( 'Réglages enregistrés.', 'lightbox-jlg' ),
+                'settings' => $sanitized_settings,
+            ]
+        );
     }
 
     public function get_sanitized_settings(): array {
