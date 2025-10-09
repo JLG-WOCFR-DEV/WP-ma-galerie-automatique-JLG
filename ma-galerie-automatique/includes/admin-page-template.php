@@ -63,508 +63,687 @@ $style_presets     = mga_get_style_presets();
             aria-hidden="false"
             tabindex="0"
         >
-            <table class="form-table">
-                <tr>
-                    <th scope="row"><label for="mga_delay"><?php echo esc_html__( 'Vitesse du diaporama', 'lightbox-jlg' ); ?></label></th>
-                    <td>
-                        <input name="mga_settings[delay]" type="number" id="mga_delay" value="<?php echo esc_attr( $settings['delay'] ); ?>" min="1" max="30" class="small-text" /> <?php echo esc_html__( 'secondes', 'lightbox-jlg' ); ?>
-                        <p class="description"><?php echo esc_html__( "Durée d'affichage de chaque image en mode lecture automatique.", 'lightbox-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="mga_style_preset"><?php echo esc_html__( 'Preset graphique', 'lightbox-jlg' ); ?></label></th>
-                    <td>
-                        <select
-                            name="mga_settings[style_preset]"
-                            id="mga_style_preset"
-                            aria-describedby="mga_style_preset_help mga_style_preset_description"
-                        >
-                            <option value="" <?php selected( $settings['style_preset'], '' ); ?>><?php echo esc_html__( 'Aucun (personnalisé)', 'lightbox-jlg' ); ?></option>
-                            <?php foreach ( $style_presets as $preset_key => $preset_definition ) :
-                                $sanitized_key = sanitize_key( (string) $preset_key );
-
-                                if ( '' === $sanitized_key ) {
-                                    continue;
-                                }
-
-                                $label = isset( $preset_definition['label'] ) && '' !== trim( (string) $preset_definition['label'] )
-                                    ? $preset_definition['label']
-                                    : ucwords( str_replace( '-', ' ', $sanitized_key ) );
-                                ?>
-                                <option value="<?php echo esc_attr( $sanitized_key ); ?>" <?php selected( $settings['style_preset'], $sanitized_key ); ?>>
-                                    <?php echo esc_html( $label ); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <p class="description" id="mga_style_preset_help"><?php echo esc_html__( 'Appliquez un ensemble de réglages inspiré de bibliothèques UI populaires. Vous pouvez ensuite ajuster chaque option librement.', 'lightbox-jlg' ); ?></p>
-                        <div class="mga-style-preset-actions">
-                            <button type="button" class="button button-secondary" data-mga-apply-style-preset><?php echo esc_html__( 'Appliquer ce preset', 'lightbox-jlg' ); ?></button>
-                            <button type="button" class="button-link" data-mga-reset-style-preset><?php echo esc_html__( 'Revenir aux valeurs par défaut', 'lightbox-jlg' ); ?></button>
-                        </div>
-                        <p class="description mga-style-preset-description" id="mga_style_preset_description" data-mga-style-preset-description></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="mga_effect"><?php echo esc_html__( 'Effet de transition', 'lightbox-jlg' ); ?></label></th>
-                    <td>
-                        <select name="mga_settings[effect]" id="mga_effect">
-                            <option value="slide" <?php selected( $settings['effect'], 'slide' ); ?>><?php echo esc_html__( 'Glissement (recommandé)', 'lightbox-jlg' ); ?></option>
-                            <option value="fade" <?php selected( $settings['effect'], 'fade' ); ?>><?php echo esc_html__( 'Fondu', 'lightbox-jlg' ); ?></option>
-                            <option value="cube" <?php selected( $settings['effect'], 'cube' ); ?>><?php echo esc_html__( 'Cube 3D', 'lightbox-jlg' ); ?></option>
-                            <option value="coverflow" <?php selected( $settings['effect'], 'coverflow' ); ?>><?php echo esc_html__( 'Coverflow 3D', 'lightbox-jlg' ); ?></option>
-                            <option value="flip" <?php selected( $settings['effect'], 'flip' ); ?>><?php echo esc_html__( 'Flip 3D', 'lightbox-jlg' ); ?></option>
-                        </select>
-                        <p class="description"><?php echo esc_html__( "Choisissez le style d'animation utilisé lors du changement d'image.", 'lightbox-jlg' ); ?></p>
-                        <p class="description"><?php echo esc_html__( 'Les effets 3D sont automatiquement simplifiés si le système demande une réduction des animations.', 'lightbox-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="mga_speed"><?php echo esc_html__( 'Vitesse de transition', 'lightbox-jlg' ); ?></label></th>
-                    <td>
-                        <input name="mga_settings[speed]" type="number" id="mga_speed" value="<?php echo esc_attr( $settings['speed'] ); ?>" min="100" max="5000" step="50" class="small-text" /> <?php echo esc_html__( 'millisecondes', 'lightbox-jlg' ); ?>
-                        <p class="description"><?php echo esc_html__( 'Durée de l’animation entre deux images (100 ms = très rapide, 5000 ms = très lent).', 'lightbox-jlg' ); ?></p>
-                        <label for="mga_easing" class="screen-reader-text"><?php echo esc_html__( 'Courbe d’animation', 'lightbox-jlg' ); ?></label>
-                        <select name="mga_settings[easing]" id="mga_easing">
-                            <option value="ease-out" <?php selected( $settings['easing'], 'ease-out' ); ?>><?php echo esc_html__( 'Décélération (par défaut)', 'lightbox-jlg' ); ?></option>
-                            <option value="ease-in-out" <?php selected( $settings['easing'], 'ease-in-out' ); ?>><?php echo esc_html__( 'Douce (aller-retour)', 'lightbox-jlg' ); ?></option>
-                            <option value="ease-in" <?php selected( $settings['easing'], 'ease-in' ); ?>><?php echo esc_html__( 'Accélération progressive', 'lightbox-jlg' ); ?></option>
-                            <option value="ease" <?php selected( $settings['easing'], 'ease' ); ?>><?php echo esc_html__( 'Standard CSS', 'lightbox-jlg' ); ?></option>
-                            <option value="linear" <?php selected( $settings['easing'], 'linear' ); ?>><?php echo esc_html__( 'Linéaire', 'lightbox-jlg' ); ?></option>
-                        </select>
-                        <p class="description"><?php echo esc_html__( 'Ajustez la fluidité de l’animation. Cette valeur est harmonisée avec vos préférences de mouvement.', 'lightbox-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php echo esc_html__( 'Taille des miniatures', 'lightbox-jlg' ); ?></th>
-                    <td>
-                        <label for="mga_thumb_size"><?php echo esc_html__( 'PC', 'lightbox-jlg' ); ?></label><br>
+                        <div class="mga-settings-layout" data-mga-settings-layout>
+                <aside class="mga-settings-layout__sidebar">
+                    <div class="mga-settings-toolbar">
+                        <label class="screen-reader-text" for="mga-settings-search"><?php echo esc_html__( 'Rechercher un réglage', 'lightbox-jlg' ); ?></label>
                         <input
-                            name="mga_settings[thumb_size]"
-                            type="range"
-                            id="mga_thumb_size"
-                            value="<?php echo esc_attr( $settings['thumb_size'] ); ?>"
-                            min="50"
-                            max="150"
-                            step="5"
-                            aria-valuemin="50"
-                            aria-valuemax="150"
-                            aria-valuenow="<?php echo esc_attr( $settings['thumb_size'] ); ?>"
-                            aria-valuetext="<?php echo esc_attr( sprintf( __( '%s pixels', 'lightbox-jlg' ), intval( $settings['thumb_size'] ) ) ); ?>"
-                            aria-describedby="mga_thumb_size_value"
+                            type="search"
+                            id="mga-settings-search"
+                            class="mga-settings-toolbar__search"
+                            placeholder="<?php echo esc_attr__( 'Rechercher un réglage…', 'lightbox-jlg' ); ?>"
+                            autocomplete="off"
+                            data-mga-settings-search
                         />
-                        <output id="mga_thumb_size_value" for="mga_thumb_size" class="mga-range-output" aria-live="polite">
-                            <?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size'] ) ); ?>
-                        </output>
-                        <br><br>
-                        <label for="mga_thumb_size_mobile"><?php echo esc_html__( 'Mobile', 'lightbox-jlg' ); ?></label><br>
-                        <input
-                            name="mga_settings[thumb_size_mobile]"
-                            type="range"
-                            id="mga_thumb_size_mobile"
-                            value="<?php echo esc_attr( $settings['thumb_size_mobile'] ); ?>"
-                            min="40"
-                            max="100"
-                            step="5"
-                            aria-valuemin="40"
-                            aria-valuemax="100"
-                            aria-valuenow="<?php echo esc_attr( $settings['thumb_size_mobile'] ); ?>"
-                            aria-valuetext="<?php echo esc_attr( sprintf( __( '%s pixels', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ) ); ?>"
-                            aria-describedby="mga_thumb_size_mobile_value"
-                        />
-                        <output id="mga_thumb_size_mobile_value" for="mga_thumb_size_mobile" class="mga-range-output" aria-live="polite">
-                            <?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ); ?>
-                        </output>
-                        <p class="description"><?php echo esc_html__( "Ajustez la hauteur des miniatures en bas de la galerie pour chaque type d'appareil.", 'lightbox-jlg' ); ?></p>
-                        <br>
-                        <input type="hidden" name="mga_settings[show_thumbs_mobile]" value="0" />
-                        <label for="mga_show_thumbs_mobile">
-                            <input
-                                name="mga_settings[show_thumbs_mobile]"
-                                type="checkbox"
-                                id="mga_show_thumbs_mobile"
-                                value="1"
-                                <?php checked( ! empty( $settings['show_thumbs_mobile'] ), 1 ); ?>
-                            />
-                            <span><?php echo esc_html__( 'Afficher les miniatures sur mobile', 'lightbox-jlg' ); ?></span>
-                        </label>
-                        <p class="description"><?php echo esc_html__( 'Décochez pour masquer les miniatures sous 768px. Les flèches de navigation resteront visibles afin de permettre le changement d’image.', 'lightbox-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="mga_thumbs_layout"><?php echo esc_html__( 'Disposition des miniatures', 'lightbox-jlg' ); ?></label></th>
-                    <td>
-                        <select name="mga_settings[thumbs_layout]" id="mga_thumbs_layout">
-                            <option value="bottom" <?php selected( $settings['thumbs_layout'], 'bottom' ); ?>><?php echo esc_html__( 'Barre inférieure (par défaut)', 'lightbox-jlg' ); ?></option>
-                            <option value="left" <?php selected( $settings['thumbs_layout'], 'left' ); ?>><?php echo esc_html__( 'Colonne latérale', 'lightbox-jlg' ); ?></option>
-                            <option value="hidden" <?php selected( $settings['thumbs_layout'], 'hidden' ); ?>><?php echo esc_html__( 'Masquées', 'lightbox-jlg' ); ?></option>
-                        </select>
-                        <p class="description"><?php echo esc_html__( 'Choisissez où afficher les miniatures dans la visionneuse. La disposition latérale passe en bas sur mobile pour préserver l’espace.', 'lightbox-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="mga_accent_color"><?php echo esc_html__( "Couleur d'accentuation", 'lightbox-jlg' ); ?></label></th>
-                    <td>
-                        <input
-                            name="mga_settings[accent_color]"
-                            type="text"
-                            id="mga_accent_color"
-                            value="<?php echo esc_attr( $settings['accent_color'] ); ?>"
-                            class="regular-text wp-color-picker"
-                            data-default-color="<?php echo esc_attr( $defaults['accent_color'] ); ?>"
-                        />
-                        <span id="mga_accent_color_preview" class="mga-color-preview" aria-hidden="true"></span>
-                        <p class="description"><?php echo esc_html__( 'Couleur des boutons, flèches et de la bordure de la miniature active.', 'lightbox-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="mga_bg_opacity"><?php echo esc_html__( "Opacité de l'arrière-plan", 'lightbox-jlg' ); ?></label></th>
-                    <td>
-                        <input
-                            name="mga_settings[bg_opacity]"
-                            type="range"
-                            id="mga_bg_opacity"
-                            value="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
-                            min="0.5"
-                            max="1"
-                            step="0.05"
-                            aria-valuemin="0.5"
-                            aria-valuemax="1"
-                            aria-valuenow="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
-                            aria-valuetext="<?php echo esc_attr( sprintf( __( '%s opacity', 'lightbox-jlg' ), $settings['bg_opacity'] ) ); ?>"
-                            aria-describedby="mga_bg_opacity_value"
-                        />
-                        <output id="mga_bg_opacity_value" for="mga_bg_opacity" class="mga-range-output" aria-live="polite">
-                            <?php echo esc_html( $settings['bg_opacity'] ); ?>
-                        </output>
-                        <p class="description"><?php echo esc_html__( "Réglez la transparence du fond de la galerie (0.5 = transparent, 1 = opaque).", 'lightbox-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="mga_background_style"><?php echo esc_html__( "Effet d'arrière-plan", 'lightbox-jlg' ); ?></label></th>
-                    <td>
-                        <select name="mga_settings[background_style]" id="mga_background_style">
-                            <option value="echo" <?php selected( $settings['background_style'], 'echo' ); ?>><?php echo esc_html__( "Flou d'écho d'image (Recommandé)", 'lightbox-jlg' ); ?></option>
-                            <option value="texture" <?php selected( $settings['background_style'], 'texture' ); ?>><?php echo esc_html__( 'Texture verre dépoli (Performance max)', 'lightbox-jlg' ); ?></option>
-                            <option value="blur" <?php selected( $settings['background_style'], 'blur' ); ?>><?php echo esc_html__( 'Flou en temps réel (Gourmand)', 'lightbox-jlg' ); ?></option>
-                        </select>
-                        <p class="description"><?php echo esc_html__( "Choisissez le style de l'arrière-plan pour un compromis entre design et performance.", 'lightbox-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="mga_group_attribute"><?php echo esc_html__( 'Attribut de regroupement', 'lightbox-jlg' ); ?></label></th>
-                    <td>
-                        <input
-                            name="mga_settings[groupAttribute]"
-                            type="text"
-                            id="mga_group_attribute"
-                            value="<?php echo esc_attr( $settings['groupAttribute'] ); ?>"
-                            class="regular-text"
-                        />
-                        <p class="description">
-                            <?php echo esc_html__( 'Indiquez l’attribut HTML qui identifie les groupes (ex. data-mga-gallery, rel, href). Laissez vide pour conserver un groupe unique comme dans les versions précédentes.', 'lightbox-jlg' ); ?>
-                        </p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="mga_z_index"><?php echo esc_html__( 'Z-index de la galerie', 'lightbox-jlg' ); ?></label></th>
-                    <td>
-                        <input name="mga_settings[z_index]" type="number" id="mga_z_index" value="<?php echo esc_attr( $settings['z_index'] ); ?>" min="1" class="small-text" />
-                        <p class="description"><?php echo esc_html__( "Augmentez cette valeur si la galerie apparaît sous un autre élément (ex: menu du site).", 'lightbox-jlg' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php echo esc_html__( 'Options diverses', 'lightbox-jlg' ); ?></th>
-                    <td>
-                        <fieldset class="mga-toggle-list">
-                            <div class="mga-toggle-list__item">
-                                <label for="mga_loop">
-                                    <input name="mga_settings[loop]" type="checkbox" id="mga_loop" value="1" <?php checked( ! empty( $settings['loop'] ), 1 ); ?> />
-                                    <span><?php echo esc_html__( 'Lecture en boucle', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description"><?php echo esc_html__( 'Permet au diaporama de recommencer au début après la dernière image.', 'lightbox-jlg' ); ?></p>
-                            </div>
+                        <p class="description mga-settings-toolbar__hint"><?php echo esc_html__( 'Filtrez les sections ou cliquez sur un titre pour y accéder rapidement.', 'lightbox-jlg' ); ?></p>
+                    </div>
 
-                            <div class="mga-toggle-list__item">
-                                <label for="mga_autoplay_start">
-                                    <input name="mga_settings[autoplay_start]" type="checkbox" id="mga_autoplay_start" value="1" <?php checked( ! empty( $settings['autoplay_start'] ), 1 ); ?> />
-                                    <span><?php echo esc_html__( 'Lancement auto. du diaporama', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description"><?php echo esc_html__( "Si coché, le diaporama démarre automatiquement à l'ouverture de la galerie.", 'lightbox-jlg' ); ?></p>
-                            </div>
+                    <ul class="mga-settings-layout__nav" data-mga-settings-nav>
+                        <li><a href="#mga-section-style" data-mga-section-link><?php echo esc_html__( 'Presets & raccourcis', 'lightbox-jlg' ); ?></a></li>
+                        <li><a href="#mga-section-playback" data-mga-section-link><?php echo esc_html__( 'Lecture & transitions', 'lightbox-jlg' ); ?></a></li>
+                        <li><a href="#mga-section-thumbnails" data-mga-section-link><?php echo esc_html__( 'Miniatures & navigation', 'lightbox-jlg' ); ?></a></li>
+                        <li><a href="#mga-section-appearance" data-mga-section-link><?php echo esc_html__( 'Apparence de la visionneuse', 'lightbox-jlg' ); ?></a></li>
+                        <li><a href="#mga-section-toolbar" data-mga-section-link><?php echo esc_html__( 'Barre d’outils & actions', 'lightbox-jlg' ); ?></a></li>
+                        <li><a href="#mga-section-detection" data-mga-section-link><?php echo esc_html__( 'Détection & intégration', 'lightbox-jlg' ); ?></a></li>
+                        <li><a href="#mga-section-maintenance" data-mga-section-link><?php echo esc_html__( 'Maintenance & support', 'lightbox-jlg' ); ?></a></li>
+                    </ul>
 
-                            <div class="mga-toggle-list__item">
-                                <label for="mga_start_on_clicked_image">
-                                    <input name="mga_settings[start_on_clicked_image]" type="checkbox" id="mga_start_on_clicked_image" value="1" <?php checked( ! empty( $settings['start_on_clicked_image'] ), 1 ); ?> />
-                                    <span><?php echo esc_html__( 'Démarrer sur l’image cliquée', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description"><?php echo esc_html__( 'Affiche directement la photo sélectionnée au lieu de revenir au début de l’article.', 'lightbox-jlg' ); ?></p>
-                            </div>
+                    <p class="mga-settings-layout__empty" data-mga-search-empty hidden><?php echo esc_html__( 'Aucun réglage ne correspond à votre recherche.', 'lightbox-jlg' ); ?></p>
+                </aside>
 
-                            <div class="mga-toggle-list__item">
-                                <label for="mga_allow_body_fallback">
-                                    <input name="mga_settings[allowBodyFallback]" type="checkbox" id="mga_allow_body_fallback" value="1" <?php checked( ! empty( $settings['allowBodyFallback'] ), 1 ); ?> />
-                                    <span><?php echo esc_html__( 'Autoriser le repli sur &lt;body&gt;', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description"><?php echo esc_html__( "Active un repli sur l'élément &lt;body&gt; si le thème ne propose pas de zone de contenu compatible.", 'lightbox-jlg' ); ?></p>
-                            </div>
+                <div class="mga-settings-layout__content">
+                    <section
+                        id="mga-section-style"
+                        class="mga-settings-section"
+                        data-mga-settings-section
+                        aria-labelledby="mga-section-style-title"
+                        tabindex="-1"
+                    >
+                        <header class="mga-settings-section__header">
+                            <h2 id="mga-section-style-title" data-mga-section-title><?php echo esc_html__( 'Presets & raccourcis', 'lightbox-jlg' ); ?></h2>
+                            <p class="mga-settings-section__description"><?php echo esc_html__( 'Appliquez une base visuelle prête à l’emploi, puis ajustez uniquement les détails nécessaires.', 'lightbox-jlg' ); ?></p>
+                        </header>
+                        <div class="mga-settings-section__body">
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga_style_preset"><?php echo esc_html__( 'Preset graphique', 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <select
+                                        name="mga_settings[style_preset]"
+                                        id="mga_style_preset"
+                                        aria-describedby="mga_style_preset_help mga_style_preset_description"
+                                    >
+                                        <option value="" <?php selected( $settings['style_preset'], '' ); ?>><?php echo esc_html__( 'Aucun (personnalisé)', 'lightbox-jlg' ); ?></option>
+                                        <?php foreach ( $style_presets as $preset_key => $preset_definition ) :
+                                            $sanitized_key = sanitize_key( (string) $preset_key );
 
-                            <div class="mga-toggle-list__item">
-                                <input type="hidden" name="mga_settings[include_svg]" value="0" />
-                                <label for="mga_include_svg">
-                                    <input
-                                        name="mga_settings[include_svg]"
-                                        type="checkbox"
-                                        id="mga_include_svg"
-                                        value="1"
-                                        <?php checked( ! empty( $settings['include_svg'] ), 1 ); ?>
-                                    />
-                                    <span><?php echo esc_html__( 'Inclure les fichiers SVG', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description"><?php echo esc_html__( 'Décochez si votre site bloque le rendu des SVG ou si vous préférez les exclure du diaporama.', 'lightbox-jlg' ); ?></p>
-                            </div>
+                                            if ( '' === $sanitized_key ) {
+                                                continue;
+                                            }
 
-                            <div class="mga-toggle-list__item">
-                                <input type="hidden" name="mga_settings[load_on_archives]" value="0" />
-                                <label for="mga_load_on_archives">
-                                    <input
-                                        name="mga_settings[load_on_archives]"
-                                        type="checkbox"
-                                        id="mga_load_on_archives"
-                                        value="1"
-                                        <?php checked( ! empty( $settings['load_on_archives'] ), 1 ); ?>
-                                    />
-                                    <span><?php echo esc_html__( 'Analyser les archives', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description"><?php echo esc_html__( 'Autorise la détection des images liées dans les listes d’articles (page de blog, catégories, étiquettes, etc.).', 'lightbox-jlg' ); ?></p>
-                            </div>
-
-                            <div class="mga-toggle-list__item">
-                                <input type="hidden" name="mga_settings[close_on_backdrop]" value="0" />
-                                <label for="mga_close_on_backdrop">
-                                    <input
-                                        name="mga_settings[close_on_backdrop]"
-                                        type="checkbox"
-                                        id="mga_close_on_backdrop"
-                                        value="1"
-                                        aria-describedby="mga_close_on_backdrop_help"
-                                        <?php checked( ! empty( $settings['close_on_backdrop'] ), 1 ); ?>
-                                    />
-                                    <span><?php echo esc_html__( 'Fermer sur clic arrière-plan', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description" id="mga_close_on_backdrop_help"><?php echo esc_html__( "Décochez pour empêcher la fermeture de la visionneuse lorsque l'arrière-plan est cliqué.", 'lightbox-jlg' ); ?></p>
-                            </div>
-
-                            <div class="mga-toggle-list__item">
-                                <input type="hidden" name="mga_settings[show_zoom]" value="0" />
-                                <label for="mga_show_zoom">
-                                    <input name="mga_settings[show_zoom]" type="checkbox" id="mga_show_zoom" value="1" <?php checked( ! empty( $settings['show_zoom'] ), 1 ); ?> />
-                                    <span><?php echo esc_html__( 'Afficher le bouton de zoom', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description"><?php echo esc_html__( "Permet aux visiteurs de zoomer sur l'image affichée.", 'lightbox-jlg' ); ?></p>
-                            </div>
-
-                            <div class="mga-toggle-list__item">
-                                <input type="hidden" name="mga_settings[show_download]" value="0" />
-                                <label for="mga_show_download">
-                                    <input name="mga_settings[show_download]" type="checkbox" id="mga_show_download" value="1" <?php checked( ! empty( $settings['show_download'] ), 1 ); ?> />
-                                    <span><?php echo esc_html__( 'Afficher le bouton de téléchargement', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description"><?php echo esc_html__( "Autorise le téléchargement direct de l'image en cours.", 'lightbox-jlg' ); ?></p>
-                            </div>
-
-                            <div class="mga-toggle-list__item">
-                                <input type="hidden" name="mga_settings[show_share]" value="0" />
-                                <label for="mga_show_share">
-                                    <input name="mga_settings[show_share]" type="checkbox" id="mga_show_share" value="1" <?php checked( ! empty( $settings['show_share'] ), 1 ); ?> />
-                                    <span><?php echo esc_html__( 'Afficher le bouton de partage', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description"><?php echo esc_html__( "Affiche le bouton de partage via le navigateur ou un nouvel onglet.", 'lightbox-jlg' ); ?></p>
-                            </div>
-
-                            <div class="mga-toggle-list__item">
-                                <input type="hidden" name="mga_settings[show_cta]" value="0" />
-                                <label for="mga_show_cta">
-                                    <input name="mga_settings[show_cta]" type="checkbox" id="mga_show_cta" value="1" <?php checked( ! empty( $settings['show_cta'] ), 1 ); ?> />
-                                    <span><?php echo esc_html__( 'Afficher le bouton « S’abonner »', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description"><?php echo esc_html__( 'Masquez complètement le bouton d’abonnement si vous ne souhaitez pas le proposer.', 'lightbox-jlg' ); ?></p>
-                            </div>
-
-                            <div class="mga-toggle-list__item">
-                                <input type="hidden" name="mga_settings[show_fullscreen]" value="0" />
-                                <label for="mga_show_fullscreen">
-                                    <input name="mga_settings[show_fullscreen]" type="checkbox" id="mga_show_fullscreen" value="1" <?php checked( ! empty( $settings['show_fullscreen'] ), 1 ); ?> />
-                                    <span><?php echo esc_html__( 'Afficher le bouton plein écran', 'lightbox-jlg' ); ?></span>
-                                </label>
-                                <p class="description"><?php echo esc_html__( "Permet d'activer le mode plein écran depuis la barre d'outils.", 'lightbox-jlg' ); ?></p>
-                            </div>
-                        </fieldset>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">
-                        <label for="mga-content-selectors-textarea">
-                            <?php echo esc_html__( 'Sélecteurs CSS personnalisés', 'lightbox-jlg' ); ?>
-                        </label>
-                    </th>
-                    <td>
-                        <?php
-                        $configured_selectors = array_filter(
-                            array_map(
-                                static function ( $selector ) {
-                                    return trim( (string) $selector );
-                                },
-                                (array) $settings['contentSelectors']
-                            ),
-                            static function ( $selector ) {
-                                return '' !== $selector;
-                            }
-                        );
-                        $selectors_placeholder = esc_attr__( '.entry-content a[href$=".jpg"]', 'lightbox-jlg' );
-                        ?>
-                        <div
-                            class="mga-content-selectors"
-                            data-mga-content-selectors
-                            data-mga-selector-placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
-                        >
-                            <textarea
-                                id="mga-content-selectors-textarea"
-                                name="mga_settings[contentSelectors]"
-                                rows="4"
-                                class="large-text code"
-                                data-mga-content-selectors-textarea
-                                placeholder="<?php echo esc_attr__( "Un sélecteur CSS par ligne\n.exemple article a[href$=\".jpg\"]", 'lightbox-jlg' ); ?>"
-                                aria-describedby="mga-content-selectors-help"
-                            ><?php echo esc_textarea( implode( "\n", $configured_selectors ) ); ?></textarea>
-                            <div class="mga-content-selectors__list" data-mga-content-selectors-list>
-                                <?php foreach ( $configured_selectors as $index => $selector ) : ?>
-                                    <?php $input_id = sprintf( 'mga-content-selector-%d', (int) $index ); ?>
-                                    <div class="mga-content-selectors__row" data-mga-content-selector-row>
-                                        <input
-                                            type="text"
-                                            id="<?php echo esc_attr( $input_id ); ?>"
-                                            class="regular-text"
-                                            value="<?php echo esc_attr( $selector ); ?>"
-                                            data-mga-content-selector-input
-                                            placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
-                                        />
-                                        <button
-                                            type="button"
-                                            class="button-link mga-content-selectors__remove"
-                                            data-mga-remove-selector
-                                            aria-label="<?php echo esc_attr__( 'Supprimer ce sélecteur CSS', 'lightbox-jlg' ); ?>"
-                                        >
-                                            <?php echo esc_html__( 'Retirer', 'lightbox-jlg' ); ?>
-                                        </button>
+                                            $label = isset( $preset_definition['label'] ) && '' !== trim( (string) $preset_definition['label'] )
+                                                ? $preset_definition['label']
+                                                : ucwords( str_replace( '-', ' ', $sanitized_key ) );
+                                            ?>
+                                            <option value="<?php echo esc_attr( $sanitized_key ); ?>" <?php selected( $settings['style_preset'], $sanitized_key ); ?>>
+                                                <?php echo esc_html( $label ); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <p class="description" id="mga_style_preset_help"><?php echo esc_html__( 'Appliquez un ensemble de réglages inspiré de bibliothèques UI populaires. Vous pouvez ensuite ajuster chaque option librement.', 'lightbox-jlg' ); ?></p>
+                                    <div class="mga-style-preset-actions">
+                                        <button type="button" class="button button-secondary" data-mga-apply-style-preset><?php echo esc_html__( 'Appliquer ce preset', 'lightbox-jlg' ); ?></button>
+                                        <button type="button" class="button-link" data-mga-reset-style-preset><?php echo esc_html__( 'Revenir aux valeurs par défaut', 'lightbox-jlg' ); ?></button>
                                     </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <p>
-                                <button
-                                    type="button"
-                                    class="button button-secondary"
-                                    data-mga-add-selector
-                                >
-                                    <?php echo esc_html__( 'Ajouter un sélecteur', 'lightbox-jlg' ); ?>
-                                </button>
-                            </p>
-                            <p class="description" id="mga-content-selectors-help">
-                                <?php
-                                echo wp_kses_post(
-                                    __( 'Ajoutez ici vos propres sélecteurs lorsque le contenu principal de votre thème n’utilise pas les classes par défaut (par exemple <code>.entry-content</code>). Chaque ligne correspond à un sélecteur complet, combiné aux valeurs natives du plugin. Utilisez le bouton <strong>Ajouter un sélecteur</strong> ou appuyez sur la touche <kbd>Entrée</kbd> dans un champ pour créer rapidement une nouvelle ligne.', 'lightbox-jlg' )
-                                );
-                                ?>
-                            </p>
-                            <div class="mga-content-selectors__details">
-                                <p><strong><?php echo esc_html__( 'Quand personnaliser ces sélecteurs ?', 'lightbox-jlg' ); ?></strong></p>
-                                <p>
-                                    <?php
-                                    echo wp_kses_post(
-                                        __( 'Utilisez cette liste si votre thème encapsule les images dans des conteneurs spécifiques (ex. <code>.site-main .article-body</code>) ou si vous avez besoin d’inclure des blocs personnalisés. En cas de doute, inspectez votre page avec les outils du navigateur pour identifier la classe englobante, puis ajoutez-la ici afin que le plugin repère les liens vers les fichiers médias.', 'lightbox-jlg' )
-                                    );
-                                    ?>
-                                </p>
+                                    <p class="description mga-style-preset-description" id="mga_style_preset_description" data-mga-style-preset-description></p>
+                                </div>
                             </div>
                         </div>
-                        <template id="mga-content-selector-template">
-                            <div class="mga-content-selectors__row" data-mga-content-selector-row>
-                                <input
-                                    type="text"
-                                    class="regular-text"
-                                    data-mga-content-selector-input
-                                    placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
-                                />
-                                <button
-                                    type="button"
-                                    class="button-link mga-content-selectors__remove"
-                                    data-mga-remove-selector
-                                    aria-label="<?php echo esc_attr__( 'Supprimer ce sélecteur CSS', 'lightbox-jlg' ); ?>"
-                                >
-                                    <?php echo esc_html__( 'Retirer', 'lightbox-jlg' ); ?>
-                                </button>
+                    </section>
+
+                    <section
+                        id="mga-section-playback"
+                        class="mga-settings-section"
+                        data-mga-settings-section
+                        aria-labelledby="mga-section-playback-title"
+                        tabindex="-1"
+                    >
+                        <header class="mga-settings-section__header">
+                            <h2 id="mga-section-playback-title" data-mga-section-title><?php echo esc_html__( 'Lecture & transitions', 'lightbox-jlg' ); ?></h2>
+                            <p class="mga-settings-section__description"><?php echo esc_html__( 'Contrôlez la cadence du diaporama et la sensation des animations pour s’adapter à votre public.', 'lightbox-jlg' ); ?></p>
+                        </header>
+                        <div class="mga-settings-section__body">
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga_delay"><?php echo esc_html__( 'Vitesse du diaporama', 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <input name="mga_settings[delay]" type="number" id="mga_delay" value="<?php echo esc_attr( $settings['delay'] ); ?>" min="1" max="30" class="small-text" /> <?php echo esc_html__( 'secondes', 'lightbox-jlg' ); ?>
+                                    <p class="description"><?php echo esc_html__( "Durée d'affichage de chaque image en mode lecture automatique.", 'lightbox-jlg' ); ?></p>
+                                </div>
                             </div>
-                        </template>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php echo esc_html__( 'Mode de débogage', 'lightbox-jlg' ); ?></th>
-                    <td>
-                        <fieldset>
-                            <label for="mga_debug_mode">
-                                <input name="mga_settings[debug_mode]" type="checkbox" id="mga_debug_mode" value="1" <?php checked( ! empty( $settings['debug_mode'] ), 1 ); ?> />
-                                <span><?php echo esc_html__( 'Activer le mode débogage', 'lightbox-jlg' ); ?></span>
-                            </label>
-                            <p class="description"><?php echo esc_html__( "Affiche un panneau d'informations techniques sur le site pour aider à résoudre les problèmes.", 'lightbox-jlg' ); ?></p>
-                        </fieldset>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php echo esc_html__( 'Types de contenu suivis', 'lightbox-jlg' ); ?></th>
-                    <td>
-                        <fieldset>
-                            <legend class="screen-reader-text">
-                                <span><?php echo esc_html__( 'Sélectionnez les types de contenu à analyser', 'lightbox-jlg' ); ?></span>
-                            </legend>
-                            <?php
-                            $post_types = get_post_types( [ 'public' => true ], 'objects' );
 
-                            if ( empty( $post_types ) ) :
-                                ?>
-                                <p class="description"><?php echo esc_html__( 'Aucun type de contenu public n’a été détecté.', 'lightbox-jlg' ); ?></p>
-                                <?php
-                            else :
-                                foreach ( $post_types as $post_type ) :
-                                    if ( 'attachment' === $post_type->name ) {
-                                        continue;
-                                    }
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga_effect"><?php echo esc_html__( 'Effet de transition', 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <select name="mga_settings[effect]" id="mga_effect">
+                                        <option value="slide" <?php selected( $settings['effect'], 'slide' ); ?>><?php echo esc_html__( 'Glissement (recommandé)', 'lightbox-jlg' ); ?></option>
+                                        <option value="fade" <?php selected( $settings['effect'], 'fade' ); ?>><?php echo esc_html__( 'Fondu', 'lightbox-jlg' ); ?></option>
+                                        <option value="cube" <?php selected( $settings['effect'], 'cube' ); ?>><?php echo esc_html__( 'Cube 3D', 'lightbox-jlg' ); ?></option>
+                                        <option value="coverflow" <?php selected( $settings['effect'], 'coverflow' ); ?>><?php echo esc_html__( 'Coverflow 3D', 'lightbox-jlg' ); ?></option>
+                                        <option value="flip" <?php selected( $settings['effect'], 'flip' ); ?>><?php echo esc_html__( 'Flip 3D', 'lightbox-jlg' ); ?></option>
+                                    </select>
+                                    <p class="description"><?php echo esc_html__( "Choisissez le style d'animation utilisé lors du changement d'image.", 'lightbox-jlg' ); ?></p>
+                                    <p class="description"><?php echo esc_html__( 'Les effets 3D sont automatiquement simplifiés si le système demande une réduction des animations.', 'lightbox-jlg' ); ?></p>
+                                </div>
+                            </div>
 
-                                    $is_checked = in_array( $post_type->name, (array) $settings['tracked_post_types'], true );
-                                    ?>
-                                    <label for="mga-tracked-post-type-<?php echo esc_attr( $post_type->name ); ?>" class="mga-tracked-post-type">
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga_speed"><?php echo esc_html__( 'Vitesse de transition', 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <input name="mga_settings[speed]" type="number" id="mga_speed" value="<?php echo esc_attr( $settings['speed'] ); ?>" min="100" max="5000" step="50" class="small-text" /> <?php echo esc_html__( 'millisecondes', 'lightbox-jlg' ); ?>
+                                    <p class="description"><?php echo esc_html__( 'Durée de l’animation entre deux images (100 ms = très rapide, 5000 ms = très lent).', 'lightbox-jlg' ); ?></p>
+                                    <label for="mga_easing" class="screen-reader-text"><?php echo esc_html__( 'Courbe d’animation', 'lightbox-jlg' ); ?></label>
+                                    <select name="mga_settings[easing]" id="mga_easing">
+                                        <option value="ease-out" <?php selected( $settings['easing'], 'ease-out' ); ?>><?php echo esc_html__( 'Décélération (par défaut)', 'lightbox-jlg' ); ?></option>
+                                        <option value="ease-in-out" <?php selected( $settings['easing'], 'ease-in-out' ); ?>><?php echo esc_html__( 'Douce (aller-retour)', 'lightbox-jlg' ); ?></option>
+                                        <option value="ease-in" <?php selected( $settings['easing'], 'ease-in' ); ?>><?php echo esc_html__( 'Accélération progressive', 'lightbox-jlg' ); ?></option>
+                                        <option value="ease" <?php selected( $settings['easing'], 'ease' ); ?>><?php echo esc_html__( 'Standard CSS', 'lightbox-jlg' ); ?></option>
+                                        <option value="linear" <?php selected( $settings['easing'], 'linear' ); ?>><?php echo esc_html__( 'Linéaire', 'lightbox-jlg' ); ?></option>
+                                    </select>
+                                    <p class="description"><?php echo esc_html__( 'Ajustez la fluidité de l’animation. Cette valeur est harmonisée avec vos préférences de mouvement.', 'lightbox-jlg' ); ?></p>
+                                </div>
+                            </div>
+
+                            <fieldset class="mga-setting-row mga-setting-row--fieldset">
+                                <legend><?php echo esc_html__( 'Lecture automatique', 'lightbox-jlg' ); ?></legend>
+                                <div class="mga-setting-row__fieldset">
+                                    <div class="mga-toggle-list__item">
+                                        <label for="mga_loop">
+                                            <input name="mga_settings[loop]" type="checkbox" id="mga_loop" value="1" <?php checked( ! empty( $settings['loop'] ), 1 ); ?> />
+                                            <span><?php echo esc_html__( 'Lecture en boucle', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( 'Permet au diaporama de recommencer au début après la dernière image.', 'lightbox-jlg' ); ?></p>
+                                    </div>
+
+                                    <div class="mga-toggle-list__item">
+                                        <label for="mga_autoplay_start">
+                                            <input name="mga_settings[autoplay_start]" type="checkbox" id="mga_autoplay_start" value="1" <?php checked( ! empty( $settings['autoplay_start'] ), 1 ); ?> />
+                                            <span><?php echo esc_html__( 'Lancement auto. du diaporama', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( "Si coché, le diaporama démarre automatiquement à l'ouverture de la galerie.", 'lightbox-jlg' ); ?></p>
+                                    </div>
+
+                                    <div class="mga-toggle-list__item">
+                                        <label for="mga_start_on_clicked_image">
+                                            <input name="mga_settings[start_on_clicked_image]" type="checkbox" id="mga_start_on_clicked_image" value="1" <?php checked( ! empty( $settings['start_on_clicked_image'] ), 1 ); ?> />
+                                            <span><?php echo esc_html__( 'Démarrer sur l’image cliquée', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( 'Affiche directement la photo sélectionnée au lieu de revenir au début de l’article.', 'lightbox-jlg' ); ?></p>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </section>
+
+                    <section
+                        id="mga-section-thumbnails"
+                        class="mga-settings-section"
+                        data-mga-settings-section
+                        aria-labelledby="mga-section-thumbnails-title"
+                        tabindex="-1"
+                    >
+                        <header class="mga-settings-section__header">
+                            <h2 id="mga-section-thumbnails-title" data-mga-section-title><?php echo esc_html__( 'Miniatures & navigation', 'lightbox-jlg' ); ?></h2>
+                            <p class="mga-settings-section__description"><?php echo esc_html__( 'Adaptez la barre de miniatures à la densité de vos photos et à l’espace disponible.', 'lightbox-jlg' ); ?></p>
+                        </header>
+                        <div class="mga-settings-section__body">
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <span class="mga-setting-row__label-text"><?php echo esc_html__( 'Taille des miniatures', 'lightbox-jlg' ); ?></span>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <label for="mga_thumb_size"><?php echo esc_html__( 'PC', 'lightbox-jlg' ); ?></label><br>
+                                    <input
+                                        name="mga_settings[thumb_size]"
+                                        type="range"
+                                        id="mga_thumb_size"
+                                        value="<?php echo esc_attr( $settings['thumb_size'] ); ?>"
+                                        min="50"
+                                        max="150"
+                                        step="5"
+                                        aria-valuemin="50"
+                                        aria-valuemax="150"
+                                        aria-valuenow="<?php echo esc_attr( $settings['thumb_size'] ); ?>"
+                                        aria-valuetext="<?php echo esc_attr( sprintf( __( '%s pixels', 'lightbox-jlg' ), intval( $settings['thumb_size'] ) ) ); ?>"
+                                        aria-describedby="mga_thumb_size_value"
+                                    />
+                                    <output id="mga_thumb_size_value" for="mga_thumb_size" class="mga-range-output" aria-live="polite">
+                                        <?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size'] ) ); ?>
+                                    </output>
+                                    <br><br>
+                                    <label for="mga_thumb_size_mobile"><?php echo esc_html__( 'Mobile', 'lightbox-jlg' ); ?></label><br>
+                                    <input
+                                        name="mga_settings[thumb_size_mobile]"
+                                        type="range"
+                                        id="mga_thumb_size_mobile"
+                                        value="<?php echo esc_attr( $settings['thumb_size_mobile'] ); ?>"
+                                        min="40"
+                                        max="100"
+                                        step="5"
+                                        aria-valuemin="40"
+                                        aria-valuemax="100"
+                                        aria-valuenow="<?php echo esc_attr( $settings['thumb_size_mobile'] ); ?>"
+                                        aria-valuetext="<?php echo esc_attr( sprintf( __( '%s pixels', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ) ); ?>"
+                                        aria-describedby="mga_thumb_size_mobile_value"
+                                    />
+                                    <output id="mga_thumb_size_mobile_value" for="mga_thumb_size_mobile" class="mga-range-output" aria-live="polite">
+                                        <?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ); ?>
+                                    </output>
+                                    <p class="description"><?php echo esc_html__( "Ajustez la hauteur des miniatures en bas de la galerie pour chaque type d'appareil.", 'lightbox-jlg' ); ?></p>
+                                </div>
+                            </div>
+
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga_show_thumbs_mobile"><?php echo esc_html__( 'Miniatures sur mobile', 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <input type="hidden" name="mga_settings[show_thumbs_mobile]" value="0" />
+                                    <label for="mga_show_thumbs_mobile" class="mga-inline-toggle">
                                         <input
+                                            name="mga_settings[show_thumbs_mobile]"
                                             type="checkbox"
-                                            id="mga-tracked-post-type-<?php echo esc_attr( $post_type->name ); ?>"
-                                            name="mga_settings[tracked_post_types][]"
-                                            value="<?php echo esc_attr( $post_type->name ); ?>"
-                                            <?php checked( $is_checked ); ?>
+                                            id="mga_show_thumbs_mobile"
+                                            value="1"
+                                            <?php checked( ! empty( $settings['show_thumbs_mobile'] ), 1 ); ?>
                                         />
-                                        <span><?php echo esc_html( $post_type->labels->singular_name ); ?></span>
+                                        <span><?php echo esc_html__( 'Afficher les miniatures sur mobile', 'lightbox-jlg' ); ?></span>
                                     </label>
-                                    <br />
-                                    <?php
-                                endforeach;
+                                    <p class="description"><?php echo esc_html__( 'Décochez pour masquer les miniatures sous 768px. Les flèches de navigation resteront visibles afin de permettre le changement d’image.', 'lightbox-jlg' ); ?></p>
+                                </div>
+                            </div>
 
-                                ?>
-                                <p class="description">
-                                    <?php echo esc_html__( 'Limitez l’analyse aux contenus réellement utilisés pour vos galeries. Par défaut, seuls les articles et les pages sont inspectés.', 'lightbox-jlg' ); ?>
-                                </p>
-                                <?php
-                            endif;
-                            ?>
-                        </fieldset>
-                    </td>
-                </tr>
-            </table>
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga_thumbs_layout"><?php echo esc_html__( 'Disposition des miniatures', 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <select name="mga_settings[thumbs_layout]" id="mga_thumbs_layout">
+                                        <option value="bottom" <?php selected( $settings['thumbs_layout'], 'bottom' ); ?>><?php echo esc_html__( 'Barre inférieure (par défaut)', 'lightbox-jlg' ); ?></option>
+                                        <option value="left" <?php selected( $settings['thumbs_layout'], 'left' ); ?>><?php echo esc_html__( 'Colonne latérale', 'lightbox-jlg' ); ?></option>
+                                        <option value="hidden" <?php selected( $settings['thumbs_layout'], 'hidden' ); ?>><?php echo esc_html__( 'Masquées', 'lightbox-jlg' ); ?></option>
+                                    </select>
+                                    <p class="description"><?php echo esc_html__( 'Choisissez où afficher les miniatures dans la visionneuse. La disposition latérale passe en bas sur mobile pour préserver l’espace.', 'lightbox-jlg' ); ?></p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section
+                        id="mga-section-appearance"
+                        class="mga-settings-section"
+                        data-mga-settings-section
+                        aria-labelledby="mga-section-appearance-title"
+                        tabindex="-1"
+                    >
+                        <header class="mga-settings-section__header">
+                            <h2 id="mga-section-appearance-title" data-mga-section-title><?php echo esc_html__( 'Apparence de la visionneuse', 'lightbox-jlg' ); ?></h2>
+                            <p class="mga-settings-section__description"><?php echo esc_html__( 'Ajustez les couleurs et la profondeur visuelle pour respecter votre charte graphique.', 'lightbox-jlg' ); ?></p>
+                        </header>
+                        <div class="mga-settings-section__body">
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga_accent_color"><?php echo esc_html__( "Couleur d'accentuation", 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <input
+                                        name="mga_settings[accent_color]"
+                                        type="text"
+                                        id="mga_accent_color"
+                                        value="<?php echo esc_attr( $settings['accent_color'] ); ?>"
+                                        class="regular-text wp-color-picker"
+                                        data-default-color="<?php echo esc_attr( $defaults['accent_color'] ); ?>"
+                                    />
+                                    <span id="mga_accent_color_preview" class="mga-color-preview" aria-hidden="true"></span>
+                                    <p class="description"><?php echo esc_html__( 'Couleur des boutons, flèches et de la bordure de la miniature active.', 'lightbox-jlg' ); ?></p>
+                                </div>
+                            </div>
+
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga_bg_opacity"><?php echo esc_html__( "Opacité de l'arrière-plan", 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <input
+                                        name="mga_settings[bg_opacity]"
+                                        type="range"
+                                        id="mga_bg_opacity"
+                                        value="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
+                                        min="0.5"
+                                        max="1"
+                                        step="0.05"
+                                        aria-valuemin="0.5"
+                                        aria-valuemax="1"
+                                        aria-valuenow="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
+                                        aria-valuetext="<?php echo esc_attr( sprintf( __( '%s opacity', 'lightbox-jlg' ), $settings['bg_opacity'] ) ); ?>"
+                                        aria-describedby="mga_bg_opacity_value"
+                                    />
+                                    <output id="mga_bg_opacity_value" for="mga_bg_opacity" class="mga-range-output" aria-live="polite">
+                                        <?php echo esc_html( $settings['bg_opacity'] ); ?>
+                                    </output>
+                                    <p class="description"><?php echo esc_html__( "Réglez la transparence du fond de la galerie (0.5 = transparent, 1 = opaque).", 'lightbox-jlg' ); ?></p>
+                                </div>
+                            </div>
+
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga_background_style"><?php echo esc_html__( "Effet d'arrière-plan", 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <select name="mga_settings[background_style]" id="mga_background_style">
+                                        <option value="echo" <?php selected( $settings['background_style'], 'echo' ); ?>><?php echo esc_html__( "Flou d'écho d'image (Recommandé)", 'lightbox-jlg' ); ?></option>
+                                        <option value="texture" <?php selected( $settings['background_style'], 'texture' ); ?>><?php echo esc_html__( 'Texture verre dépoli (Performance max)', 'lightbox-jlg' ); ?></option>
+                                        <option value="blur" <?php selected( $settings['background_style'], 'blur' ); ?>><?php echo esc_html__( 'Flou en temps réel (Gourmand)', 'lightbox-jlg' ); ?></option>
+                                    </select>
+                                    <p class="description"><?php echo esc_html__( "Choisissez le style de l'arrière-plan pour un compromis entre design et performance.", 'lightbox-jlg' ); ?></p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section
+                        id="mga-section-toolbar"
+                        class="mga-settings-section"
+                        data-mga-settings-section
+                        aria-labelledby="mga-section-toolbar-title"
+                        tabindex="-1"
+                    >
+                        <header class="mga-settings-section__header">
+                            <h2 id="mga-section-toolbar-title" data-mga-section-title><?php echo esc_html__( 'Barre d’outils & actions', 'lightbox-jlg' ); ?></h2>
+                            <p class="mga-settings-section__description"><?php echo esc_html__( 'Activez les contrôles utiles à vos visiteurs tout en conservant une interface épurée.', 'lightbox-jlg' ); ?></p>
+                        </header>
+                        <div class="mga-settings-section__body">
+                            <fieldset class="mga-setting-row mga-setting-row--fieldset">
+                                <legend><?php echo esc_html__( 'Contrôles disponibles', 'lightbox-jlg' ); ?></legend>
+                                <div class="mga-setting-row__fieldset">
+                                    <div class="mga-toggle-list__item">
+                                        <input type="hidden" name="mga_settings[close_on_backdrop]" value="0" />
+                                        <label for="mga_close_on_backdrop">
+                                            <input
+                                                name="mga_settings[close_on_backdrop]"
+                                                type="checkbox"
+                                                id="mga_close_on_backdrop"
+                                                value="1"
+                                                aria-describedby="mga_close_on_backdrop_help"
+                                                <?php checked( ! empty( $settings['close_on_backdrop'] ), 1 ); ?>
+                                            />
+                                            <span><?php echo esc_html__( 'Fermer sur clic arrière-plan', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description" id="mga_close_on_backdrop_help"><?php echo esc_html__( "Décochez pour empêcher la fermeture de la visionneuse lorsque l'arrière-plan est cliqué.", 'lightbox-jlg' ); ?></p>
+                                    </div>
+
+                                    <div class="mga-toggle-list__item">
+                                        <input type="hidden" name="mga_settings[show_zoom]" value="0" />
+                                        <label for="mga_show_zoom">
+                                            <input name="mga_settings[show_zoom]" type="checkbox" id="mga_show_zoom" value="1" <?php checked( ! empty( $settings['show_zoom'] ), 1 ); ?> />
+                                            <span><?php echo esc_html__( 'Afficher le bouton de zoom', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( "Permet aux visiteurs de zoomer sur l'image affichée.", 'lightbox-jlg' ); ?></p>
+                                    </div>
+
+                                    <div class="mga-toggle-list__item">
+                                        <input type="hidden" name="mga_settings[show_download]" value="0" />
+                                        <label for="mga_show_download">
+                                            <input name="mga_settings[show_download]" type="checkbox" id="mga_show_download" value="1" <?php checked( ! empty( $settings['show_download'] ), 1 ); ?> />
+                                            <span><?php echo esc_html__( 'Afficher le bouton de téléchargement', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( "Autorise le téléchargement direct de l'image en cours.", 'lightbox-jlg' ); ?></p>
+                                    </div>
+
+                                    <div class="mga-toggle-list__item">
+                                        <input type="hidden" name="mga_settings[show_share]" value="0" />
+                                        <label for="mga_show_share">
+                                            <input name="mga_settings[show_share]" type="checkbox" id="mga_show_share" value="1" <?php checked( ! empty( $settings['show_share'] ), 1 ); ?> />
+                                            <span><?php echo esc_html__( 'Afficher le bouton de partage', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( "Affiche le bouton de partage via le navigateur ou un nouvel onglet.", 'lightbox-jlg' ); ?></p>
+                                    </div>
+
+                                    <div class="mga-toggle-list__item">
+                                        <input type="hidden" name="mga_settings[show_cta]" value="0" />
+                                        <label for="mga_show_cta">
+                                            <input name="mga_settings[show_cta]" type="checkbox" id="mga_show_cta" value="1" <?php checked( ! empty( $settings['show_cta'] ), 1 ); ?> />
+                                            <span><?php echo esc_html__( 'Afficher le bouton « S’abonner »', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( 'Masquez complètement le bouton d’abonnement si vous ne souhaitez pas le proposer.', 'lightbox-jlg' ); ?></p>
+                                    </div>
+
+                                    <div class="mga-toggle-list__item">
+                                        <input type="hidden" name="mga_settings[show_fullscreen]" value="0" />
+                                        <label for="mga_show_fullscreen">
+                                            <input name="mga_settings[show_fullscreen]" type="checkbox" id="mga_show_fullscreen" value="1" <?php checked( ! empty( $settings['show_fullscreen'] ), 1 ); ?> />
+                                            <span><?php echo esc_html__( 'Afficher le bouton plein écran', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( "Permet d'activer le mode plein écran depuis la barre d'outils.", 'lightbox-jlg' ); ?></p>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </section>
+
+                    <section
+                        id="mga-section-detection"
+                        class="mga-settings-section"
+                        data-mga-settings-section
+                        aria-labelledby="mga-section-detection-title"
+                        tabindex="-1"
+                    >
+                        <header class="mga-settings-section__header">
+                            <h2 id="mga-section-detection-title" data-mga-section-title><?php echo esc_html__( 'Détection & intégration', 'lightbox-jlg' ); ?></h2>
+                            <p class="mga-settings-section__description"><?php echo esc_html__( 'Ciblez précisément les contenus pris en charge et ajustez les comportements d’intégration.', 'lightbox-jlg' ); ?></p>
+                        </header>
+                        <div class="mga-settings-section__body">
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga_group_attribute"><?php echo esc_html__( 'Attribut de regroupement', 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <input
+                                        name="mga_settings[groupAttribute]"
+                                        type="text"
+                                        id="mga_group_attribute"
+                                        value="<?php echo esc_attr( $settings['groupAttribute'] ); ?>"
+                                        class="regular-text"
+                                    />
+                                    <p class="description">
+                                        <?php echo esc_html__( 'Indiquez l’attribut HTML qui identifie les groupes (ex. data-mga-gallery, rel, href). Laissez vide pour conserver un groupe unique comme dans les versions précédentes.', 'lightbox-jlg' ); ?>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga_z_index"><?php echo esc_html__( 'Z-index de la galerie', 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <input name="mga_settings[z_index]" type="number" id="mga_z_index" value="<?php echo esc_attr( $settings['z_index'] ); ?>" min="1" class="small-text" />
+                                    <p class="description"><?php echo esc_html__( "Augmentez cette valeur si la galerie apparaît sous un autre élément (ex: menu du site).", 'lightbox-jlg' ); ?></p>
+                                </div>
+                            </div>
+
+                            <fieldset class="mga-setting-row mga-setting-row--fieldset">
+                                <legend><?php echo esc_html__( 'Compatibilité', 'lightbox-jlg' ); ?></legend>
+                                <div class="mga-setting-row__fieldset">
+                                    <div class="mga-toggle-list__item">
+                                        <label for="mga_allow_body_fallback">
+                                            <input name="mga_settings[allowBodyFallback]" type="checkbox" id="mga_allow_body_fallback" value="1" <?php checked( ! empty( $settings['allowBodyFallback'] ), 1 ); ?> />
+                                            <span><?php echo esc_html__( 'Autoriser le repli sur &lt;body&gt;', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( "Active un repli sur l'élément &lt;body&gt; si le thème ne propose pas de zone de contenu compatible.", 'lightbox-jlg' ); ?></p>
+                                    </div>
+
+                                    <div class="mga-toggle-list__item">
+                                        <input type="hidden" name="mga_settings[include_svg]" value="0" />
+                                        <label for="mga_include_svg">
+                                            <input
+                                                name="mga_settings[include_svg]"
+                                                type="checkbox"
+                                                id="mga_include_svg"
+                                                value="1"
+                                                <?php checked( ! empty( $settings['include_svg'] ), 1 ); ?>
+                                            />
+                                            <span><?php echo esc_html__( 'Inclure les fichiers SVG', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( 'Décochez si votre site bloque le rendu des SVG ou si vous préférez les exclure du diaporama.', 'lightbox-jlg' ); ?></p>
+                                    </div>
+
+                                    <div class="mga-toggle-list__item">
+                                        <input type="hidden" name="mga_settings[load_on_archives]" value="0" />
+                                        <label for="mga_load_on_archives">
+                                            <input
+                                                name="mga_settings[load_on_archives]"
+                                                type="checkbox"
+                                                id="mga_load_on_archives"
+                                                value="1"
+                                                <?php checked( ! empty( $settings['load_on_archives'] ), 1 ); ?>
+                                            />
+                                            <span><?php echo esc_html__( 'Analyser les archives', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( 'Autorise la détection des images liées dans les listes d’articles (page de blog, catégories, étiquettes, etc.).', 'lightbox-jlg' ); ?></p>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <label for="mga-content-selectors-textarea"><?php echo esc_html__( 'Sélecteurs CSS personnalisés', 'lightbox-jlg' ); ?></label>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <?php
+                                    $configured_selectors = array_filter(
+                                        array_map(
+                                            static function ( $selector ) {
+                                                return trim( (string) $selector );
+                                            },
+                                            (array) $settings['contentSelectors']
+                                        ),
+                                        static function ( $selector ) {
+                                            return '' !== $selector;
+                                        }
+                                    );
+                                    $selectors_placeholder = esc_attr__( '.entry-content a[href$=".jpg"]', 'lightbox-jlg' );
+                                    ?>
+                                    <div
+                                        class="mga-content-selectors"
+                                        data-mga-content-selectors
+                                        data-mga-selector-placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
+                                    >
+                                        <textarea
+                                            id="mga-content-selectors-textarea"
+                                            name="mga_settings[contentSelectors]"
+                                            rows="4"
+                                            class="large-text code"
+                                            data-mga-content-selectors-textarea
+                                            placeholder="<?php echo esc_attr__( "Un sélecteur CSS par ligne\n.exemple article a[href$=\".jpg\"]", 'lightbox-jlg' ); ?>"
+                                            aria-describedby="mga-content-selectors-help"
+                                        ><?php echo esc_textarea( implode( "\n", $configured_selectors ) ); ?></textarea>
+                                        <div class="mga-content-selectors__list" data-mga-content-selectors-list>
+                                            <?php foreach ( $configured_selectors as $index => $selector ) : ?>
+                                                <?php $input_id = sprintf( 'mga-content-selector-%d', (int) $index ); ?>
+                                                <div class="mga-content-selectors__row" data-mga-content-selector-row>
+                                                    <input
+                                                        type="text"
+                                                        id="<?php echo esc_attr( $input_id ); ?>"
+                                                        class="regular-text"
+                                                        value="<?php echo esc_attr( $selector ); ?>"
+                                                        data-mga-content-selector-input
+                                                        placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        class="button-link mga-content-selectors__remove"
+                                                        data-mga-remove-selector
+                                                        aria-label="<?php echo esc_attr__( 'Supprimer ce sélecteur CSS', 'lightbox-jlg' ); ?>"
+                                                    >
+                                                        <?php echo esc_html__( 'Retirer', 'lightbox-jlg' ); ?>
+                                                    </button>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <p>
+                                            <button
+                                                type="button"
+                                                class="button button-secondary"
+                                                data-mga-add-selector
+                                            >
+                                                <?php echo esc_html__( 'Ajouter un sélecteur', 'lightbox-jlg' ); ?>
+                                            </button>
+                                        </p>
+                                        <p class="description" id="mga-content-selectors-help">
+                                            <?php
+                                            echo wp_kses_post(
+                                                __( 'Ajoutez ici vos propres sélecteurs lorsque le contenu principal de votre thème n’utilise pas les classes par défaut (par exemple <code>.entry-content</code>). Chaque ligne correspond à un sélecteur complet, combiné aux valeurs natives du plugin. Utilisez le bouton <strong>Ajouter un sélecteur</strong> ou appuyez sur la touche <kbd>Entrée</kbd> dans un champ pour créer rapidement une nouvelle ligne.', 'lightbox-jlg' )
+                                            );
+                                            ?>
+                                        </p>
+                                        <div class="mga-content-selectors__details">
+                                            <p><strong><?php echo esc_html__( 'Quand personnaliser ces sélecteurs ?', 'lightbox-jlg' ); ?></strong></p>
+                                            <p>
+                                                <?php
+                                                echo wp_kses_post(
+                                                    __( 'Utilisez cette liste si votre thème encapsule les images dans des conteneurs spécifiques (ex. <code>.site-main .article-body</code>) ou si vous avez besoin d’inclure des blocs personnalisés. En cas de doute, inspectez votre page avec les outils du navigateur pour identifier la classe englobante, puis ajoutez-la ici afin que le plugin repère les liens vers les fichiers médias.', 'lightbox-jlg' )
+                                                );
+                                                ?>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <template id="mga-content-selector-template">
+                                        <div class="mga-content-selectors__row" data-mga-content-selector-row>
+                                            <input
+                                                type="text"
+                                                class="regular-text"
+                                                data-mga-content-selector-input
+                                                placeholder="<?php echo esc_attr( $selectors_placeholder ); ?>"
+                                            />
+                                            <button
+                                                type="button"
+                                                class="button-link mga-content-selectors__remove"
+                                                data-mga-remove-selector
+                                                aria-label="<?php echo esc_attr__( 'Supprimer ce sélecteur CSS', 'lightbox-jlg' ); ?>"
+                                            >
+                                                <?php echo esc_html__( 'Retirer', 'lightbox-jlg' ); ?>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <span class="mga-setting-row__label-text"><?php echo esc_html__( 'Types de contenu suivis', 'lightbox-jlg' ); ?></span>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <fieldset class="mga-post-type-list">
+                                        <legend class="screen-reader-text">
+                                            <span><?php echo esc_html__( 'Sélectionnez les types de contenu à analyser', 'lightbox-jlg' ); ?></span>
+                                        </legend>
+                                        <?php
+                                        $post_types = get_post_types( [ 'public' => true ], 'objects' );
+
+                                        if ( empty( $post_types ) ) :
+                                            ?>
+                                            <p class="description"><?php echo esc_html__( 'Aucun type de contenu public n’a été détecté.', 'lightbox-jlg' ); ?></p>
+                                            <?php
+                                        else :
+                                            foreach ( $post_types as $post_type ) :
+                                                if ( 'attachment' === $post_type->name ) {
+                                                    continue;
+                                                }
+
+                                                $is_checked = in_array( $post_type->name, (array) $settings['tracked_post_types'], true );
+                                                ?>
+                                                <label for="mga-tracked-post-type-<?php echo esc_attr( $post_type->name ); ?>" class="mga-tracked-post-type">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="mga-tracked-post-type-<?php echo esc_attr( $post_type->name ); ?>"
+                                                        name="mga_settings[tracked_post_types][]"
+                                                        value="<?php echo esc_attr( $post_type->name ); ?>"
+                                                        <?php checked( $is_checked ); ?>
+                                                    />
+                                                    <span><?php echo esc_html( $post_type->labels->singular_name ); ?></span>
+                                                </label>
+                                            <?php
+                                            endforeach;
+
+                                            ?>
+                                            <p class="description">
+                                                <?php echo esc_html__( 'Limitez l’analyse aux contenus réellement utilisés pour vos galeries. Par défaut, seuls les articles et les pages sont inspectés.', 'lightbox-jlg' ); ?>
+                                            </p>
+                                            <?php
+                                        endif;
+                                        ?>
+                                    </fieldset>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section
+                        id="mga-section-maintenance"
+                        class="mga-settings-section"
+                        data-mga-settings-section
+                        aria-labelledby="mga-section-maintenance-title"
+                        tabindex="-1"
+                    >
+                        <header class="mga-settings-section__header">
+                            <h2 id="mga-section-maintenance-title" data-mga-section-title><?php echo esc_html__( 'Maintenance & support', 'lightbox-jlg' ); ?></h2>
+                            <p class="mga-settings-section__description"><?php echo esc_html__( 'Activez les outils de diagnostic lorsque vous devez investiguer un comportement inattendu.', 'lightbox-jlg' ); ?></p>
+                        </header>
+                        <div class="mga-settings-section__body">
+                            <div class="mga-setting-row">
+                                <div class="mga-setting-row__label">
+                                    <span class="mga-setting-row__label-text"><?php echo esc_html__( 'Mode de débogage', 'lightbox-jlg' ); ?></span>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <fieldset>
+                                        <label for="mga_debug_mode">
+                                            <input name="mga_settings[debug_mode]" type="checkbox" id="mga_debug_mode" value="1" <?php checked( ! empty( $settings['debug_mode'] ), 1 ); ?> />
+                                            <span><?php echo esc_html__( 'Activer le mode débogage', 'lightbox-jlg' ); ?></span>
+                                        </label>
+                                        <p class="description"><?php echo esc_html__( "Affiche un panneau d'informations techniques sur le site pour aider à résoudre les problèmes.", 'lightbox-jlg' ); ?></p>
+                                    </fieldset>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
         </div>
 
         <div
