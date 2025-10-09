@@ -76,26 +76,66 @@ $style_presets     = mga_get_style_presets();
                             data-mga-settings-search
                         />
                         <p class="description mga-settings-toolbar__hint"><?php echo esc_html__( 'Filtrez les sections ou cliquez sur un titre pour y accéder rapidement.', 'lightbox-jlg' ); ?></p>
+                        <div class="mga-settings-toolbar__view" data-mga-view-toggle>
+                            <label for="mga-settings-view-mode"><?php echo esc_html__( 'Mode d’affichage', 'lightbox-jlg' ); ?></label>
+                            <select id="mga-settings-view-mode" data-mga-view-select>
+                                <option value="essential"><?php echo esc_html__( 'Vue simplifiée', 'lightbox-jlg' ); ?></option>
+                                <option value="advanced"><?php echo esc_html__( 'Vue complète', 'lightbox-jlg' ); ?></option>
+                            </select>
+                            <p class="description"><?php echo esc_html__( 'Masquez les réglages techniques tant que vous configurez l’essentiel.', 'lightbox-jlg' ); ?></p>
+                        </div>
                     </div>
 
                     <ul class="mga-settings-layout__nav" data-mga-settings-nav>
-                        <li><a href="#mga-section-style" data-mga-section-link><?php echo esc_html__( 'Presets & raccourcis', 'lightbox-jlg' ); ?></a></li>
-                        <li><a href="#mga-section-playback" data-mga-section-link><?php echo esc_html__( 'Lecture & transitions', 'lightbox-jlg' ); ?></a></li>
-                        <li><a href="#mga-section-thumbnails" data-mga-section-link><?php echo esc_html__( 'Miniatures & navigation', 'lightbox-jlg' ); ?></a></li>
-                        <li><a href="#mga-section-appearance" data-mga-section-link><?php echo esc_html__( 'Apparence de la visionneuse', 'lightbox-jlg' ); ?></a></li>
-                        <li><a href="#mga-section-toolbar" data-mga-section-link><?php echo esc_html__( 'Barre d’outils & actions', 'lightbox-jlg' ); ?></a></li>
-                        <li><a href="#mga-section-detection" data-mga-section-link><?php echo esc_html__( 'Détection & intégration', 'lightbox-jlg' ); ?></a></li>
-                        <li><a href="#mga-section-maintenance" data-mga-section-link><?php echo esc_html__( 'Maintenance & support', 'lightbox-jlg' ); ?></a></li>
+                        <li data-mga-visibility="essential"><a href="#mga-section-style" data-mga-section-link><?php echo esc_html__( 'Presets & raccourcis', 'lightbox-jlg' ); ?></a></li>
+                        <li data-mga-visibility="essential"><a href="#mga-section-playback" data-mga-section-link><?php echo esc_html__( 'Lecture & transitions', 'lightbox-jlg' ); ?></a></li>
+                        <li data-mga-visibility="essential"><a href="#mga-section-thumbnails" data-mga-section-link><?php echo esc_html__( 'Miniatures & navigation', 'lightbox-jlg' ); ?></a></li>
+                        <li data-mga-visibility="essential"><a href="#mga-section-appearance" data-mga-section-link><?php echo esc_html__( 'Apparence de la visionneuse', 'lightbox-jlg' ); ?></a></li>
+                        <li data-mga-visibility="essential"><a href="#mga-section-toolbar" data-mga-section-link><?php echo esc_html__( 'Barre d’outils & actions', 'lightbox-jlg' ); ?></a></li>
+                        <li data-mga-visibility="advanced"><a href="#mga-section-detection" data-mga-section-link><?php echo esc_html__( 'Détection & intégration', 'lightbox-jlg' ); ?></a></li>
+                        <li data-mga-visibility="advanced"><a href="#mga-section-maintenance" data-mga-section-link><?php echo esc_html__( 'Maintenance & support', 'lightbox-jlg' ); ?></a></li>
                     </ul>
 
                     <p class="mga-settings-layout__empty" data-mga-search-empty hidden><?php echo esc_html__( 'Aucun réglage ne correspond à votre recherche.', 'lightbox-jlg' ); ?></p>
                 </aside>
 
                 <div class="mga-settings-layout__content">
+                    <div class="mga-live-preview" data-mga-live-preview>
+                        <div class="mga-live-preview__header">
+                            <h2><?php echo esc_html__( 'Prévisualisation en direct', 'lightbox-jlg' ); ?></h2>
+                            <p class="description"><?php echo esc_html__( 'Les ajustements majeurs (presets, animations, couleurs) s’illustrent immédiatement dans cette vignette.', 'lightbox-jlg' ); ?></p>
+                        </div>
+                        <div class="mga-live-preview__stage" data-mga-live-preview-stage>
+                            <div class="mga-live-preview__mock" data-mga-live-preview-mock data-preview-style="echo">
+                                <div class="mga-live-preview__frame" role="group" aria-label="<?php echo esc_attr__( 'Aperçu simplifié de la visionneuse', 'lightbox-jlg' ); ?>">
+                                    <div class="mga-live-preview__image" aria-hidden="true"></div>
+                                    <div class="mga-live-preview__toolbar" data-mga-preview-toolbar>
+                                        <span class="mga-live-preview__action" data-preview-action="zoom" aria-hidden="true">&#128269;</span>
+                                        <span class="mga-live-preview__action" data-preview-action="download" aria-hidden="true">&#8681;</span>
+                                        <span class="mga-live-preview__action" data-preview-action="share" aria-hidden="true">&#128257;</span>
+                                        <span class="mga-live-preview__action" data-preview-action="cta" aria-hidden="true">&#9733;</span>
+                                        <span class="mga-live-preview__action" data-preview-action="fullscreen" aria-hidden="true">&#9974;</span>
+                                    </div>
+                                    <div class="mga-live-preview__caption">
+                                        <span class="mga-live-preview__effect" data-mga-preview-effect><?php echo esc_html__( 'Transition : glissement', 'lightbox-jlg' ); ?></span>
+                                        <h3 class="mga-live-preview__title"><?php echo esc_html__( 'Tirage photographique mis en avant', 'lightbox-jlg' ); ?></h3>
+                                        <p class="mga-live-preview__text"><?php echo esc_html__( 'Une lumière douce et des détails précis pour valoriser vos images.', 'lightbox-jlg' ); ?></p>
+                                    </div>
+                                </div>
+                                <div class="mga-live-preview__thumbs" data-mga-preview-thumbs>
+                                    <span aria-hidden="true"></span>
+                                    <span aria-hidden="true"></span>
+                                    <span aria-hidden="true"></span>
+                                    <span aria-hidden="true"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <section
                         id="mga-section-style"
                         class="mga-settings-section"
                         data-mga-settings-section
+                        data-mga-visibility="essential"
                         aria-labelledby="mga-section-style-title"
                         tabindex="-1"
                     >
@@ -146,6 +186,7 @@ $style_presets     = mga_get_style_presets();
                         id="mga-section-playback"
                         class="mga-settings-section"
                         data-mga-settings-section
+                        data-mga-visibility="essential"
                         aria-labelledby="mga-section-playback-title"
                         tabindex="-1"
                     >
@@ -235,6 +276,7 @@ $style_presets     = mga_get_style_presets();
                         id="mga-section-thumbnails"
                         class="mga-settings-section"
                         data-mga-settings-section
+                        data-mga-visibility="essential"
                         aria-labelledby="mga-section-thumbnails-title"
                         tabindex="-1"
                     >
@@ -329,6 +371,7 @@ $style_presets     = mga_get_style_presets();
                         id="mga-section-appearance"
                         class="mga-settings-section"
                         data-mga-settings-section
+                        data-mga-visibility="essential"
                         aria-labelledby="mga-section-appearance-title"
                         tabindex="-1"
                     >
@@ -401,6 +444,7 @@ $style_presets     = mga_get_style_presets();
                         id="mga-section-toolbar"
                         class="mga-settings-section"
                         data-mga-settings-section
+                        data-mga-visibility="essential"
                         aria-labelledby="mga-section-toolbar-title"
                         tabindex="-1"
                     >
@@ -481,6 +525,7 @@ $style_presets     = mga_get_style_presets();
                         id="mga-section-detection"
                         class="mga-settings-section"
                         data-mga-settings-section
+                        data-mga-visibility="advanced"
                         aria-labelledby="mga-section-detection-title"
                         tabindex="-1"
                     >
@@ -718,6 +763,7 @@ $style_presets     = mga_get_style_presets();
                         id="mga-section-maintenance"
                         class="mga-settings-section"
                         data-mga-settings-section
+                        data-mga-visibility="advanced"
                         aria-labelledby="mga-section-maintenance-title"
                         tabindex="-1"
                     >
@@ -819,6 +865,13 @@ $style_presets     = mga_get_style_presets();
                                                 </button>
                                             </div>
                                         </div>
+                                        <div class="mga-share-repeater__preview" data-share-preview>
+                                            <span class="mga-share-repeater__preview-icon" data-share-preview-icon aria-hidden="true"></span>
+                                            <div class="mga-share-repeater__preview-text">
+                                                <span class="mga-share-repeater__preview-label" data-share-preview-label><?php echo esc_html( $channel_title ); ?></span>
+                                                <code class="mga-share-repeater__preview-url" data-share-preview-url aria-live="polite"></code>
+                                            </div>
+                                        </div>
                                         <div class="mga-share-repeater__fields">
                                             <div class="mga-share-repeater__field">
                                                 <label data-share-id-suffix="label"><?php echo esc_html__( 'Libellé affiché', 'lightbox-jlg' ); ?></label>
@@ -842,6 +895,7 @@ $style_presets     = mga_get_style_presets();
                                                     data-share-id-suffix="key"
                                                 />
                                                 <p class="description"><?php echo esc_html__( 'Utilisé pour identifier le canal. Lettres, chiffres et tirets uniquement.', 'lightbox-jlg' ); ?></p>
+                                                <p class="mga-share-repeater__error" data-share-error="key" aria-live="polite" hidden></p>
                                             </div>
                                             <div class="mga-share-repeater__field mga-share-repeater__field--full">
                                                 <label data-share-id-suffix="template"><?php echo esc_html__( 'Modèle d’URL', 'lightbox-jlg' ); ?></label>
@@ -856,6 +910,7 @@ $style_presets     = mga_get_style_presets();
                                                 />
                                                 <p class="description"><?php echo esc_html__( 'Placez %url%, %text% ou %title% pour injecter les informations de l’image.', 'lightbox-jlg' ); ?></p>
                                                 <p class="description"><?php echo esc_html__( 'Seules les URL débutant par http, https, mailto, tel ou sms seront conservées ; les autres schémas sont ignorés.', 'lightbox-jlg' ); ?></p>
+                                                <p class="mga-share-repeater__error" data-share-error="template" aria-live="polite" hidden></p>
                                             </div>
                                             <div class="mga-share-repeater__field">
                                                 <label data-share-id-suffix="icon"><?php echo esc_html__( 'Icône', 'lightbox-jlg' ); ?></label>
@@ -908,6 +963,13 @@ $style_presets     = mga_get_style_presets();
                                             </button>
                                         </div>
                                     </div>
+                                    <div class="mga-share-repeater__preview" data-share-preview>
+                                        <span class="mga-share-repeater__preview-icon" data-share-preview-icon aria-hidden="true"></span>
+                                        <div class="mga-share-repeater__preview-text">
+                                            <span class="mga-share-repeater__preview-label" data-share-preview-label><?php echo esc_html__( 'Nouveau canal', 'lightbox-jlg' ); ?></span>
+                                            <code class="mga-share-repeater__preview-url" data-share-preview-url aria-live="polite"></code>
+                                        </div>
+                                    </div>
                                     <div class="mga-share-repeater__fields">
                                         <div class="mga-share-repeater__field">
                                             <label data-share-id-suffix="label"><?php echo esc_html__( 'Libellé affiché', 'lightbox-jlg' ); ?></label>
@@ -917,12 +979,14 @@ $style_presets     = mga_get_style_presets();
                                             <label data-share-id-suffix="key"><?php echo esc_html__( 'Clé technique', 'lightbox-jlg' ); ?></label>
                                             <input type="text" class="regular-text" value="" data-share-field="key" data-share-id-suffix="key" />
                                             <p class="description"><?php echo esc_html__( 'Utilisé pour identifier le canal. Lettres, chiffres et tirets uniquement.', 'lightbox-jlg' ); ?></p>
+                                            <p class="mga-share-repeater__error" data-share-error="key" aria-live="polite" hidden></p>
                                         </div>
                                         <div class="mga-share-repeater__field mga-share-repeater__field--full">
                                             <label data-share-id-suffix="template"><?php echo esc_html__( 'Modèle d’URL', 'lightbox-jlg' ); ?></label>
                                             <input type="text" class="regular-text" value="" data-share-field="template" data-share-id-suffix="template" placeholder="<?php echo esc_attr__( 'https://exemple.com/?u=%url%', 'lightbox-jlg' ); ?>" />
                                             <p class="description"><?php echo esc_html__( 'Placez %url%, %text% ou %title% pour injecter les informations de l’image.', 'lightbox-jlg' ); ?></p>
                                             <p class="description"><?php echo esc_html__( 'Seules les URL débutant par http, https, mailto, tel ou sms seront conservées ; les autres schémas sont ignorés.', 'lightbox-jlg' ); ?></p>
+                                            <p class="mga-share-repeater__error" data-share-error="template" aria-live="polite" hidden></p>
                                         </div>
                                         <div class="mga-share-repeater__field">
                                             <label data-share-id-suffix="icon"><?php echo esc_html__( 'Icône', 'lightbox-jlg' ); ?></label>
