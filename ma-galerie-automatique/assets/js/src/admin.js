@@ -268,6 +268,504 @@ import {
                 const diffList = diffContainer ? diffContainer.querySelector('[data-mga-summary-diff-list]') : null;
                 const diffBaseline = diffContainer ? diffContainer.querySelector('[data-mga-summary-diff-baseline]') : null;
                 const diffEmpty = diffContainer ? diffContainer.querySelector('[data-mga-summary-diff-empty]') : null;
+                const scoreboardContainer = wizard.querySelector('[data-mga-summary-scoreboard]');
+                const scorecardMap = (() => {
+                    const map = new Map();
+
+                    if (!scoreboardContainer) {
+                        return map;
+                    }
+
+                    scoreboardContainer.querySelectorAll('[data-mga-scorecard]').forEach((card) => {
+                        const key = card.getAttribute('data-mga-score-key');
+
+                        if (key) {
+                            map.set(key, card);
+                        }
+                    });
+
+                    return map;
+                })();
+
+                const applyScorecardState = (key, payload) => {
+                    const card = scorecardMap.get(key);
+
+                    if (!card || !payload) {
+                        return;
+                    }
+
+                    const level = payload.level || 'info';
+                    card.setAttribute('data-score-level', level);
+
+                    const statusEl = card.querySelector('[data-mga-scorecard-status]');
+
+                    if (statusEl) {
+                        statusEl.textContent = payload.message || '';
+                    }
+
+                    const pointsContainer = card.querySelector('[data-mga-scorecard-points]');
+
+                    if (pointsContainer && Array.isArray(payload.points)) {
+                        payload.points.forEach((point) => {
+                            if (!point || !point.key) {
+                                return;
+                            }
+
+                            const item = pointsContainer.querySelector(`[data-point="${point.key}"]`);
+
+                            if (!item) {
+                                return;
+                            }
+
+                            const state = point.state || 'info';
+                            item.setAttribute('data-point-state', state);
+
+                            if (typeof point.text === 'string') {
+                                item.textContent = point.text;
+                            }
+                        });
+                    }
+                };
+
+                const renderScoreboard = (scores) => {
+                    if (!scores || !scorecardMap.size) {
+                        return;
+                    }
+
+                    Object.keys(scores).forEach((scoreKey) => {
+                        applyScorecardState(scoreKey, scores[scoreKey]);
+                    });
+                };
+
+                const severityRank = {
+                    positive: 0,
+                    info: 1,
+                    warning: 2,
+                    alert: 3,
+                };
+
+                const computeLevelFromPoints = (points) => {
+                    if (!Array.isArray(points) || points.length === 0) {
+                        return 'info';
+                    }
+
+                    let highest = 'positive';
+
+                    points.forEach((point) => {
+                        const state = point && point.state ? point.state : 'info';
+
+                        if (severityRank[state] > severityRank[highest]) {
+                            highest = state;
+                        }
+                    });
+
+                    return highest;
+                };
+
+                const resolveCardMessage = (cardKey, level) => {
+                    const dictionary = {
+                        ux: {
+                            positive: mgaAdmin__('Parcours fluide et aligné sur les extensions premium.', 'lightbox-jlg'),
+                            info: mgaAdmin__('Quelques optimisations UX restent possibles.', 'lightbox-jlg'),
+                            warning: mgaAdmin__('Ajustez le rythme ou la navigation pour égaler les standards pro.', 'lightbox-jlg'),
+                            alert: mgaAdmin__('Corrigez les réglages UX critiques avant publication.', 'lightbox-jlg'),
+                        },
+                        accessibility: {
+                            positive: mgaAdmin__('Accessible par défaut : prêt pour un audit WCAG.', 'lightbox-jlg'),
+                            info: mgaAdmin__('Affinez deux ou trois points pour une accessibilité parfaite.', 'lightbox-jlg'),
+                            warning: mgaAdmin__('Renforcez l’accessibilité pour rester au niveau des lightbox professionnelles.', 'lightbox-jlg'),
+                            alert: mgaAdmin__('Corrigez les problèmes d’accessibilité avant publication.', 'lightbox-jlg'),
+                        },
+                        reliability: {
+                            positive: mgaAdmin__('Stack prête pour une mise en production sans surprise.', 'lightbox-jlg'),
+                            info: mgaAdmin__('Vérifiez vos fallbacks pour égaler la robustesse des offres pro.', 'lightbox-jlg'),
+                            warning: mgaAdmin__('Sécurisez la configuration avant de la confier à vos clients.', 'lightbox-jlg'),
+                            alert: mgaAdmin__('Corrigez les risques critiques pour garantir la fiabilité.', 'lightbox-jlg'),
+                        },
+                        visual: {
+                            positive: mgaAdmin__('Palette prête à impressionner vos visiteurs.', 'lightbox-jlg'),
+                            info: mgaAdmin__('Peaufinez les presets pour un rendu au niveau premium.', 'lightbox-jlg'),
+                            warning: mgaAdmin__('Ajustez les éléments visuels pour conserver une identité cohérente.', 'lightbox-jlg'),
+                            alert: mgaAdmin__('Corrigez la couleur ou le style avant publication.', 'lightbox-jlg'),
+                        },
+                    };
+
+                    const variants = dictionary[cardKey] || {};
+                    return variants[level] || variants.info || '';
+                };
+
+                const readNumberValue = (id) => {
+                    const element = doc.getElementById(id);
+
+                    if (!element) {
+                        return Number.NaN;
+                    }
+
+                    const value = parseFloat(element.value);
+                    return Number.isNaN(value) ? Number.NaN : value;
+                };
+
+                const readSelectValue = (id) => {
+                    const element = doc.getElementById(id);
+
+                    if (!element || typeof element.value !== 'string') {
+                        return '';
+                    }
+
+                    return element.value;
+                };
+
+                const readSelectLabel = (id, fallback) => {
+                    const element = doc.getElementById(id);
+
+                    if (!element) {
+                        return fallback || '';
+                    }
+
+                    const selectedOption = Array.from(element.options).find((option) => option.selected);
+
+                    if (selectedOption && selectedOption.textContent) {
+                        return selectedOption.textContent;
+                    }
+
+                    return fallback || '';
+                };
+
+                const readCheckboxValue = (id) => {
+                    const element = doc.getElementById(id);
+                    return element ? Boolean(element.checked) : false;
+                };
+
+                const formatSecondsValue = (value) => {
+                    if (!Number.isFinite(value)) {
+                        return '—';
+                    }
+
+                    const rounded = Math.round(value * 10) / 10;
+
+                    if (Math.abs(rounded - Math.round(rounded)) < 0.01) {
+                        return String(Math.round(rounded));
+                    }
+
+                    return rounded.toFixed(1);
+                };
+
+                const evaluateScoreboard = (validations, diff, baselineInfo) => {
+                    if (!scorecardMap.size) {
+                        return null;
+                    }
+
+                    const worstValidation = Array.isArray(validations)
+                        ? validations.find((item) => item && item.severity === 'error')
+                            || validations.find((item) => item && item.severity === 'warning')
+                        : null;
+
+                    const buildUxScore = () => {
+                        const delayValue = readNumberValue('mga_delay');
+                        const effectValue = readSelectValue('mga_effect');
+                        const effectLabel = readSelectLabel('mga_effect', effectValue);
+                        const autoplay = readCheckboxValue('mga_autoplay_start');
+                        const showThumbsMobile = readCheckboxValue('mga_show_thumbs_mobile');
+                        const thumbsLayout = readSelectValue('mga_thumbs_layout');
+                        const points = [];
+
+                        const formattedDelay = formatSecondsValue(delayValue);
+                        let delayState = 'positive';
+                        let delayText = mgaAdminSprintf(
+                            mgaAdmin__('Tempo confortable : %1$s s par diapositive.', 'lightbox-jlg'),
+                            formattedDelay
+                        );
+
+                        if (!Number.isFinite(delayValue)) {
+                            delayState = 'info';
+                            delayText = mgaAdmin__('Renseignez le tempo du diaporama pour caler la cadence.', 'lightbox-jlg');
+                        } else if (delayValue < 2.5) {
+                            delayState = 'alert';
+                            delayText = mgaAdminSprintf(
+                                mgaAdmin__('Tempo très rapide (%1$s s) : ralentissez pour laisser le temps de lecture.', 'lightbox-jlg'),
+                                formattedDelay
+                            );
+                        } else if (delayValue < 3 || delayValue > 6) {
+                            delayState = 'warning';
+                            delayText = mgaAdminSprintf(
+                                mgaAdmin__('Tempo à %1$s s : ciblez entre 3 et 6 s pour un rythme premium.', 'lightbox-jlg'),
+                                formattedDelay
+                            );
+                        }
+
+                        points.push({
+                            key: 'delay',
+                            state: delayState,
+                            text: delayText,
+                        });
+
+                        let navState = 'positive';
+                        let navText = mgaAdmin__('Miniatures ou navigation mobile affichées : repères clairs.', 'lightbox-jlg');
+
+                        if (thumbsLayout === 'hidden' && !showThumbsMobile) {
+                            navState = 'warning';
+                            navText = mgaAdmin__('Activez les miniatures ou la navigation mobile pour guider vos visiteurs.', 'lightbox-jlg');
+                        } else if (thumbsLayout === 'hidden') {
+                            navState = 'info';
+                            navText = mgaAdmin__('Miniatures masquées sur desktop : vérifiez que les flèches restent visibles.', 'lightbox-jlg');
+                        }
+
+                        points.push({
+                            key: 'navigation',
+                            state: navState,
+                            text: navText,
+                        });
+
+                        const heavyEffects = new Set(['cube', 'coverflow', 'flip']);
+                        const normalizedEffect = typeof effectValue === 'string' ? effectValue.toLowerCase() : '';
+                        const effectDisplayLabel = effectLabel || effectValue || 'slide';
+                        let animState = 'positive';
+                        let animText = mgaAdminSprintf(
+                            mgaAdmin__('Transition « %1$s » adaptée au parcours.', 'lightbox-jlg'),
+                            effectDisplayLabel
+                        );
+
+                        if (heavyEffects.has(normalizedEffect) && autoplay) {
+                            animState = 'warning';
+                            animText = mgaAdminSprintf(
+                                mgaAdmin__('Effet 3D « %1$s » avec autoplay : envisagez un démarrage manuel pour le confort utilisateur.', 'lightbox-jlg'),
+                                effectDisplayLabel
+                            );
+                        } else if (heavyEffects.has(normalizedEffect)) {
+                            animState = 'info';
+                            animText = mgaAdminSprintf(
+                                mgaAdmin__('Effet 3D « %1$s » activé : testez la performance sur mobile.', 'lightbox-jlg'),
+                                effectDisplayLabel
+                            );
+                        } else if (!effectValue) {
+                            animState = 'info';
+                            animText = mgaAdmin__('Choisissez un effet pour personnaliser le ressenti.', 'lightbox-jlg');
+                        }
+
+                        points.push({
+                            key: 'animation',
+                            state: animState,
+                            text: animText,
+                        });
+
+                        const level = computeLevelFromPoints(points);
+                        const message = resolveCardMessage('ux', level);
+
+                        return { level, message, points };
+                    };
+
+                    const buildAccessibilityScore = () => {
+                        const autoplay = readCheckboxValue('mga_autoplay_start');
+                        const startOnClicked = readCheckboxValue('mga_start_on_clicked_image');
+                        const points = [];
+
+                        let contrastState = 'positive';
+                        let contrastText = mgaAdmin__('Contraste validé : aucun blocage détecté.', 'lightbox-jlg');
+
+                        if (worstValidation) {
+                            contrastState = worstValidation.severity === 'error' ? 'alert' : 'warning';
+                            contrastText = worstValidation.message;
+                        }
+
+                        points.push({
+                            key: 'contrast',
+                            state: contrastState,
+                            text: contrastText,
+                        });
+
+                        let autoplayState = 'positive';
+                        let autoplayText = mgaAdmin__('Lecture déclenchée par l’utilisateur : confort respecté.', 'lightbox-jlg');
+
+                        if (autoplay) {
+                            autoplayState = 'warning';
+                            autoplayText = mgaAdmin__('Désactivez le démarrage automatique pour laisser le contrôle aux visiteurs.', 'lightbox-jlg');
+                        }
+
+                        points.push({
+                            key: 'autoplay',
+                            state: autoplayState,
+                            text: autoplayText,
+                        });
+
+                        let contextState = 'positive';
+                        let contextText = mgaAdmin__('La visionneuse s’ouvre sur l’image cliquée : orientation conservée.', 'lightbox-jlg');
+
+                        if (!startOnClicked) {
+                            contextState = 'info';
+                            contextText = mgaAdmin__('Activez « Démarrer sur l’image cliquée » pour éviter les sauts de focus.', 'lightbox-jlg');
+                        }
+
+                        points.push({
+                            key: 'context',
+                            state: contextState,
+                            text: contextText,
+                        });
+
+                        const level = computeLevelFromPoints(points);
+                        const message = resolveCardMessage('accessibility', level);
+
+                        return { level, message, points };
+                    };
+
+                    const buildReliabilityScore = () => {
+                        const includeSvg = readCheckboxValue('mga_include_svg');
+                        const allowFallback = readCheckboxValue('mga_allow_body_fallback');
+                        const debugMode = readCheckboxValue('mga_debug_mode');
+                        const loadArchives = readCheckboxValue('mga_load_on_archives');
+                        const points = [];
+
+                        const assetsState = includeSvg ? 'positive' : 'alert';
+                        const assetsText = includeSvg
+                            ? mgaAdmin__('Icônes SVG locales actives : vos contrôles restent visibles hors connexion.', 'lightbox-jlg')
+                            : mgaAdmin__('Réactivez les icônes SVG locales pour éviter les boutons invisibles si le CDN est indisponible.', 'lightbox-jlg');
+
+                        points.push({
+                            key: 'assets',
+                            state: assetsState,
+                            text: assetsText,
+                        });
+
+                        let fallbackState = allowFallback ? 'positive' : 'info';
+                        let fallbackText = allowFallback
+                            ? mgaAdmin__('Fallback « body » actif : compatibilité renforcée avec les constructeurs de pages.', 'lightbox-jlg')
+                            : mgaAdmin__('Activez le fallback « body » si vos galeries sont injectées dynamiquement.', 'lightbox-jlg');
+
+                        if (loadArchives) {
+                            fallbackState = 'positive';
+                            fallbackText = mgaAdmin__('Chargement sur les pages d’archives activé : visionneuse prête dans les listes.', 'lightbox-jlg');
+                        }
+
+                        points.push({
+                            key: 'fallback',
+                            state: fallbackState,
+                            text: fallbackText,
+                        });
+
+                        const debugState = debugMode ? 'warning' : 'positive';
+                        const debugText = debugMode
+                            ? mgaAdmin__('Désactivez le mode debug pour éviter les logs verbeux en production.', 'lightbox-jlg')
+                            : mgaAdmin__('Mode debug désactivé : stabilité optimale.', 'lightbox-jlg');
+
+                        points.push({
+                            key: 'debug',
+                            state: debugState,
+                            text: debugText,
+                        });
+
+                        const level = computeLevelFromPoints(points);
+                        const message = resolveCardMessage('reliability', level);
+
+                        return { level, message, points };
+                    };
+
+                    const buildVisualScore = () => {
+                        const presetSelect = doc.getElementById('mga_style_preset');
+                        const presetValue = presetSelect && typeof presetSelect.value === 'string' ? presetSelect.value : '';
+                        const accentInput = doc.getElementById('mga_accent_color');
+                        const rawAccentValue = accentInput && typeof accentInput.value === 'string'
+                            ? accentInput.value.trim()
+                            : '';
+                        const backgroundValue = readSelectValue('mga_background_style');
+                        const backgroundLabel = readSelectLabel('mga_background_style', backgroundValue);
+                        const hasDiff = Array.isArray(diff) && diff.length > 0;
+                        const baselineLabel = baselineInfo && baselineInfo.label ? baselineInfo.label : '';
+                        const points = [];
+
+                        const resolvePresetLabel = () => {
+                            if (presetSelect) {
+                                const option = Array.from(presetSelect.options).find((candidate) => candidate.value === presetValue);
+
+                                if (option && option.textContent) {
+                                    return option.textContent.trim();
+                                }
+                            }
+
+                            if (baselineLabel) {
+                                return baselineLabel;
+                            }
+
+                            return '';
+                        };
+
+                        const presetLabel = resolvePresetLabel();
+                        let presetState = 'info';
+                        let presetText = mgaAdmin__('Aucun preset sélectionné : testez les styles proposés pour un rendu premium.', 'lightbox-jlg');
+
+                        if (presetValue) {
+                            presetState = 'positive';
+                            presetText = mgaAdminSprintf(
+                                mgaAdmin__('Preset professionnel « %1$s » appliqué.', 'lightbox-jlg'),
+                                presetLabel || presetValue
+                            );
+                        } else if (hasDiff) {
+                            presetState = 'positive';
+                            presetText = baselineLabel
+                                ? mgaAdminSprintf(
+                                    mgaAdmin__('Palette personnalisée basée sur « %1$s ».', 'lightbox-jlg'),
+                                    baselineLabel
+                                )
+                                : mgaAdmin__('Palette personnalisée active.', 'lightbox-jlg');
+                        }
+
+                        points.push({
+                            key: 'preset',
+                            state: presetState,
+                            text: presetText,
+                        });
+
+                        const accentLower = rawAccentValue.toLowerCase();
+                        let accentState = 'positive';
+                        let accentText = mgaAdmin__('Couleur d’accent personnalisée prête à être déclinée.', 'lightbox-jlg');
+
+                        if (!isValidHexColor(rawAccentValue)) {
+                            accentState = 'alert';
+                            accentText = mgaAdmin__('Couleur d’accent invalide : utilisez un code hexadécimal (#123ABC).', 'lightbox-jlg');
+                        } else if (accentLower === '#ffffff') {
+                            accentState = 'info';
+                            accentText = mgaAdmin__('Personnalisez la couleur d’accent pour refléter votre marque.', 'lightbox-jlg');
+                        } else {
+                            accentText = mgaAdminSprintf(
+                                mgaAdmin__('Accent défini sur %1$s : pensez à l’harmoniser avec vos CTA.', 'lightbox-jlg'),
+                                rawAccentValue.toUpperCase()
+                            );
+                        }
+
+                        points.push({
+                            key: 'accent',
+                            state: accentState,
+                            text: accentText,
+                        });
+
+                        let backgroundState = 'info';
+                        let backgroundText = mgaAdmin__('Choisissez un style de fond (écho, blur, texture) pour enrichir la scénographie.', 'lightbox-jlg');
+
+                        if (backgroundValue) {
+                            backgroundState = 'positive';
+                            backgroundText = mgaAdminSprintf(
+                                mgaAdmin__('Arrière-plan « %1$s » activé pour créer de la profondeur.', 'lightbox-jlg'),
+                                backgroundLabel || backgroundValue
+                            );
+                        }
+
+                        points.push({
+                            key: 'background',
+                            state: backgroundState,
+                            text: backgroundText,
+                        });
+
+                        const level = computeLevelFromPoints(points);
+                        const message = resolveCardMessage('visual', level);
+
+                        return { level, message, points };
+                    };
+
+                    return {
+                        ux: buildUxScore(),
+                        accessibility: buildAccessibilityScore(),
+                        reliability: buildReliabilityScore(),
+                        visual: buildVisualScore(),
+                    };
+                };
 
                 const renderToolbarSummary = () => {
                     if (!toolbarTarget) {
@@ -505,13 +1003,15 @@ import {
                 const update = () => {
                     const diff = presetDiffTracker ? presetDiffTracker.refresh() : [];
                     const baselineInfo = presetDiffTracker ? presetDiffTracker.getBaselineInfo() : { label: '', key: '' };
+                    const validations = collectValidations();
 
                     renderPresetSummary(diff, baselineInfo);
                     renderTimingSummary();
                     renderToolbarSummary();
                     renderShareSummary();
                     renderPresetDiff(diff, baselineInfo);
-                    renderValidations(collectValidations());
+                    renderValidations(validations);
+                    renderScoreboard(evaluateScoreboard(validations, diff, baselineInfo));
                 };
 
                 return () => {

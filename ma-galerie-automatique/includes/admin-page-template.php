@@ -1133,6 +1133,61 @@ $style_presets     = mga_get_style_presets();
                                     <dd data-mga-summary-share>—</dd>
                                 </div>
                             </dl>
+                            <div
+                                class="mga-summary__scoreboard"
+                                data-mga-summary-scoreboard
+                                aria-live="polite"
+                                aria-label="<?php echo esc_attr__( 'Évaluation UI/UX, accessibilité, fiabilité et rendu visuel', 'lightbox-jlg' ); ?>"
+                            >
+                                <article class="mga-scorecard" data-mga-scorecard data-mga-score-key="ux" data-score-level="info">
+                                    <header class="mga-scorecard__header">
+                                        <span class="mga-scorecard__icon" aria-hidden="true">◎</span>
+                                        <h3 class="mga-scorecard__title"><?php echo esc_html__( 'UI & UX', 'lightbox-jlg' ); ?></h3>
+                                    </header>
+                                    <p class="mga-scorecard__status" data-mga-scorecard-status><?php echo esc_html__( 'Analyse en cours…', 'lightbox-jlg' ); ?></p>
+                                    <ul class="mga-scorecard__points" data-mga-scorecard-points>
+                                        <li data-point="delay" data-point-state="info"><?php echo esc_html__( 'Tempo du diaporama à vérifier.', 'lightbox-jlg' ); ?></li>
+                                        <li data-point="navigation" data-point-state="info"><?php echo esc_html__( 'Présence d’une navigation explicite.', 'lightbox-jlg' ); ?></li>
+                                        <li data-point="animation" data-point-state="info"><?php echo esc_html__( 'Transitions adaptées au contexte.', 'lightbox-jlg' ); ?></li>
+                                    </ul>
+                                </article>
+                                <article class="mga-scorecard" data-mga-scorecard data-mga-score-key="accessibility" data-score-level="info">
+                                    <header class="mga-scorecard__header">
+                                        <span class="mga-scorecard__icon" aria-hidden="true">⚑</span>
+                                        <h3 class="mga-scorecard__title"><?php echo esc_html__( 'Accessibilité', 'lightbox-jlg' ); ?></h3>
+                                    </header>
+                                    <p class="mga-scorecard__status" data-mga-scorecard-status><?php echo esc_html__( 'Analyse en cours…', 'lightbox-jlg' ); ?></p>
+                                    <ul class="mga-scorecard__points" data-mga-scorecard-points>
+                                        <li data-point="contrast" data-point-state="info"><?php echo esc_html__( 'Contraste des contrôles à confirmer.', 'lightbox-jlg' ); ?></li>
+                                        <li data-point="autoplay" data-point-state="info"><?php echo esc_html__( 'Lecture automatique sous contrôle.', 'lightbox-jlg' ); ?></li>
+                                        <li data-point="context" data-point-state="info"><?php echo esc_html__( 'Respect du point d’entrée utilisateur.', 'lightbox-jlg' ); ?></li>
+                                    </ul>
+                                </article>
+                                <article class="mga-scorecard" data-mga-scorecard data-mga-score-key="reliability" data-score-level="info">
+                                    <header class="mga-scorecard__header">
+                                        <span class="mga-scorecard__icon" aria-hidden="true">◆</span>
+                                        <h3 class="mga-scorecard__title"><?php echo esc_html__( 'Fiabilité', 'lightbox-jlg' ); ?></h3>
+                                    </header>
+                                    <p class="mga-scorecard__status" data-mga-scorecard-status><?php echo esc_html__( 'Analyse en cours…', 'lightbox-jlg' ); ?></p>
+                                    <ul class="mga-scorecard__points" data-mga-scorecard-points>
+                                        <li data-point="assets" data-point-state="info"><?php echo esc_html__( 'Disponibilité des icônes et scripts.', 'lightbox-jlg' ); ?></li>
+                                        <li data-point="fallback" data-point-state="info"><?php echo esc_html__( 'Gestion des mises en page dynamiques.', 'lightbox-jlg' ); ?></li>
+                                        <li data-point="debug" data-point-state="info"><?php echo esc_html__( 'Paramètres de diagnostic adaptés.', 'lightbox-jlg' ); ?></li>
+                                    </ul>
+                                </article>
+                                <article class="mga-scorecard" data-mga-scorecard data-mga-score-key="visual" data-score-level="info">
+                                    <header class="mga-scorecard__header">
+                                        <span class="mga-scorecard__icon" aria-hidden="true">✦</span>
+                                        <h3 class="mga-scorecard__title"><?php echo esc_html__( 'Visuel', 'lightbox-jlg' ); ?></h3>
+                                    </header>
+                                    <p class="mga-scorecard__status" data-mga-scorecard-status><?php echo esc_html__( 'Analyse en cours…', 'lightbox-jlg' ); ?></p>
+                                    <ul class="mga-scorecard__points" data-mga-scorecard-points>
+                                        <li data-point="preset" data-point-state="info"><?php echo esc_html__( 'Sélection d’un preset professionnel.', 'lightbox-jlg' ); ?></li>
+                                        <li data-point="accent" data-point-state="info"><?php echo esc_html__( 'Couleur d’accent conforme à votre marque.', 'lightbox-jlg' ); ?></li>
+                                        <li data-point="background" data-point-state="info"><?php echo esc_html__( 'Arrière-plan valorisant la série photo.', 'lightbox-jlg' ); ?></li>
+                                    </ul>
+                                </article>
+                            </div>
                             <div class="mga-summary__alerts" data-mga-summary-validations hidden aria-live="polite" aria-atomic="false"></div>
                             <div class="mga-summary__diff" data-mga-summary-diff hidden>
                                 <h3 class="mga-summary__heading"><?php echo esc_html__( 'Modifications par rapport au preset', 'lightbox-jlg' ); ?></h3>
