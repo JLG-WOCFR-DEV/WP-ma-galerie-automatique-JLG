@@ -4,6 +4,7 @@ import {
     createSprintf,
     createTranslate,
     detectFocusOptionsSupport,
+    ensureSwiper,
     exposeOnWindow,
     resolveI18n,
     safeFocus,
@@ -262,6 +263,11 @@ import {
                 const timingTarget = wizard.querySelector('[data-mga-summary-timing]');
                 const toolbarTarget = wizard.querySelector('[data-mga-summary-toolbar]');
                 const shareTarget = wizard.querySelector('[data-mga-summary-share]');
+                const validationContainer = wizard.querySelector('[data-mga-summary-validations]');
+                const diffContainer = wizard.querySelector('[data-mga-summary-diff]');
+                const diffList = diffContainer ? diffContainer.querySelector('[data-mga-summary-diff-list]') : null;
+                const diffBaseline = diffContainer ? diffContainer.querySelector('[data-mga-summary-diff-baseline]') : null;
+                const diffEmpty = diffContainer ? diffContainer.querySelector('[data-mga-summary-diff-empty]') : null;
 
                 const renderToolbarSummary = () => {
                     if (!toolbarTarget) {
@@ -286,34 +292,38 @@ import {
                         : mgaAdmin__('Aucun bouton affiché', 'lightbox-jlg');
                 };
 
-                const renderPresetSummary = () => {
+                const renderPresetSummary = (diff, baselineInfo) => {
                     if (!presetTarget) {
                         return;
                     }
 
                     const presetSelect = doc.getElementById('mga_style_preset');
                     const value = presetSelect ? presetSelect.value : '';
+                    let label = '';
 
-                    if (!presetSelect) {
-                        presetTarget.textContent = mgaAdmin__('Réglages personnalisés', 'lightbox-jlg');
-                        return;
-                    }
+                    if (presetSelect && value) {
+                        const fallback = Array.from(presetSelect.options).find((option) => option.value === value);
 
-                    const fallback = Array.from(presetSelect.options).find((option) => option.value === value);
-                    let label = fallback ? fallback.textContent : mgaAdmin__('Réglages personnalisés', 'lightbox-jlg');
-
-                    if (global.mgaStylePresets && global.mgaStylePresets.presets) {
-                        const preset = global.mgaStylePresets.presets[value];
-
-                        if (preset && preset.label) {
-                            label = preset.label;
+                        if (fallback) {
+                            label = fallback.textContent || '';
                         }
                     }
 
-                    if (!value) {
-                        label = global.mgaStylePresets && global.mgaStylePresets.customDescription
-                            ? global.mgaStylePresets.customDescription
-                            : label;
+                    if (!label) {
+                        if (diff.length > 0 && baselineInfo && baselineInfo.label) {
+                            label = mgaAdminSprintf(
+                                mgaAdmin__('Personnalisé à partir de %1$s', 'lightbox-jlg'),
+                                baselineInfo.label
+                            );
+                        } else if (diff.length > 0) {
+                            label = mgaAdmin__('Réglages personnalisés', 'lightbox-jlg');
+                        } else if (baselineInfo && baselineInfo.label) {
+                            label = baselineInfo.label;
+                        } else if (global.mgaStylePresets && typeof global.mgaStylePresets.customDescription === 'string') {
+                            label = global.mgaStylePresets.customDescription;
+                        } else {
+                            label = mgaAdmin__('Réglages personnalisés', 'lightbox-jlg');
+                        }
                     }
 
                     presetTarget.textContent = label;
@@ -372,11 +382,136 @@ import {
                     }
                 };
 
+                const collectValidations = () => {
+                    if (!contrastInspector || typeof contrastInspector.readAudit !== 'function') {
+                        return [];
+                    }
+
+                    const audit = contrastInspector.readAudit();
+
+                    if (!audit || !Array.isArray(audit.entries)) {
+                        return [];
+                    }
+
+                    return audit.entries
+                        .filter((entry) => entry && (entry.severity === 'warning' || entry.severity === 'error'))
+                        .map((entry) => {
+                            const message = entry.severity === 'error'
+                                ? mgaAdminSprintf(
+                                    mgaAdmin__('Contraste %1$s insuffisant : %2$s. Ajustez la couleur ou le fond pour atteindre au moins 3,0 (AA ≥ 4,5).', 'lightbox-jlg'),
+                                    entry.label,
+                                    entry.ratioText
+                                )
+                                : mgaAdminSprintf(
+                                    mgaAdmin__('Contraste %1$s limité : %2$s. Augmentez légèrement pour viser AA (≥ 4,5).', 'lightbox-jlg'),
+                                    entry.label,
+                                    entry.ratioText
+                                );
+
+                            return {
+                                severity: entry.severity,
+                                message,
+                            };
+                        });
+                };
+
+                const renderValidations = (validations) => {
+                    if (!validationContainer) {
+                        return;
+                    }
+
+                    validationContainer.innerHTML = '';
+
+                    if (!validations || validations.length === 0) {
+                        validationContainer.setAttribute('hidden', 'hidden');
+                        return;
+                    }
+
+                    validationContainer.removeAttribute('hidden');
+
+                    validations.forEach((validation) => {
+                        const alert = doc.createElement('div');
+                        alert.className = 'mga-summary__alert';
+                        alert.setAttribute('data-mga-severity', validation.severity);
+                        alert.textContent = validation.message;
+                        validationContainer.appendChild(alert);
+                    });
+                };
+
+                const renderPresetDiff = (diff, baselineInfo) => {
+                    if (!diffContainer || !diffList) {
+                        return;
+                    }
+
+                    diffList.innerHTML = '';
+
+                    if (!diff || diff.length === 0) {
+                        diffContainer.setAttribute('hidden', 'hidden');
+
+                        if (diffBaseline) {
+                            diffBaseline.textContent = '';
+                        }
+
+                        if (diffEmpty) {
+                            diffEmpty.setAttribute('hidden', 'hidden');
+                        }
+
+                        return;
+                    }
+
+                    diffContainer.removeAttribute('hidden');
+
+                    if (diffBaseline) {
+                        diffBaseline.textContent = baselineInfo && baselineInfo.label
+                            ? mgaAdminSprintf(mgaAdmin__('Base : %1$s', 'lightbox-jlg'), baselineInfo.label)
+                            : '';
+                    }
+
+                    if (diffEmpty) {
+                        diffEmpty.setAttribute('hidden', 'hidden');
+                    }
+
+                    diff.forEach((item) => {
+                        const row = doc.createElement('li');
+                        row.className = 'mga-summary__diff-item';
+
+                        const label = doc.createElement('span');
+                        label.className = 'mga-summary__diff-label';
+                        label.textContent = item.label;
+                        row.appendChild(label);
+
+                        const values = doc.createElement('span');
+                        values.className = 'mga-summary__diff-values';
+
+                        const beforeValue = doc.createElement('span');
+                        beforeValue.className = 'mga-summary__diff-before';
+                        beforeValue.textContent = item.baselineLabel;
+                        values.appendChild(beforeValue);
+
+                        const arrow = doc.createElement('span');
+                        arrow.textContent = '→';
+                        values.appendChild(arrow);
+
+                        const afterValue = doc.createElement('span');
+                        afterValue.className = 'mga-summary__diff-after';
+                        afterValue.textContent = item.currentLabel;
+                        values.appendChild(afterValue);
+
+                        row.appendChild(values);
+                        diffList.appendChild(row);
+                    });
+                };
+
                 const update = () => {
-                    renderPresetSummary();
+                    const diff = presetDiffTracker ? presetDiffTracker.refresh() : [];
+                    const baselineInfo = presetDiffTracker ? presetDiffTracker.getBaselineInfo() : { label: '', key: '' };
+
+                    renderPresetSummary(diff, baselineInfo);
                     renderTimingSummary();
                     renderToolbarSummary();
                     renderShareSummary();
+                    renderPresetDiff(diff, baselineInfo);
+                    renderValidations(collectValidations());
                 };
 
                 return () => {
@@ -581,22 +716,27 @@ import {
         initializeAsyncSave(form, wizardApi);
 
         const initSettingsNavigation = () => {
+            const noopApi = {
+                setSectionModified: () => {},
+            };
+
             const layout = doc.querySelector('[data-mga-settings-layout]');
 
             if (!layout) {
-                return;
+                return noopApi;
             }
 
             const sections = Array.from(layout.querySelectorAll('[data-mga-settings-section]'));
 
             if (sections.length === 0) {
-                return;
+                return noopApi;
             }
 
             const navList = layout.querySelector('[data-mga-settings-nav]');
             const navLinks = navList ? Array.from(navList.querySelectorAll('[data-mga-section-link]')) : [];
             const linkBySection = new Map();
             const navItemBySection = new Map();
+            const navBadgeBySection = new Map();
             const viewToggle = layout.querySelector('[data-mga-view-toggle]');
             const viewSelect = viewToggle ? viewToggle.querySelector('[data-mga-view-select]') : null;
             const VIEW_STORAGE_KEY = 'mga-settings-view-mode';
@@ -834,6 +974,19 @@ import {
 
                 if (navItem) {
                     navItemBySection.set(target, navItem);
+
+                    let badge = navItem.querySelector('[data-mga-modified-badge]');
+
+                    if (!badge) {
+                        badge = doc.createElement('span');
+                        badge.className = 'mga-settings-layout__badge';
+                        badge.textContent = mgaAdmin__('Modifié', 'lightbox-jlg');
+                        badge.hidden = true;
+                        badge.setAttribute('data-mga-modified-badge', 'true');
+                        navItem.appendChild(badge);
+                    }
+
+                    navBadgeBySection.set(target, badge);
                 }
 
                 link.addEventListener('click', (event) => {
@@ -943,9 +1096,32 @@ import {
             if (!isSearchActive()) {
                 setActiveLink(sections[0]);
             }
+
+            return {
+                setSectionModified(section, isModified) {
+                    if (!section) {
+                        return;
+                    }
+
+                    const badge = navBadgeBySection.get(section);
+                    const navItem = navItemBySection.get(section);
+
+                    if (badge) {
+                        badge.hidden = !isModified;
+                    }
+
+                    if (navItem) {
+                        if (isModified) {
+                            navItem.setAttribute('data-mga-modified', 'true');
+                        } else {
+                            navItem.removeAttribute('data-mga-modified');
+                        }
+                    }
+                },
+            };
         };
 
-        initSettingsNavigation();
+        const navigationApi = initSettingsNavigation();
 
         // Live update for range sliders
         const bindRangeToOutput = (sliderId, outputId, displayFormatter, ariaFormatter) => {
@@ -1043,6 +1219,8 @@ import {
             }
         }
 
+        contrastInspector = createContrastInspector();
+
         const initLivePreview = () => {
             const previewContainer = doc.querySelector('[data-mga-live-preview]');
 
@@ -1053,32 +1231,194 @@ import {
             const previewMock = previewContainer.querySelector('[data-mga-live-preview-mock]');
             const effectLabel = previewContainer.querySelector('[data-mga-preview-effect]');
             const thumbsContainer = previewContainer.querySelector('[data-mga-preview-thumbs]');
+            const statusRegion = previewContainer.querySelector('[data-mga-preview-status]');
+            const fallbackMessage = previewContainer.querySelector('[data-mga-preview-fallback]');
+            const mainSwiperEl = previewContainer.querySelector('[data-mga-preview-swiper]');
+            const paginationEl = previewContainer.querySelector('[data-mga-preview-pagination]');
+            const nextButton = previewContainer.querySelector('[data-mga-preview-next]');
+            const prevButton = previewContainer.querySelector('[data-mga-preview-prev]');
+
             const toolbarActions = {
-                zoom: previewContainer.querySelector('[data-preview-action="zoom"]'),
-                download: previewContainer.querySelector('[data-preview-action="download"]'),
-                share: previewContainer.querySelector('[data-preview-action="share"]'),
-                cta: previewContainer.querySelector('[data-preview-action="cta"]'),
-                fullscreen: previewContainer.querySelector('[data-preview-action="fullscreen"]'),
+                zoom: Array.from(previewContainer.querySelectorAll('[data-preview-action="zoom"]')),
+                download: Array.from(previewContainer.querySelectorAll('[data-preview-action="download"]')),
+                share: Array.from(previewContainer.querySelectorAll('[data-preview-action="share"]')),
+                cta: Array.from(previewContainer.querySelectorAll('[data-preview-action="cta"]')),
+                fullscreen: Array.from(previewContainer.querySelectorAll('[data-preview-action="fullscreen"]')),
             };
 
-            const effectNameMap = {
-                slide: mgaAdmin__('glissement', 'lightbox-jlg'),
-                fade: mgaAdmin__('fondu', 'lightbox-jlg'),
-                cube: mgaAdmin__('cube 3D', 'lightbox-jlg'),
-                coverflow: mgaAdmin__('coverflow', 'lightbox-jlg'),
-                flip: mgaAdmin__('flip 3D', 'lightbox-jlg'),
+            let previewSwiper = null;
+
+            const shouldAnnounce = (event) => {
+                if (!event || typeof event !== 'object') {
+                    return false;
+                }
+
+                if (event.type === 'init') {
+                    return false;
+                }
+
+                return event.type !== 'input';
             };
 
-            const setAccent = (value) => {
+            const announce = (message) => {
+                if (!statusRegion || typeof message !== 'string' || message.trim() === '') {
+                    return;
+                }
+
+                statusRegion.textContent = message;
+            };
+
+            const setPreviewState = (state) => {
+                if (!previewContainer) {
+                    return;
+                }
+
+                previewContainer.setAttribute('data-mga-preview-state', state);
+            };
+
+            const showFallback = (message) => {
+                setPreviewState('error');
+
+                if (fallbackMessage) {
+                    fallbackMessage.hidden = false;
+
+                    if (typeof message === 'string' && message.trim() !== '') {
+                        fallbackMessage.textContent = message;
+                    }
+                }
+
+                if (message) {
+                    announce(message);
+                }
+            };
+
+            const destroyPreviewSwiper = () => {
+                if (previewSwiper && typeof previewSwiper.destroy === 'function') {
+                    previewSwiper.destroy(true, true);
+                }
+
+                previewSwiper = null;
+            };
+
+            const parseNumber = (value, fallbackValue) => {
+                const numeric = typeof value === 'number' ? value : parseFloat(value);
+
+                if (Number.isNaN(numeric)) {
+                    return fallbackValue;
+                }
+
+                return numeric;
+            };
+
+            const buildSwiperConfig = () => {
+                const effectSelect = doc.getElementById('mga_effect');
+                const delayInput = doc.getElementById('mga_delay');
+                const speedInput = doc.getElementById('mga_speed');
+                const effectValue = effectSelect ? effectSelect.value : 'slide';
+                const delaySeconds = parseNumber(delayInput ? delayInput.value : null, 4);
+                const speedValue = parseNumber(speedInput ? speedInput.value : null, 600);
+
+                const autoplayDelay = Math.max(Math.round(delaySeconds * 1000), 1000);
+                const speed = Math.max(Math.round(speedValue), 100);
+
+                const config = {
+                    allowTouchMove: false,
+                    simulateTouch: false,
+                    centeredSlides: true,
+                    effect: effectValue || 'slide',
+                    loop: true,
+                    slidesPerView: 1,
+                    speed,
+                };
+
+                if (paginationEl) {
+                    config.pagination = {
+                        el: paginationEl,
+                        clickable: false,
+                    };
+                }
+
+                if (nextButton && prevButton) {
+                    config.navigation = {
+                        nextEl: nextButton,
+                        prevEl: prevButton,
+                    };
+                }
+
+                if (!Number.isNaN(autoplayDelay) && autoplayDelay > 0) {
+                    config.autoplay = {
+                        delay: autoplayDelay,
+                        disableOnInteraction: false,
+                    };
+                }
+
+                if (config.effect === 'fade') {
+                    config.fadeEffect = { crossFade: true };
+                }
+
+                config.on = {
+                    init(swiper) {
+                        if (swiper && typeof swiper.slideToLoop === 'function') {
+                            swiper.slideToLoop(0, 0, false);
+                        }
+                    },
+                };
+
+                return config;
+            };
+
+            const rebuildPreviewSwiper = () => {
+                if (!mainSwiperEl || typeof global.Swiper !== 'function') {
+                    return;
+                }
+
+                destroyPreviewSwiper();
+
+                try {
+                    previewSwiper = new global.Swiper(mainSwiperEl, buildSwiperConfig());
+                    setPreviewState('ready');
+                } catch (error) {
+                    showFallback(mgaAdmin__('Impossible d’initialiser l’aperçu Swiper.', 'lightbox-jlg'));
+                }
+            };
+
+            if (!mainSwiperEl) {
+                showFallback(mgaAdmin__('Prévisualisation indisponible : conteneur Swiper manquant.', 'lightbox-jlg'));
+            } else {
+                if (fallbackMessage) {
+                    fallbackMessage.hidden = true;
+                }
+
+                setPreviewState('loading');
+                announce(mgaAdmin__('Préparation de la prévisualisation…', 'lightbox-jlg'));
+
+                ensureSwiper(global, { namespace: 'admin-preview' })
+                    .then(() => {
+                        rebuildPreviewSwiper();
+                        if (previewSwiper && typeof previewSwiper.update === 'function') {
+                            previewSwiper.update();
+                        }
+                        announce(mgaAdmin__('Prévisualisation prête.', 'lightbox-jlg'));
+                    })
+                    .catch(() => {
+                        showFallback(mgaAdmin__('Impossible de charger Swiper. La prévisualisation interactive est désactivée.', 'lightbox-jlg'));
+                    });
+            }
+
+            const setAccent = (value, _element, event) => {
                 if (!previewMock) {
                     return;
                 }
 
                 const color = isValidHexColor(value) ? value : '#6366f1';
                 previewMock.style.setProperty('--mga-preview-accent', color);
+
+                if (shouldAnnounce(event)) {
+                    announce(mgaAdmin__('Couleur d’accent mise à jour.', 'lightbox-jlg'));
+                }
             };
 
-            const setOverlay = (value) => {
+            const setOverlay = (value, _element, event) => {
                 if (!previewMock) {
                     return;
                 }
@@ -1091,29 +1431,52 @@ import {
 
                 const clamped = Math.min(Math.max(numeric, 0), 1);
                 previewMock.style.setProperty('--mga-preview-overlay', `rgba(15, 23, 42, ${clamped})`);
+
+                if (shouldAnnounce(event)) {
+                    announce(mgaAdmin__('Opacité de l’arrière-plan mise à jour.', 'lightbox-jlg'));
+                }
             };
 
-            const setBackgroundStyle = (style) => {
+            const setBackgroundStyle = (style, _element, event) => {
                 if (!previewMock) {
                     return;
                 }
 
                 const normalized = typeof style === 'string' && style ? style : 'echo';
                 previewMock.setAttribute('data-preview-style', normalized);
-            };
 
-            const toggleAction = (name, enabled) => {
-                const action = toolbarActions[name];
-
-                if (!action) {
-                    return;
+                if (shouldAnnounce(event)) {
+                    announce(mgaAdmin__('Style d’arrière-plan actualisé.', 'lightbox-jlg'));
                 }
-
-                action.setAttribute('data-preview-hidden', enabled ? 'false' : 'true');
-                action.setAttribute('aria-hidden', enabled ? 'false' : 'true');
             };
 
-            const setThumbScale = (value) => {
+            const toggleAction = (name, enabled, _element, event) => {
+                const actions = toolbarActions[name] || [];
+
+                actions.forEach((action) => {
+                    action.setAttribute('data-preview-hidden', enabled ? 'false' : 'true');
+                    action.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+                });
+
+                if (shouldAnnounce(event)) {
+                    const label = {
+                        zoom: mgaAdmin__('Zoom', 'lightbox-jlg'),
+                        download: mgaAdmin__('Téléchargement', 'lightbox-jlg'),
+                        share: mgaAdmin__('Partage', 'lightbox-jlg'),
+                        cta: mgaAdmin__('Appel à l’action', 'lightbox-jlg'),
+                        fullscreen: mgaAdmin__('Plein écran', 'lightbox-jlg'),
+                    }[name] || name;
+
+                    announce(mgaAdminSprintf(
+                        enabled
+                            ? mgaAdmin__('%s activé dans l’aperçu.', 'lightbox-jlg')
+                            : mgaAdmin__('%s masqué dans l’aperçu.', 'lightbox-jlg'),
+                        label
+                    ));
+                }
+            };
+
+            const setThumbScale = (value, _element, event) => {
                 if (!thumbsContainer) {
                     return;
                 }
@@ -1122,14 +1485,17 @@ import {
 
                 if (Number.isNaN(numeric)) {
                     thumbsContainer.style.setProperty('--mga-preview-thumb-scale', '1');
-                    return;
+                } else {
+                    const normalized = Math.min(Math.max(numeric / 90, 0.6), 1.4);
+                    thumbsContainer.style.setProperty('--mga-preview-thumb-scale', normalized.toString());
                 }
 
-                const normalized = Math.min(Math.max(numeric / 90, 0.6), 1.4);
-                thumbsContainer.style.setProperty('--mga-preview-thumb-scale', normalized.toString());
+                if (shouldAnnounce(event)) {
+                    announce(mgaAdmin__('Taille des miniatures mise à jour.', 'lightbox-jlg'));
+                }
             };
 
-            const updateEffectLabel = () => {
+            const updateEffectLabel = (_value, _element, event) => {
                 if (!effectLabel) {
                     return;
                 }
@@ -1140,7 +1506,7 @@ import {
                 const effectValue = effectSelect ? effectSelect.value : '';
                 const delayValue = delayInput ? delayInput.value || '4' : '4';
                 const speedValue = speedInput ? speedInput.value || '600' : '600';
-                const effectLabelText = effectNameMap[effectValue] || mgaAdmin__('personnalisée', 'lightbox-jlg');
+                const effectLabelText = EFFECT_LABELS[effectValue] || mgaAdmin__('personnalisée', 'lightbox-jlg');
 
                 effectLabel.textContent = mgaAdminSprintf(
                     mgaAdmin__('Transition : %1$s • %2$ss / %3$sms', 'lightbox-jlg'),
@@ -1148,6 +1514,16 @@ import {
                     delayValue,
                     speedValue
                 );
+
+                if (shouldAnnounce(event)) {
+                    announce(mgaAdminSprintf(
+                        mgaAdmin__('Transition mise à jour : %1$s, rythme de %2$ss.', 'lightbox-jlg'),
+                        effectLabelText,
+                        delayValue
+                    ));
+                }
+
+                rebuildPreviewSwiper();
             };
 
             const bindPreviewControl = (id, handler, events = ['change']) => {
@@ -1157,30 +1533,27 @@ import {
                     return;
                 }
 
-                const invoke = () => {
-                    if (element.type === 'checkbox') {
-                        handler(element.checked, element);
-                    } else {
-                        handler(element.value, element);
-                    }
+                const invoke = (event) => {
+                    const payload = element.type === 'checkbox' ? element.checked : element.value;
+                    handler(payload, element, event || { type: 'init' });
                 };
 
                 events.forEach((eventName) => {
                     element.addEventListener(eventName, invoke);
                 });
 
-                invoke();
+                invoke({ type: 'init' });
             };
 
             bindPreviewControl('mga_accent_color', setAccent, ['input', 'change']);
             bindPreviewControl('mga_bg_opacity', setOverlay, ['input', 'change']);
             bindPreviewControl('mga_background_style', setBackgroundStyle);
             bindPreviewControl('mga_thumb_size', setThumbScale, ['input', 'change']);
-            bindPreviewControl('mga_show_zoom', (checked) => toggleAction('zoom', checked));
-            bindPreviewControl('mga_show_download', (checked) => toggleAction('download', checked));
-            bindPreviewControl('mga_show_share', (checked) => toggleAction('share', checked));
-            bindPreviewControl('mga_show_cta', (checked) => toggleAction('cta', checked));
-            bindPreviewControl('mga_show_fullscreen', (checked) => toggleAction('fullscreen', checked));
+            bindPreviewControl('mga_show_zoom', (checked, element, event) => toggleAction('zoom', checked, element, event));
+            bindPreviewControl('mga_show_download', (checked, element, event) => toggleAction('download', checked, element, event));
+            bindPreviewControl('mga_show_share', (checked, element, event) => toggleAction('share', checked, element, event));
+            bindPreviewControl('mga_show_cta', (checked, element, event) => toggleAction('cta', checked, element, event));
+            bindPreviewControl('mga_show_fullscreen', (checked, element, event) => toggleAction('fullscreen', checked, element, event));
             bindPreviewControl('mga_effect', updateEffectLabel);
             bindPreviewControl('mga_delay', updateEffectLabel, ['input', 'change']);
             bindPreviewControl('mga_speed', updateEffectLabel, ['input', 'change']);
@@ -1199,6 +1572,12 @@ import {
         const resetPresetButton = doc.querySelector('[data-mga-reset-style-preset]');
         const presetDescription = doc.querySelector('[data-mga-style-preset-description]');
         let isApplyingPreset = false;
+
+        presetDiffTracker = createPresetDiffTracker(stylePresetExport.defaults || {});
+
+        if (presetDiffTracker && typeof presetDiffTracker.setNavigationApi === 'function') {
+            presetDiffTracker.setNavigationApi(navigationApi);
+        }
 
         const maybeDispatchEvent = (element, eventType) => {
             if (!element || typeof element.dispatchEvent !== 'function') {
@@ -1269,12 +1648,19 @@ import {
 
                 if (picker && typeof picker.wpColorPicker === 'function') {
                     picker.wpColorPicker('color', targetColor);
+                    if (contrastInspector) {
+                        contrastInspector.update(targetColor);
+                    }
                     return;
                 }
             }
 
             accentColorInput.value = targetColor;
             maybeDispatchEvent(accentColorInput, 'change');
+
+            if (contrastInspector) {
+                contrastInspector.update(targetColor);
+            }
         };
 
         const applyPresetSettings = (settings) => {
@@ -1370,21 +1756,36 @@ import {
             const customDescription = typeof stylePresetExport.customDescription === 'string'
                 ? stylePresetExport.customDescription
                 : '';
+            const baselineInfo = presetDiffTracker ? presetDiffTracker.getBaselineInfo() : { label: '', key: '' };
+            const baselineNote = baselineInfo && baselineInfo.label
+                ? mgaAdminSprintf(mgaAdmin__('Base : %1$s.', 'lightbox-jlg'), baselineInfo.label)
+                : '';
+            const segments = [customDescription, baselineNote].filter((segment) => segment && segment.trim() !== '');
 
-            presetDescription.textContent = customDescription;
+            if (segments.length === 0) {
+                presetDescription.textContent = '';
+                return;
+            }
+
+            presetDescription.textContent = segments.join(' ');
         };
 
         const markPresetAsCustom = () => {
-            if (isApplyingPreset || !presetSelect) {
+            if (isApplyingPreset) {
                 return;
             }
 
-            if (presetSelect.value === '') {
-                return;
+            if (presetSelect && presetSelect.value !== '') {
+                presetSelect.value = '';
             }
 
-            presetSelect.value = '';
             updatePresetDescription();
+
+            if (presetDiffTracker && typeof presetDiffTracker.refresh === 'function') {
+                presetDiffTracker.refresh();
+            }
+
+            scheduleSummaryRefresh();
         };
 
         const registerPresetWatcher = (id) => {
@@ -1410,6 +1811,24 @@ import {
             presetSelect.addEventListener('change', updatePresetDescription);
         }
 
+        if (presetDiffTracker) {
+            if (presetSelect && presetSelect.value && stylePresets[presetSelect.value]) {
+                const initialPreset = stylePresets[presetSelect.value];
+
+                presetDiffTracker.setBaseline({
+                    key: presetSelect.value,
+                    label: initialPreset.label || presetSelect.options[presetSelect.selectedIndex]?.text || '',
+                    settings: initialPreset.settings || {},
+                });
+            } else {
+                presetDiffTracker.setBaseline({
+                    key: '',
+                    label: presetDiffTracker.getDefaultLabel(),
+                    settings: stylePresetExport.defaults || {},
+                });
+            }
+        }
+
         if (applyPresetButton) {
             applyPresetButton.addEventListener('click', (event) => {
                 event.preventDefault();
@@ -1426,8 +1845,16 @@ import {
 
                 isApplyingPreset = true;
                 applyPresetSettings(stylePresets[key].settings || {});
+                if (presetDiffTracker) {
+                    presetDiffTracker.setBaseline({
+                        key,
+                        label: stylePresets[key].label || '',
+                        settings: stylePresets[key].settings || {},
+                    });
+                }
                 isApplyingPreset = false;
                 updatePresetDescription();
+                scheduleSummaryRefresh();
             });
         }
 
@@ -1440,6 +1867,13 @@ import {
                 if (defaults && typeof defaults === 'object' && Object.keys(defaults).length > 0) {
                     isApplyingPreset = true;
                     applyPresetSettings(defaults);
+                    if (presetDiffTracker) {
+                        presetDiffTracker.setBaseline({
+                            key: '',
+                            label: presetDiffTracker.getDefaultLabel(),
+                            settings: defaults,
+                        });
+                    }
                     isApplyingPreset = false;
                 }
 
@@ -1448,6 +1882,7 @@ import {
                 }
 
                 updatePresetDescription();
+                scheduleSummaryRefresh();
             });
         }
 

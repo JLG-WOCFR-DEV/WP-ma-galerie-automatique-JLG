@@ -71,12 +71,15 @@ etc.). Les recommandations sont classées par thématique demandée.
   compteur dynamique et minuterie circulaire, offrant une ergonomie soignée.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L1917-L2051】【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L2802-L2858】
 - Les boutons optionnels (zoom, téléchargement, partage, plein écran) peuvent
   être masqués individuellement selon les réglages enregistrés.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L2012-L2051】【F:ma-galerie-automatique/includes/Admin/Settings.php†L288-L295】
+- Un gestionnaire d’historique encode l’ID de la galerie et l’index courant dans
+  l’URL via `pushState`, ce qui permet déjà un deep linking comparable aux offres
+  premium et restaure l’état à la fermeture.【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L2703-L2790】
 
 ### Améliorations recommandées
-- **Deep linking & navigation historique** : implémentez des ancres ou
-  `pushState` pour permettre le partage d’une diapositive précise, fonctionnalité
-  standard des galeries pro. (Le code actuel ne manipule ni `history` ni
-  `location`.)
+- **Optimiser le deep linking existant** : exposez des réglages pour choisir le
+  format du paramètre `mga`, synchroniser la légende dans la balise `<title>` et
+  fournir une API JS permettant d’ouvrir une diapositive précise depuis un autre
+  composant (menu, timeline) afin d’égaler les parcours des suites pro.
 - **Annotations et métadonnées** : offrez une barre latérale optionnelle affichant
   EXIF, auteur ou boutons « acheter/imprimer », très demandés par les
   photographes.
@@ -296,6 +299,33 @@ etc.). Les recommandations sont classées par thématique demandée.
 ### Opportunités court terme
 - Capitalisez sur l’action `mga_swiper_asset_sources_refreshed` pour alimenter un log (WP-CLI ou Action Scheduler) retraçant les rafraîchissements et bascules CDN/local par site, afin de rassurer les intégrateurs sur la stabilité des déploiements.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L395-L418】
 - Ajoutez une commande WP-CLI qui recompresse automatiquement les fichiers `.mo` en `.b64`, met à jour le hash attendu par le `TranslationManager` et valide l’écriture dans `wp-content/uploads/mga-translations/`.【F:ma-galerie-automatique/includes/Translation/Manager.php†L9-L108】
+
+## 7. Performance & SEO
+
+### Points solides
+- La détection mémorise les résultats dans des transients persistants basés sur
+  l’empreinte du contenu et des réglages, ce qui évite les rescans inutiles sur
+  les sites riches en médias.【F:ma-galerie-automatique/includes/Content/Detection.php†L1206-L1241】
+- La collecte des sources haute définition lit `srcset`, `data-*` et URL des
+  liens pour sélectionner la ressource la plus pertinente, limitant les erreurs
+  404 et maximisant la netteté dans la visionneuse.【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L1844-L1935】
+- Les images injectées dans le diaporama et les miniatures utilisent `loading="lazy"`
+  par défaut, ce qui réduit le coût initial du rendu sur mobile.【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L3190-L3227】
+
+### Améliorations recommandées
+- **Générer des sources responsive côté visionneuse** : aujourd’hui `mainImg`
+  n’injecte qu’un `src` haute résolution, ce qui impose la même ressource aux
+  mobiles. Calculez et appliquez `srcset`/`sizes` en réutilisant l’analyse déjà
+  effectuée par `parseSrcset()` pour réduire le poids chargé selon le viewport.【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L1844-L1935】【F:ma-galerie-automatique/assets/js/src/gallery-slideshow.js†L3200-L3207】
+- **Précharger intelligemment les assets** : `enqueue_assets()` se limite à
+  enregistrer et charger Swiper + le bundle principal sans exposer de `rel="preload"`
+  ni de `fetchpriority`. Ajoutez des hooks `wp_resource_hints`/`wp_preload_resources`
+  et un réglage de priorité sur la première diapositive pour optimiser le Largest
+  Contentful Paint, comme le proposent les suites pro orientées SEO.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L23-L189】
+- **Suivi du cache de détection** : la persistance via transients n’expose pas
+  de métriques de hit/miss. Fournissez un panneau d’observation ou des hooks
+  d’instrumentation (stats, alertes purge) pour sécuriser les déploiements sur
+  des catalogues volumineux.【F:ma-galerie-automatique/includes/Content/Detection.php†L1206-L1241】
 
 ---
 

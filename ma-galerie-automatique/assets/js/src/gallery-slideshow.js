@@ -2,6 +2,7 @@ import {
     createSprintf,
     createTranslate,
     createIconSvg,
+    ensureSwiper,
     getSharedI18n,
     sanitizeIconKey,
 } from './shared';
@@ -4339,10 +4340,22 @@ import {
         }
     }
 
+    const bootstrapGalleryViewer = () => {
+        ensureSwiper(window, { namespace: 'frontend' })
+            .catch((error) => {
+                if (window.console && typeof window.console.error === 'function') {
+                    window.console.error('[MGA] Swiper indisponible, utilisation du mode dégradé.', error);
+                }
+            })
+            .finally(() => {
+                initGalleryViewer();
+            });
+    };
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initGalleryViewer);
+        document.addEventListener('DOMContentLoaded', bootstrapGalleryViewer);
     } else {
-        initGalleryViewer();
+        bootstrapGalleryViewer();
     }
 
     if (typeof module !== 'undefined' && module.exports) {
