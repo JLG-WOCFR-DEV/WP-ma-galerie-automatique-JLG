@@ -1,47 +1,11 @@
+import { createSprintf, createTranslate, resolveI18n } from './shared';
+
 (function(global) {
     "use strict";
 
-    const mgaI18n = global.wp && global.wp.i18n ? global.wp.i18n : null;
-    const mga__ = mgaI18n && typeof mgaI18n.__ === 'function' ? mgaI18n.__ : ( text ) => text;
-    const TOKEN_REGEX = /%(\d+\$)?[sd]/g;
-    const fallbackSprintf = ( format, ...args ) => {
-        let autoIndex = 0;
-
-        return String(format).replace(TOKEN_REGEX, (match, position) => {
-            let argIndex;
-            const type = match.charAt(match.length - 1);
-
-            if (position) {
-                const numericIndex = parseInt(position.slice(0, -1), 10);
-
-                if (Number.isNaN(numericIndex) || numericIndex <= 0) {
-                    return '';
-                }
-
-                argIndex = numericIndex - 1;
-            } else {
-                argIndex = autoIndex;
-                autoIndex += 1;
-            }
-
-            const value = argIndex >= 0 && argIndex < args.length ? args[argIndex] : undefined;
-
-            if (type === 'd') {
-                const coerced = parseInt(value, 10);
-                return Number.isNaN(coerced) ? '' : String(coerced);
-            }
-
-            if (typeof value === 'undefined') {
-                return '';
-            }
-
-            return String(value);
-        });
-    };
-
-    const mgaSprintf = mgaI18n && typeof mgaI18n.sprintf === 'function'
-        ? mgaI18n.sprintf
-        : fallbackSprintf;
+    const mgaI18n = resolveI18n(global);
+    const mga__ = createTranslate(mgaI18n);
+    const mgaSprintf = createSprintf(mgaI18n);
 
     const state = {
         panel: null,

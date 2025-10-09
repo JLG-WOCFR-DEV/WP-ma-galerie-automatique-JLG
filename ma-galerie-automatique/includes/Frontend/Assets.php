@@ -121,7 +121,7 @@ class Assets {
             if ( $can_view_debug ) {
                 wp_register_script(
                     'mga-debug-script',
-                    $this->plugin->get_plugin_dir_url() . 'assets/js/debug.js',
+                    $this->plugin->get_plugin_dir_url() . 'assets/js/dist/debug.js',
                     [ 'wp-i18n' ],
                     MGA_VERSION,
                     true
@@ -138,7 +138,7 @@ class Assets {
 
         wp_enqueue_script(
             'mga-gallery-script',
-            $this->plugin->get_plugin_dir_url() . 'assets/js/gallery-slideshow.js',
+            $this->plugin->get_plugin_dir_url() . 'assets/js/dist/gallery-slideshow.js',
             $script_dependencies,
             MGA_VERSION,
             true
