@@ -2400,6 +2400,8 @@
                 viewer = document.createElement('div');
                 viewer.id = 'mga-viewer';
                 viewer.className = 'mga-viewer';
+                viewer.classList.add('mga-toolbar-compact');
+                viewer.classList.add('mga-toolbar-auto-hide');
                 viewer.classList.toggle('mga-has-caption', false);
                 viewer.style.display = 'none';
                 viewer.setAttribute('role', 'dialog');
@@ -3240,6 +3242,8 @@
             };
 
             viewer.className = 'mga-viewer';
+            viewer.classList.add('mga-toolbar-compact');
+            viewer.classList.add('mga-toolbar-auto-hide');
             viewer.classList.toggle('mga-has-caption', false);
             if (thumbsLayout === 'left') {
                 viewer.classList.add('mga-thumbs-left');

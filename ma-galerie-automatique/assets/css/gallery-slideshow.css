@@ -182,7 +182,20 @@
     justify-content: flex-end;
 }
 
+.mga-viewer.mga-toolbar-compact .mga-toolbar {
+    --mga-toolbar-gap: clamp(6px, 1.8vw, 9px);
+    background: rgba(15, 18, 22, 0.55);
+    padding: 4px 8px;
+    border-radius: 999px;
+    backdrop-filter: blur(6px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
 .mga-toolbar-button { position: relative; background: transparent; border: none; color: var(--mga-accent-color, #fff); cursor: pointer; padding: 10px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.2s ease, box-shadow 0.2s ease; line-height: 0; }
+.mga-viewer.mga-toolbar-compact .mga-toolbar-button { min-width: 40px; min-height: 40px; padding: 8px; border-radius: 12px; background-color: rgba(255, 255, 255, 0.08); }
+.mga-viewer.mga-toolbar-compact .mga-toolbar-button:hover { background-color: rgba(255, 255, 255, 0.18); }
+.mga-viewer.mga-toolbar-compact .mga-toolbar-button:focus-visible { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45); }
+.mga-viewer.mga-toolbar-compact .mga-toolbar-button .mga-icon { width: 20px; height: 20px; }
 .mga-toolbar-button[hidden],
 .mga-toolbar-button.is-hidden { display: none !important; }
 .mga-toolbar-button:focus { outline: none; }
@@ -191,6 +204,21 @@
 .mga-toolbar-button .mga-icon { width: 22px; height: 22px; fill: var(--mga-accent-color, #fff); position: relative; z-index: 1; }
 .mga-toolbar-button .mga-download-icon,
 .mga-toolbar-button .mga-share-icon { width: 22px; height: 22px; }
+
+@media (hover: hover) and (pointer: fine) {
+    .mga-viewer.mga-toolbar-auto-hide .mga-toolbar {
+        opacity: 0;
+        transform: translateY(-12px);
+        pointer-events: none;
+    }
+
+    .mga-viewer.mga-toolbar-auto-hide:hover .mga-toolbar,
+    .mga-viewer.mga-toolbar-auto-hide .mga-toolbar:focus-within {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+}
 
 .mga-timer-svg { position: absolute; top: 50%; left: 50%; width: calc(100% + 6px); height: calc(100% + 6px); transform: translate(-50%, -50%) rotate(-90deg); }
 .mga-timer-svg path { fill: none; stroke-width: 2.5; }
