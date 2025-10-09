@@ -417,6 +417,44 @@ class Settings {
 
         wp_enqueue_script( 'mga-admin-script' );
 
+        $swiper_version  = '11.1.4';
+        $local_swiper_js = $this->plugin->get_plugin_dir_url() . 'assets/vendor/swiper/swiper-bundle.min.js';
+        $local_swiper_css = $this->plugin->get_plugin_dir_url() . 'assets/vendor/swiper/swiper-bundle.min.css';
+        $cdn_swiper_js   = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.js';
+        $cdn_swiper_css  = 'https://cdn.jsdelivr.net/npm/swiper@' . $swiper_version . '/swiper-bundle.min.css';
+
+        $admin_swiper_loader = [
+            'version'  => $swiper_version,
+            'attempts' => [
+                [
+                    'key'    => 'local',
+                    'label'  => __( 'Bibliothèque locale', 'lightbox-jlg' ),
+                    'inject' => true,
+                    'js'     => [
+                        'src' => $local_swiper_js,
+                    ],
+                    'css'    => [
+                        'href' => $local_swiper_css,
+                    ],
+                ],
+                [
+                    'key'    => 'cdn',
+                    'label'  => __( 'CDN jsDelivr', 'lightbox-jlg' ),
+                    'inject' => true,
+                    'js'     => [
+                        'src'        => $cdn_swiper_js,
+                        'integrity'  => MGA_SWIPER_JS_SRI_HASH,
+                        'crossOrigin' => 'anonymous',
+                    ],
+                    'css'    => [
+                        'href'        => $cdn_swiper_css,
+                        'integrity'   => MGA_SWIPER_CSS_SRI_HASH,
+                        'crossOrigin' => 'anonymous',
+                    ],
+                ],
+            ],
+        ];
+
         $style_presets_for_js = [];
 
         foreach ( $this->get_style_presets() as $preset_key => $preset_definition ) {
@@ -462,6 +500,7 @@ class Settings {
                     'success' => __( 'Réglages enregistrés.', 'lightbox-jlg' ),
                     'error'   => __( 'Impossible d’enregistrer les réglages.', 'lightbox-jlg' ),
                 ],
+                'swiper'   => $admin_swiper_loader,
             ]
         );
 

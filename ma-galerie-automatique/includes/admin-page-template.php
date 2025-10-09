@@ -71,13 +71,34 @@ $style_presets     = mga_get_style_presets();
                     </div>
 
                     <ul class="mga-settings-layout__nav" data-mga-settings-nav>
-                        <li data-mga-visibility="essential"><a href="#mga-section-style" data-mga-section-link><?php echo esc_html__( 'Presets & raccourcis', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="essential"><a href="#mga-section-playback" data-mga-section-link><?php echo esc_html__( 'Lecture & transitions', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="essential"><a href="#mga-section-thumbnails" data-mga-section-link><?php echo esc_html__( 'Miniatures & navigation', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="essential"><a href="#mga-section-appearance" data-mga-section-link><?php echo esc_html__( 'Apparence de la visionneuse', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="essential"><a href="#mga-section-toolbar" data-mga-section-link><?php echo esc_html__( 'Barre d’outils & actions', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="advanced"><a href="#mga-section-detection" data-mga-section-link><?php echo esc_html__( 'Détection & intégration', 'lightbox-jlg' ); ?></a></li>
-                        <li data-mga-visibility="advanced"><a href="#mga-section-maintenance" data-mga-section-link><?php echo esc_html__( 'Maintenance & support', 'lightbox-jlg' ); ?></a></li>
+                        <li data-mga-visibility="essential">
+                            <a href="#mga-section-style" data-mga-section-link><?php echo esc_html__( 'Presets & raccourcis', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="essential">
+                            <a href="#mga-section-playback" data-mga-section-link><?php echo esc_html__( 'Lecture & transitions', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="essential">
+                            <a href="#mga-section-thumbnails" data-mga-section-link><?php echo esc_html__( 'Miniatures & navigation', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="essential">
+                            <a href="#mga-section-appearance" data-mga-section-link><?php echo esc_html__( 'Apparence de la visionneuse', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="essential">
+                            <a href="#mga-section-toolbar" data-mga-section-link><?php echo esc_html__( 'Barre d’outils & actions', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="advanced">
+                            <a href="#mga-section-detection" data-mga-section-link><?php echo esc_html__( 'Détection & intégration', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
+                        <li data-mga-visibility="advanced">
+                            <a href="#mga-section-maintenance" data-mga-section-link><?php echo esc_html__( 'Maintenance & support', 'lightbox-jlg' ); ?></a>
+                            <span class="mga-settings-layout__badge" data-mga-modified-badge hidden aria-hidden="true"><?php echo esc_html__( 'Modifié', 'lightbox-jlg' ); ?></span>
+                        </li>
                     </ul>
 
                     <p class="mga-settings-layout__empty" data-mga-search-empty hidden><?php echo esc_html__( 'Aucun réglage ne correspond à votre recherche.', 'lightbox-jlg' ); ?></p>
@@ -89,31 +110,68 @@ $style_presets     = mga_get_style_presets();
                             <h2><?php echo esc_html__( 'Prévisualisation en direct', 'lightbox-jlg' ); ?></h2>
                             <p class="description"><?php echo esc_html__( 'Les ajustements majeurs (presets, animations, couleurs) s’illustrent immédiatement dans cette vignette.', 'lightbox-jlg' ); ?></p>
                         </div>
-                        <div class="mga-live-preview__stage" data-mga-live-preview-stage>
-                            <div class="mga-live-preview__mock" data-mga-live-preview-mock data-preview-style="echo">
-                                <div class="mga-live-preview__frame" role="group" aria-label="<?php echo esc_attr__( 'Aperçu simplifié de la visionneuse', 'lightbox-jlg' ); ?>">
-                                    <div class="mga-live-preview__image" aria-hidden="true"></div>
-                                    <div class="mga-live-preview__toolbar" data-mga-preview-toolbar>
-                                        <span class="mga-live-preview__action" data-preview-action="zoom" aria-hidden="true">&#128269;</span>
-                                        <span class="mga-live-preview__action" data-preview-action="download" aria-hidden="true">&#8681;</span>
-                                        <span class="mga-live-preview__action" data-preview-action="share" aria-hidden="true">&#128257;</span>
-                                        <span class="mga-live-preview__action" data-preview-action="cta" aria-hidden="true">&#9733;</span>
-                                        <span class="mga-live-preview__action" data-preview-action="fullscreen" aria-hidden="true">&#9974;</span>
-                                    </div>
-                                    <div class="mga-live-preview__caption">
-                                        <span class="mga-live-preview__effect" data-mga-preview-effect><?php echo esc_html__( 'Transition : glissement', 'lightbox-jlg' ); ?></span>
-                                        <h3 class="mga-live-preview__title"><?php echo esc_html__( 'Tirage photographique mis en avant', 'lightbox-jlg' ); ?></h3>
-                                        <p class="mga-live-preview__text"><?php echo esc_html__( 'Une lumière douce et des détails précis pour valoriser vos images.', 'lightbox-jlg' ); ?></p>
+                    <div class="mga-live-preview__stage" data-mga-live-preview-stage>
+                        <p class="screen-reader-text" data-mga-preview-status aria-live="polite" aria-atomic="true"></p>
+                        <div class="mga-live-preview__mock" data-mga-live-preview-mock data-preview-style="echo">
+                            <div class="mga-live-preview__frame" role="group" aria-label="<?php echo esc_attr__( 'Aperçu interactif de la visionneuse', 'lightbox-jlg' ); ?>">
+                                <div
+                                    class="swiper mga-preview-swiper"
+                                    data-mga-preview-swiper
+                                    aria-roledescription="<?php echo esc_attr__( 'diaporama miniature', 'lightbox-jlg' ); ?>"
+                                >
+                                    <div class="swiper-wrapper">
+                                        <div class="swiper-slide">
+                                            <div class="mga-live-preview__slide">
+                                                <div class="mga-live-preview__image" aria-hidden="true"></div>
+                                                <div class="mga-live-preview__caption">
+                                                    <span class="mga-live-preview__effect" data-mga-preview-effect><?php echo esc_html__( 'Transition : glissement', 'lightbox-jlg' ); ?></span>
+                                                    <h3 class="mga-live-preview__title"><?php echo esc_html__( 'Tirage photographique mis en avant', 'lightbox-jlg' ); ?></h3>
+                                                    <p class="mga-live-preview__text"><?php echo esc_html__( 'Une lumière douce et des détails précis pour valoriser vos images.', 'lightbox-jlg' ); ?></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="swiper-slide">
+                                            <div class="mga-live-preview__slide">
+                                                <div class="mga-live-preview__image mga-live-preview__image--secondary" aria-hidden="true"></div>
+                                                <div class="mga-live-preview__caption">
+                                                    <span class="mga-live-preview__effect" aria-hidden="true"><?php echo esc_html__( 'Focus sur vos collections', 'lightbox-jlg' ); ?></span>
+                                                    <h3 class="mga-live-preview__title"><?php echo esc_html__( 'Collection studio', 'lightbox-jlg' ); ?></h3>
+                                                    <p class="mga-live-preview__text"><?php echo esc_html__( 'Montrez l’étendue de votre savoir-faire sur chaque série.', 'lightbox-jlg' ); ?></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="swiper-slide">
+                                            <div class="mga-live-preview__slide">
+                                                <div class="mga-live-preview__image mga-live-preview__image--tertiary" aria-hidden="true"></div>
+                                                <div class="mga-live-preview__caption">
+                                                    <span class="mga-live-preview__effect" aria-hidden="true"><?php echo esc_html__( 'Miniatures harmonisées', 'lightbox-jlg' ); ?></span>
+                                                    <h3 class="mga-live-preview__title"><?php echo esc_html__( 'Zoom sur les détails', 'lightbox-jlg' ); ?></h3>
+                                                    <p class="mga-live-preview__text"><?php echo esc_html__( 'Un aperçu rapide de la palette et des textures de votre galerie.', 'lightbox-jlg' ); ?></p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="mga-live-preview__thumbs" data-mga-preview-thumbs>
-                                    <span aria-hidden="true"></span>
-                                    <span aria-hidden="true"></span>
-                                    <span aria-hidden="true"></span>
-                                    <span aria-hidden="true"></span>
+                                <div class="mga-live-preview__toolbar" data-mga-preview-toolbar>
+                                    <span class="mga-live-preview__action" data-preview-action="zoom" aria-hidden="true">&#128269;</span>
+                                    <span class="mga-live-preview__action" data-preview-action="download" aria-hidden="true">&#8681;</span>
+                                    <span class="mga-live-preview__action" data-preview-action="share" aria-hidden="true">&#128257;</span>
+                                    <span class="mga-live-preview__action" data-preview-action="cta" aria-hidden="true">&#9733;</span>
+                                    <span class="mga-live-preview__action" data-preview-action="fullscreen" aria-hidden="true">&#9974;</span>
                                 </div>
+                                <div class="mga-live-preview__pagination" data-mga-preview-pagination aria-hidden="true"></div>
+                                <button type="button" class="mga-live-preview__nav mga-live-preview__nav--prev" data-mga-preview-prev aria-label="<?php echo esc_attr__( 'Image précédente dans l’aperçu', 'lightbox-jlg' ); ?>">&#10094;</button>
+                                <button type="button" class="mga-live-preview__nav mga-live-preview__nav--next" data-mga-preview-next aria-label="<?php echo esc_attr__( 'Image suivante dans l’aperçu', 'lightbox-jlg' ); ?>">&#10095;</button>
+                            </div>
+                            <div class="mga-live-preview__thumbs" data-mga-preview-thumbs>
+                                <span aria-hidden="true"></span>
+                                <span aria-hidden="true"></span>
+                                <span aria-hidden="true"></span>
+                                <span aria-hidden="true"></span>
                             </div>
                         </div>
+                        <p class="mga-live-preview__fallback" data-mga-preview-fallback hidden><?php echo esc_html__( 'Aperçu interactif indisponible. Veuillez recharger la page.', 'lightbox-jlg' ); ?></p>
+                    </div>
                     </div>
                     <section
                         id="mga-section-style"
@@ -378,6 +436,23 @@ $style_presets     = mga_get_style_presets();
                                         data-default-color="<?php echo esc_attr( $defaults['accent_color'] ); ?>"
                                     />
                                     <span id="mga_accent_color_preview" class="mga-color-preview" aria-hidden="true"></span>
+                                    <div class="mga-contrast-check" data-mga-contrast-inspector hidden>
+                                        <div class="mga-contrast-check__row" data-mga-contrast-row="light">
+                                            <span class="mga-contrast-check__swatch" data-mga-contrast-swatch="light" aria-hidden="true"></span>
+                                            <div class="mga-contrast-check__details">
+                                                <span class="mga-contrast-check__label"><?php echo esc_html__( 'Fond clair', 'lightbox-jlg' ); ?></span>
+                                                <span class="mga-contrast-check__value" data-mga-contrast-value="light">—</span>
+                                            </div>
+                                        </div>
+                                        <div class="mga-contrast-check__row" data-mga-contrast-row="dark">
+                                            <span class="mga-contrast-check__swatch" data-mga-contrast-swatch="dark" aria-hidden="true"></span>
+                                            <div class="mga-contrast-check__details">
+                                                <span class="mga-contrast-check__label"><?php echo esc_html__( 'Fond sombre', 'lightbox-jlg' ); ?></span>
+                                                <span class="mga-contrast-check__value" data-mga-contrast-value="dark">—</span>
+                                            </div>
+                                        </div>
+                                        <p class="mga-contrast-check__message" data-mga-contrast-message></p>
+                                    </div>
                                     <p class="description"><?php echo esc_html__( 'Couleur des boutons, flèches et de la bordure de la miniature active.', 'lightbox-jlg' ); ?></p>
                                 </div>
                             </div>
@@ -1048,6 +1123,13 @@ $style_presets     = mga_get_style_presets();
                                     <dd data-mga-summary-share>—</dd>
                                 </div>
                             </dl>
+                            <div class="mga-summary__alerts" data-mga-summary-validations hidden aria-live="polite" aria-atomic="false"></div>
+                            <div class="mga-summary__diff" data-mga-summary-diff hidden>
+                                <h3 class="mga-summary__heading"><?php echo esc_html__( 'Modifications par rapport au preset', 'lightbox-jlg' ); ?></h3>
+                                <p class="mga-summary__diff-baseline" data-mga-summary-diff-baseline></p>
+                                <ul class="mga-summary__diff-list" data-mga-summary-diff-list></ul>
+                                <p class="mga-summary__diff-empty" data-mga-summary-diff-empty hidden><?php echo esc_html__( 'Aucun écart détecté : vos réglages correspondent au preset de référence.', 'lightbox-jlg' ); ?></p>
+                            </div>
                         </div>
                         <div class="mga-summary__tutorial">
                             <h3 class="mga-summary__heading"><?php echo esc_html__( 'Tutoriel express', 'lightbox-jlg' ); ?></h3>
