@@ -295,6 +295,257 @@
             });
         });
 
+        const initSettingsNavigation = () => {
+            const layout = doc.querySelector('[data-mga-settings-layout]');
+
+            if (!layout) {
+                return;
+            }
+
+            const sections = Array.from(layout.querySelectorAll('[data-mga-settings-section]'));
+
+            if (sections.length === 0) {
+                return;
+            }
+
+            const navList = layout.querySelector('[data-mga-settings-nav]');
+            const navLinks = navList ? Array.from(navList.querySelectorAll('[data-mga-section-link]')) : [];
+            const linkBySection = new Map();
+            const searchInput = layout.querySelector('[data-mga-settings-search]');
+            const emptyState = layout.querySelector('[data-mga-search-empty]');
+            const highlightTimeouts = new WeakMap();
+
+            const isSearchActive = () => layout.getAttribute('data-mga-search-active') === 'true';
+
+            const updateEmptyState = (visibleCount, searchActive) => {
+                if (!emptyState) {
+                    return;
+                }
+
+                if (searchActive && visibleCount === 0) {
+                    emptyState.removeAttribute('hidden');
+                } else {
+                    emptyState.setAttribute('hidden', 'hidden');
+                }
+            };
+
+            const setActiveLink = (section) => {
+                if (!section) {
+                    return;
+                }
+
+                linkBySection.forEach((link, candidate) => {
+                    if (candidate === section) {
+                        link.setAttribute('aria-current', 'true');
+                    } else {
+                        link.removeAttribute('aria-current');
+                    }
+                });
+            };
+
+            const clearHighlights = () => {
+                sections.forEach((section) => {
+                    section.removeAttribute('data-mga-section-highlight');
+
+                    if (highlightTimeouts.has(section)) {
+                        global.clearTimeout(highlightTimeouts.get(section));
+                        highlightTimeouts.delete(section);
+                    }
+                });
+            };
+
+            const highlightSection = (section) => {
+                if (!section) {
+                    return;
+                }
+
+                section.setAttribute('data-mga-section-highlight', 'true');
+
+                if (highlightTimeouts.has(section)) {
+                    global.clearTimeout(highlightTimeouts.get(section));
+                }
+
+                const timeoutId = global.setTimeout(() => {
+                    section.removeAttribute('data-mga-section-highlight');
+                    highlightTimeouts.delete(section);
+                }, 1600);
+
+                highlightTimeouts.set(section, timeoutId);
+            };
+
+            const filterSections = (rawQuery) => {
+                const query = typeof rawQuery === 'string' ? rawQuery.trim().toLowerCase() : '';
+                const searchActive = query.length > 0;
+                let visibleCount = 0;
+
+                if (searchActive) {
+                    layout.setAttribute('data-mga-search-active', 'true');
+                } else {
+                    layout.removeAttribute('data-mga-search-active');
+                    clearHighlights();
+                }
+
+                sections.forEach((section) => {
+                    const link = linkBySection.get(section);
+
+                    if (!searchActive) {
+                        section.removeAttribute('hidden');
+
+                        if (link) {
+                            link.removeAttribute('hidden');
+                        }
+
+                        return;
+                    }
+
+                    const text = (section.textContent || '').toLowerCase();
+                    const isMatch = text.includes(query);
+
+                    if (isMatch) {
+                        section.removeAttribute('hidden');
+                        section.setAttribute('data-mga-section-highlight', 'true');
+                        visibleCount += 1;
+
+                        if (link) {
+                            link.removeAttribute('hidden');
+                        }
+                    } else {
+                        section.setAttribute('hidden', 'hidden');
+                        section.removeAttribute('data-mga-section-highlight');
+
+                        if (link) {
+                            link.setAttribute('hidden', 'hidden');
+                            link.removeAttribute('aria-current');
+                        }
+                    }
+                });
+
+                if (searchActive) {
+                    const firstMatch = sections.find((section) => !section.hasAttribute('hidden'));
+
+                    if (firstMatch) {
+                        setActiveLink(firstMatch);
+                    }
+                }
+
+                updateEmptyState(visibleCount, searchActive);
+            };
+
+            navLinks.forEach((link) => {
+                const href = link.getAttribute('href');
+
+                if (!href || href.charAt(0) !== '#') {
+                    return;
+                }
+
+                const target = layout.querySelector(href);
+
+                if (!target) {
+                    return;
+                }
+
+                linkBySection.set(target, link);
+
+                link.addEventListener('click', (event) => {
+                    event.preventDefault();
+
+                    if (target.hasAttribute('hidden')) {
+                        target.removeAttribute('hidden');
+                    }
+
+                    try {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } catch (error) {
+                        if (typeof target.scrollIntoView === 'function') {
+                            target.scrollIntoView();
+                        }
+                    }
+
+                    setActiveLink(target);
+                    highlightSection(target);
+
+                    const focusOptions = detectFocusOptionsSupport() ? { preventScroll: true } : undefined;
+
+                    if (typeof global.requestAnimationFrame === 'function') {
+                        global.requestAnimationFrame(() => {
+                            safeFocus(target, focusOptions);
+                        });
+                    } else {
+                        safeFocus(target, focusOptions);
+                    }
+                });
+            });
+
+            if ('IntersectionObserver' in global) {
+                let lastVisibleSection = null;
+
+                const observer = new IntersectionObserver((entries) => {
+                    if (isSearchActive()) {
+                        return;
+                    }
+
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            lastVisibleSection = entry.target;
+                        }
+                    });
+
+                    if (lastVisibleSection) {
+                        setActiveLink(lastVisibleSection);
+                    }
+                }, {
+                    rootMargin: '-40% 0px -40% 0px',
+                    threshold: 0.1,
+                });
+
+                sections.forEach((section) => observer.observe(section));
+            } else {
+                const handleScroll = () => {
+                    if (isSearchActive()) {
+                        return;
+                    }
+
+                    let bestSection = null;
+                    let bestOffset = Infinity;
+                    const scrollY = global.pageYOffset || doc.documentElement.scrollTop || 0;
+
+                    sections.forEach((section) => {
+                        const rect = section.getBoundingClientRect();
+                        const absoluteTop = rect.top + scrollY;
+                        const delta = Math.abs(absoluteTop - scrollY - 140);
+
+                        if (delta < bestOffset) {
+                            bestSection = section;
+                            bestOffset = delta;
+                        }
+                    });
+
+                    if (bestSection) {
+                        setActiveLink(bestSection);
+                    }
+                };
+
+                global.addEventListener('scroll', handleScroll, { passive: true });
+                handleScroll();
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', (event) => {
+                    filterSections(event.target.value || '');
+                });
+
+                filterSections(searchInput.value || '');
+            } else {
+                updateEmptyState(sections.length, false);
+            }
+
+            if (!isSearchActive()) {
+                setActiveLink(sections[0]);
+            }
+        };
+
+        initSettingsNavigation();
+
         // Live update for range sliders
         const bindRangeToOutput = (sliderId, outputId, displayFormatter, ariaFormatter) => {
             const slider = doc.getElementById(sliderId);
