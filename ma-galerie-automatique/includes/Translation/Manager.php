@@ -7,31 +7,69 @@ use MaGalerieAutomatique\Plugin;
 class Manager {
     private Plugin $plugin;
 
+    private ?string $loaded_locale = null;
+
     public function __construct( Plugin $plugin ) {
         $this->plugin = $plugin;
     }
 
     public function load_textdomain( bool $force_fallback = false ): bool {
         $domain = 'lightbox-jlg';
+        $locale = $this->get_locale();
+
+        if (
+            ! $force_fallback
+            && $this->loaded_locale === $locale
+            && function_exists( 'is_textdomain_loaded' )
+            && \is_textdomain_loaded( $domain )
+        ) {
+            return true;
+        }
 
         if ( ! $force_fallback && $this->plugin->languages_directory_exists() ) {
             $relative_path = \dirname( \plugin_basename( $this->plugin->get_plugin_file() ) ) . '/languages';
 
             if ( \load_plugin_textdomain( $domain, false, $relative_path ) ) {
+                $this->loaded_locale = $locale;
+
                 return true;
             }
         }
 
-        return $this->load_from_base64_fallback( $domain );
+        $loaded = $this->load_from_base64_fallback( $domain, $locale );
+
+        if ( $loaded ) {
+            $this->loaded_locale = $locale;
+        }
+
+        return $loaded;
     }
 
     public function handle_switch_blog(): void {
-        // No persistent state kept between requests, but this hook allows future extensions
-        // (like per-site caches) to clear themselves when the blog changes.
+        $this->loaded_locale = null;
+
+        if ( function_exists( 'unload_textdomain' ) ) {
+            \unload_textdomain( 'lightbox-jlg' );
+        }
+
+        $this->load_textdomain();
     }
 
-    private function load_from_base64_fallback( string $domain ): bool {
-        $locale      = $this->get_locale();
+    public function handle_switch_locale( string $new_locale, string $old_locale ): void {
+        unset( $old_locale );
+
+        if ( function_exists( 'unload_textdomain' ) ) {
+            \unload_textdomain( 'lightbox-jlg' );
+        }
+
+        $this->loaded_locale = null;
+
+        if ( '' !== $new_locale ) {
+            $this->load_textdomain();
+        }
+    }
+
+    private function load_from_base64_fallback( string $domain, string $locale ): bool {
         $base64_path = \trailingslashit( $this->plugin->get_languages_path() ) . $domain . '-' . $locale . '.mo.b64';
 
         if ( ! file_exists( $base64_path ) ) {

@@ -53,6 +53,30 @@ class TranslationFallbackTest extends WP_UnitTestCase {
         $this->assertSame( $initial_mtime, $second_mtime, 'A matching hash should avoid regenerating the cached file.' );
     }
 
+    public function test_switch_locale_triggers_fallback_reload(): void {
+        if ( ! function_exists( 'switch_to_locale' ) || ! function_exists( 'restore_previous_locale' ) ) {
+            $this->markTestSkipped( 'Locale switching is not available in this WordPress version.' );
+        }
+
+        $plugin = mga_plugin();
+        $this->assertInstanceOf( \MaGalerieAutomatique\Plugin::class, $plugin );
+
+        $cached_file = trailingslashit( $this->cache_dir ) . 'lightbox-jlg-fr_FR.mo';
+        $this->assertFileDoesNotExist( $cached_file, 'The fallback cache should be empty before switching locale.' );
+
+        $switched = switch_to_locale( 'fr_FR' );
+        $this->assertTrue( $switched, 'The locale switch helper should succeed when French is available.' );
+
+        try {
+            $this->assertFileExists(
+                $cached_file,
+                'Switching locale should trigger the Base64 fallback and generate the cached translation file.'
+            );
+        } finally {
+            restore_previous_locale();
+        }
+    }
+
     private function purge_cache_directory(): void {
         if ( ! $this->cache_dir || ! is_dir( $this->cache_dir ) ) {
             return;
