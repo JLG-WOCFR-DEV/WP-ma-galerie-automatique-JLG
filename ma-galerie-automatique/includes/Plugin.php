@@ -50,6 +50,7 @@ class Plugin {
         add_action( 'init', [ $this, 'register_block' ] );
         add_action( 'update_option_mga_settings', [ $this, 'maybe_purge_detection_cache' ], 10, 3 );
         add_action( 'switch_blog', [ $this, 'handle_switch_blog' ], 10, 2 );
+        add_action( 'switch_locale', [ $this, 'handle_switch_locale' ], 10, 2 );
 
         if ( defined( 'WP_CLI' ) && WP_CLI ) {
             CacheCommand::register( $this );
@@ -111,6 +112,15 @@ class Plugin {
 
         if ( isset( $this->translation_manager ) ) {
             $this->translation_manager->handle_switch_blog();
+        }
+    }
+
+    public function handle_switch_locale( $new_locale, $old_locale ): void {
+        if ( isset( $this->translation_manager ) ) {
+            $this->translation_manager->handle_switch_locale(
+                is_string( $new_locale ) ? $new_locale : '',
+                is_string( $old_locale ) ? $old_locale : ''
+            );
         }
     }
 
