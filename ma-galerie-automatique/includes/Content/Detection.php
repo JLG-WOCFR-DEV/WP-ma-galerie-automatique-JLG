@@ -47,6 +47,37 @@ class Detection {
     private ?array $latest_detection_snapshot = null;
 
     /**
+     * Cache parsed reusable block contents keyed by block ID.
+     *
+     * @var array<int,array>
+     */
+    private array $reusable_block_cache = [];
+
+    /**
+     * Tracks the timestamp at which reusable block traversal started.
+     */
+    private float $reusable_block_traversal_started_at = 0.0;
+
+    /**
+     * Timeout (in seconds) applied when traversing reusable blocks.
+     */
+    private float $reusable_block_traversal_timeout = 1.5;
+
+    /**
+     * Tracks the current traversal depth to mitigate runaway recursion.
+     */
+    private int $reusable_block_traversal_depth = 0;
+
+    /**
+     * List of reusable block IDs discovered during the current traversal.
+     *
+     * @var int[]
+     */
+    private array $prefetched_reusable_block_ids = [];
+
+    private bool $reusable_block_traversal_initialized = false;
+
+    /**
      * Runtime cache of reusable block signatures keyed by block ID.
      *
      * @var array<int,string|null>
@@ -56,6 +87,14 @@ class Detection {
     public function __construct( Plugin $plugin, Settings $settings ) {
         $this->plugin  = $plugin;
         $this->settings = $settings;
+    }
+
+    private function reset_reusable_block_traversal_state(): void {
+        $this->reusable_block_traversal_started_at = 0.0;
+        $this->reusable_block_traversal_timeout    = 1.5;
+        $this->reusable_block_traversal_depth      = 0;
+        $this->prefetched_reusable_block_ids       = [];
+        $this->reusable_block_traversal_initialized = false;
     }
 
     public function should_enqueue_assets( $post ): bool {
@@ -315,11 +354,16 @@ class Detection {
 
     public function detect_post_linked_images( WP_Post $post ): bool {
         $this->latest_detection_snapshot = null;
+        $this->reset_reusable_block_traversal_state();
 
         $parsed_blocks = [];
 
         if ( has_blocks( $post ) ) {
             $parsed_blocks = $this->parse_blocks_from_content( $post->post_content );
+
+            if ( ! empty( $parsed_blocks ) ) {
+                $this->prime_reusable_block_traversal( $parsed_blocks, $post );
+            }
         }
 
         $default_block_names = [
@@ -372,6 +416,7 @@ class Detection {
         }
 
         $this->latest_detection_snapshot = $this->build_detection_snapshot( $post, $has_linked_images );
+        $this->reset_reusable_block_traversal_state();
 
         return $has_linked_images;
     }
@@ -456,59 +501,321 @@ class Detection {
             $visited_block_ids = [];
         }
 
-        static $reusable_block_cache = [];
+        $is_top_level_call = ! $this->reusable_block_traversal_initialized;
+
+        if ( ! $this->reusable_block_traversal_initialized ) {
+            $this->prime_reusable_block_traversal( $blocks );
+            $this->reusable_block_traversal_initialized = true;
+        }
+
+        $allowed_block_names = $this->normalize_allowed_block_names( $allowed_block_names );
 
         foreach ( $blocks as $block ) {
             if ( ! is_array( $block ) ) {
                 continue;
             }
 
-            $block_name = $block['blockName'] ?? null;
+            $short_circuit = apply_filters( 'mga_block_contains_linked_media', null, $block, $allowed_block_names, $this );
 
-            if ( 'core/block' === $block_name ) {
+            if ( is_bool( $short_circuit ) ) {
+                if ( true === $short_circuit ) {
+                    if ( $is_top_level_call ) {
+                        $this->reset_reusable_block_traversal_state();
+                    }
+
+                    return true;
+                }
+
+                continue;
+            }
+
+            $block_name = $block['blockName'] ?? null;
+            $normalized_block_name = is_string( $block_name ) ? strtolower( $block_name ) : '';
+
+            if ( 'core/block' === $normalized_block_name ) {
                 $attrs = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [];
                 $ref   = isset( $attrs['ref'] ) ? absint( $attrs['ref'] ) : 0;
 
                 if ( $ref && ! in_array( $ref, $visited_block_ids, true ) ) {
                     $visited_block_ids[] = $ref;
 
-                    if ( array_key_exists( $ref, $reusable_block_cache ) ) {
-                        $parsed_reusable_blocks = $reusable_block_cache[ $ref ];
-                    } else {
-                        $reusable_block_cache[ $ref ] = [];
-                        $reusable_block              = get_post( $ref );
+                    if ( $this->reusable_block_traversal_has_timed_out() ) {
+                        do_action( 'mga_reusable_block_traversal_timed_out', $ref, $visited_block_ids );
 
-                        if ( $reusable_block instanceof WP_Post && 'wp_block' === $reusable_block->post_type && ! empty( $reusable_block->post_content ) ) {
-                            $reusable_block_cache[ $ref ] = $this->parse_blocks_from_content( $reusable_block->post_content );
-                        }
-
-                        $parsed_reusable_blocks = $reusable_block_cache[ $ref ];
+                        continue;
                     }
 
-                    if ( ! empty( $parsed_reusable_blocks ) && $this->blocks_contain_linked_media( $parsed_reusable_blocks, $allowed_block_names, $visited_block_ids ) ) {
-                        return true;
+                    $parsed_reusable_blocks = $this->get_reusable_block_from_cache( $ref );
+
+                    if ( empty( $parsed_reusable_blocks ) ) {
+                        $parsed_reusable_blocks = $this->fetch_and_cache_reusable_block( $ref );
+                    }
+
+                    if ( ! empty( $parsed_reusable_blocks ) ) {
+                        $this->reusable_block_traversal_depth++;
+
+                        $result = $this->blocks_contain_linked_media( $parsed_reusable_blocks, $allowed_block_names, $visited_block_ids );
+
+                        $this->reusable_block_traversal_depth = max( 0, $this->reusable_block_traversal_depth - 1 );
+
+                        if ( $result ) {
+                            if ( $is_top_level_call ) {
+                                $this->reset_reusable_block_traversal_state();
+                            }
+
+                            return true;
+                        }
                     }
                 }
 
                 continue;
             }
 
-            if ( $block_name && in_array( $block_name, $allowed_block_names, true ) ) {
+            if ( $normalized_block_name && $this->block_is_dynamic( $normalized_block_name ) ) {
+                $dynamic_evaluation = $this->dynamic_block_contains_media( $block, $allowed_block_names );
+
+                if ( true === $dynamic_evaluation ) {
+                    if ( $is_top_level_call ) {
+                        $this->reset_reusable_block_traversal_state();
+                    }
+
+                    return true;
+                }
+
+                if ( false === $dynamic_evaluation ) {
+                    continue;
+                }
+            }
+
+            if ( $normalized_block_name && in_array( $normalized_block_name, $allowed_block_names, true ) ) {
                 $attrs = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [];
 
                 if ( $this->block_attributes_link_to_media( $attrs ) ) {
+                    if ( $is_top_level_call ) {
+                        $this->reset_reusable_block_traversal_state();
+                    }
+
                     return true;
                 }
             }
 
             if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
                 if ( $this->blocks_contain_linked_media( $block['innerBlocks'], $allowed_block_names, $visited_block_ids ) ) {
+                    if ( $is_top_level_call ) {
+                        $this->reset_reusable_block_traversal_state();
+                    }
+
                     return true;
                 }
             }
         }
 
+        if ( $is_top_level_call ) {
+            $this->reset_reusable_block_traversal_state();
+        }
+
         return false;
+    }
+
+    private function prime_reusable_block_traversal( array $blocks, ?WP_Post $post = null ): void {
+        $this->reusable_block_traversal_started_at = microtime( true );
+
+        $timeout = apply_filters( 'mga_reusable_block_traversal_timeout', 1.5, $post, $blocks, $this );
+
+        if ( ! is_numeric( $timeout ) ) {
+            $timeout = 1.5;
+        }
+
+        $timeout = (float) $timeout;
+
+        if ( $timeout < 0 ) {
+            $timeout = 0.0;
+        }
+
+        $this->reusable_block_traversal_timeout = $timeout;
+        $this->prefetched_reusable_block_ids    = $this->prefetch_reusable_blocks( $blocks );
+    }
+
+    private function normalize_allowed_block_names( array $allowed_block_names ): array {
+        $normalized = array_values(
+            array_unique(
+                array_filter(
+                    array_map(
+                        static function ( $block_name ): string {
+                            return is_string( $block_name ) ? strtolower( trim( $block_name ) ) : '';
+                        },
+                        $allowed_block_names
+                    )
+                )
+            )
+        );
+
+        return $normalized;
+    }
+
+    private function reusable_block_traversal_has_timed_out(): bool {
+        if ( $this->reusable_block_traversal_depth > 50 ) {
+            return true;
+        }
+
+        if ( $this->reusable_block_traversal_timeout <= 0 ) {
+            return false;
+        }
+
+        if ( $this->reusable_block_traversal_started_at <= 0 ) {
+            return false;
+        }
+
+        $elapsed = microtime( true ) - $this->reusable_block_traversal_started_at;
+
+        return $elapsed > $this->reusable_block_traversal_timeout;
+    }
+
+    private function get_reusable_block_from_cache( int $ref ): array {
+        if ( array_key_exists( $ref, $this->reusable_block_cache ) ) {
+            $cached = $this->reusable_block_cache[ $ref ];
+
+            return is_array( $cached ) ? $cached : [];
+        }
+
+        return [];
+    }
+
+    private function fetch_and_cache_reusable_block( int $ref ): array {
+        $this->prefetched_reusable_block_ids[] = $ref;
+
+        $reusable_block = get_post( $ref );
+
+        if ( $reusable_block instanceof WP_Post && 'wp_block' === $reusable_block->post_type && ! empty( $reusable_block->post_content ) ) {
+            $parsed = $this->parse_blocks_from_content( $reusable_block->post_content );
+            $this->reusable_block_cache[ $ref ] = $parsed;
+
+            return $parsed;
+        }
+
+        $this->reusable_block_cache[ $ref ] = [];
+
+        return [];
+    }
+
+    private function block_is_dynamic( ?string $block_name ): bool {
+        if ( ! is_string( $block_name ) || '' === $block_name ) {
+            return false;
+        }
+
+        $default_dynamic_blocks = [
+            'core/query',
+            'core/post-template',
+            'core/template-part',
+            'core/post-content',
+            'core/post-featured-image',
+            'core/latest-posts',
+        ];
+
+        $dynamic_blocks = apply_filters( 'mga_dynamic_media_blocks', $default_dynamic_blocks, $block_name, $this );
+
+        if ( ! is_array( $dynamic_blocks ) ) {
+            $dynamic_blocks = $default_dynamic_blocks;
+        }
+
+        $dynamic_blocks = array_map( 'strtolower', array_filter( array_map( 'strval', $dynamic_blocks ) ) );
+
+        return in_array( strtolower( $block_name ), $dynamic_blocks, true );
+    }
+
+    private function dynamic_block_contains_media( array $block, array $allowed_block_names ): ?bool {
+        $evaluation = apply_filters( 'mga_dynamic_block_contains_linked_media', null, $block, $allowed_block_names, $this );
+
+        if ( is_bool( $evaluation ) ) {
+            return $evaluation;
+        }
+
+        return null;
+    }
+
+    private function prefetch_reusable_blocks( array $blocks ): array {
+        $refs = [];
+
+        $this->collect_reusable_block_references( $blocks, $refs );
+
+        $refs = array_values( array_unique( array_filter( array_map( 'absint', $refs ) ) ) );
+
+        if ( empty( $refs ) ) {
+            return [];
+        }
+
+        $uncached = array_values( array_diff( $refs, array_keys( $this->reusable_block_cache ) ) );
+
+        if ( empty( $uncached ) ) {
+            return $refs;
+        }
+
+        $query_args = [
+            'post__in'               => $uncached,
+            'post_type'              => 'wp_block',
+            'post_status'            => 'publish',
+            'posts_per_page'         => count( $uncached ),
+            'orderby'                => 'post__in',
+            'order'                  => 'ASC',
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
+            'no_found_rows'          => true,
+            'lazy_load_term_meta'    => false,
+            'suppress_filters'       => false,
+        ];
+
+        $query_args = apply_filters( 'mga_prepare_reusable_block_prefetch_args', $query_args, $uncached, $this );
+
+        if ( ! is_array( $query_args ) ) {
+            $query_args = [];
+        }
+
+        if ( ! function_exists( 'get_posts' ) ) {
+            return $refs;
+        }
+
+        $reusable_blocks = get_posts( $query_args );
+
+        $parsed_blocks = [];
+
+        if ( is_array( $reusable_blocks ) ) {
+            foreach ( $reusable_blocks as $reusable_block ) {
+                if ( $reusable_block instanceof WP_Post && ! empty( $reusable_block->post_content ) ) {
+                    $parsed_blocks[ $reusable_block->ID ] = $this->parse_blocks_from_content( $reusable_block->post_content );
+                } else {
+                    $parsed_blocks[ $reusable_block->ID ] = [];
+                }
+            }
+        }
+
+        foreach ( $uncached as $ref ) {
+            $this->reusable_block_cache[ $ref ] = $parsed_blocks[ $ref ] ?? [];
+        }
+
+        do_action( 'mga_reusable_block_prefetched', $refs, $parsed_blocks, $this );
+
+        return $refs;
+    }
+
+    private function collect_reusable_block_references( array $blocks, array &$refs ): void {
+        foreach ( $blocks as $block ) {
+            if ( ! is_array( $block ) ) {
+                continue;
+            }
+
+            if ( isset( $block['blockName'] ) && 'core/block' === $block['blockName'] ) {
+                $attrs = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [];
+                $ref   = isset( $attrs['ref'] ) ? absint( $attrs['ref'] ) : 0;
+
+                if ( $ref > 0 ) {
+                    $refs[] = $ref;
+                }
+            }
+
+            if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+                $this->collect_reusable_block_references( $block['innerBlocks'], $refs );
+            }
+        }
     }
 
     public function block_attributes_link_to_media( array $attrs ): bool {
