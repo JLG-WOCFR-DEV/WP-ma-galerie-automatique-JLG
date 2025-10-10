@@ -65,6 +65,56 @@ class DetectionHtmlParsingTest extends WP_UnitTestCase {
         );
     }
 
+    public function test_gallery_html_detection_supports_custom_source_attribute_filter(): void {
+        $html = '<div class="wp-block-gallery"><a href="https://example.com/full.jpg"><img data-custom-src="https://example.com/lazy.jpg" alt="Custom" /></a></div>';
+
+        $this->assertFalse(
+            $this->detection()->gallery_html_has_linked_media( $html ),
+            'Custom attributes should be ignored by default to avoid false positives.'
+        );
+
+        $filter = static function ( array $attributes, \DOMElement $image ): array {
+            $attributes[] = 'data-custom-src';
+
+            return $attributes;
+        };
+
+        add_filter( 'mga_image_source_attributes', $filter, 10, 2 );
+
+        try {
+            $this->assertTrue(
+                $this->detection()->gallery_html_has_linked_media( $html ),
+                'Attributes injected via the filter should be taken into account when evaluating image nodes.'
+            );
+        } finally {
+            remove_filter( 'mga_image_source_attributes', $filter, 10 );
+        }
+    }
+
+    public function test_gallery_html_detection_allows_meaningful_override_filter(): void {
+        $html = '<div class="wp-block-gallery"><a href="https://example.com/full.jpg"><img alt="Override" /></a></div>';
+
+        $this->assertFalse(
+            $this->detection()->gallery_html_has_linked_media( $html ),
+            'Images without any usable source attribute should be ignored to avoid false positives.'
+        );
+
+        $filter = static function ( bool $is_meaningful, \DOMElement $image, array $attributes ): bool {
+            return true;
+        };
+
+        add_filter( 'mga_is_image_node_meaningful', $filter, 10, 3 );
+
+        try {
+            $this->assertTrue(
+                $this->detection()->gallery_html_has_linked_media( $html ),
+                'The override filter should allow integrations to mark custom <img> nodes as meaningful.'
+            );
+        } finally {
+            remove_filter( 'mga_is_image_node_meaningful', $filter, 10 );
+        }
+    }
+
     public function test_gallery_html_ignores_images_without_sources(): void {
         $html = '<div class="wp-block-gallery"><a href="https://example.com/full.jpg"><img alt="Empty" /></a></div>';
 
