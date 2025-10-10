@@ -1008,7 +1008,40 @@ class Detection {
     }
 
     private function dom_image_node_is_meaningful( DOMElement $image ): bool {
-        $attributes_to_check = [ 'src', 'data-src', 'data-original', 'data-lazy-src', 'data-srcset', 'srcset' ];
+        $default_attributes = [ 'src', 'data-src', 'data-original', 'data-lazy-src', 'data-srcset', 'srcset' ];
+
+        /**
+         * Filters the list of attributes inspected to determine whether an <img> node
+         * contains a meaningful source.
+         *
+         * @param string[]   $attributes Default list of attribute names.
+         * @param DOMElement $image      Current DOM image node being evaluated.
+         */
+        $attributes_to_check = apply_filters( 'mga_image_source_attributes', $default_attributes, $image );
+
+        if ( ! is_array( $attributes_to_check ) ) {
+            $attributes_to_check = $default_attributes;
+        } else {
+            $attributes_to_check = array_values(
+                array_unique(
+                    array_filter(
+                        array_map(
+                            static function ( $attribute ): string {
+                                return is_string( $attribute ) ? trim( $attribute ) : '';
+                            },
+                            $attributes_to_check
+                        ),
+                        static function ( string $attribute ): bool {
+                            return '' !== $attribute;
+                        }
+                    )
+                )
+            );
+
+            if ( empty( $attributes_to_check ) ) {
+                $attributes_to_check = $default_attributes;
+            }
+        }
 
         foreach ( $attributes_to_check as $attribute ) {
             if ( ! $image->hasAttribute( $attribute ) ) {
@@ -1056,7 +1089,19 @@ class Detection {
             }
         }
 
-        return false;
+        /**
+         * Filters the final evaluation of an <img> node when no usable source has
+         * been detected.
+         *
+         * Returning true here allows custom integrations to mark a node as
+         * meaningful even if none of the inspected attributes matched the default
+         * heuristics.
+         *
+         * @param bool       $is_meaningful Whether the node should be treated as meaningful.
+         * @param DOMElement $image         Current DOM image node being evaluated.
+         * @param string[]   $attributes    List of attributes that were inspected.
+         */
+        return (bool) apply_filters( 'mga_is_image_node_meaningful', false, $image, $attributes_to_check );
     }
 
     private function image_source_candidate_is_valid( string $value ): bool {
