@@ -227,6 +227,71 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
         );
     }
 
+    public function test_contextual_presets_override_settings_per_context(): void {
+        $page_id = self::factory()->post->create(
+            [
+                'post_type'    => 'page',
+                'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+            ]
+        );
+
+        $post_id = self::factory()->post->create(
+            [
+                'post_type'    => 'post',
+                'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+            ]
+        );
+
+        update_option(
+            'mga_settings',
+            [
+                'show_share'         => true,
+                'contextual_presets' => [
+                    [
+                        'key'       => 'page-focus',
+                        'label'     => 'Page focus',
+                        'enabled'   => true,
+                        'priority'  => 1,
+                        'contexts'  => [
+                            'post_types'  => [ 'page' ],
+                            'is_singular' => true,
+                        ],
+                        'settings'  => [
+                            'delay'          => 9,
+                            'autoplay_start' => 'enable',
+                            'show_share'     => 'disable',
+                        ],
+                    ],
+                ],
+            ]
+        );
+
+        $this->go_to( get_permalink( $page_id ) );
+        $this->assets()->enqueue_assets();
+
+        $page_settings = $this->extract_settings_from_inline_script( (array) wp_scripts()->get_data( 'mga-gallery-script', 'before' ) );
+
+        $this->assertSame( 9, $page_settings['delay'], 'Contextual preset should override the autoplay delay on matching pages.' );
+        $this->assertTrue( $page_settings['autoplay_start'], 'Contextual preset should force autoplay when requested.' );
+        $this->assertFalse( $page_settings['show_share'], 'Contextual preset should disable share controls for matching pages.' );
+        $this->assertSame( 'page-focus', $page_settings['active_contextual_preset'], 'The active preset key should be exposed for diagnostics.' );
+
+        wp_styles()->reset();
+        wp_scripts()->reset();
+        wp_styles();
+        wp_scripts();
+
+        $this->go_to( get_permalink( $post_id ) );
+        $this->assets()->enqueue_assets();
+
+        $post_settings = $this->extract_settings_from_inline_script( (array) wp_scripts()->get_data( 'mga-gallery-script', 'before' ) );
+
+        $this->assertSame( 4, $post_settings['delay'], 'Non matching contexts should fallback to the global delay.' );
+        $this->assertTrue( $post_settings['show_share'], 'Non matching contexts should keep global share controls.' );
+        $this->assertArrayHasKey( 'active_contextual_preset', $post_settings, 'The payload should expose the active contextual preset flag.' );
+        $this->assertNull( $post_settings['active_contextual_preset'], 'No preset should be reported for non matching content.' );
+    }
+
     /**
      * Provides truthy filter return values that should still produce a boolean true in the JSON payload.
      *

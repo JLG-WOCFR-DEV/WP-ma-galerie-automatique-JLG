@@ -434,6 +434,91 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'style_preset' => '',
                 ],
             ],
+            'contextual_presets_sanitization' => [
+                [
+                    'contextual_presets' => [
+                        [
+                            'key'         => 'custom-case',
+                            'label'       => '<strong>Custom</strong> ',
+                            'description' => "Line one\n\nLine two",
+                            'enabled'     => '1',
+                            'priority'    => '2',
+                            'contexts'    => [
+                                'post_types'   => [ 'post', 'page', 'unknown' ],
+                                'is_front_page' => '0',
+                                'is_archive'    => '1',
+                                'is_singular'   => 'inherit',
+                            ],
+                            'settings'    => [
+                                'delay'          => '12',
+                                'speed'          => '4000',
+                                'thumb_size'     => '140',
+                                'thumb_size_mobile' => '90',
+                                'bg_opacity'     => '0.7',
+                                'accent_color'   => '#ff00ff',
+                                'autoplay_start' => 'enable',
+                                'show_share'     => 'disable',
+                                'show_download'  => 'inherit',
+                                'thumbs_layout'  => 'LEFT',
+                                'effect'         => 'FADE',
+                                'easing'         => 'EASE',
+                                'background_style' => 'BLUR',
+                                'style_preset'   => 'radix-ui',
+                            ],
+                        ],
+                        [
+                            'label'    => 'Needs key',
+                            'enabled'  => '',
+                            'settings' => [
+                                'autoplay_start' => 'inherit',
+                                'show_share'     => '',
+                                'thumbs_layout'  => 'diagonal',
+                            ],
+                        ],
+                    ],
+                ],
+                [],
+                [
+                    'contextual_presets' => [
+                        [
+                            'key'         => 'custom-case',
+                            'label'       => 'Custom',
+                            'description' => "Line one\nLine two",
+                            'enabled'     => true,
+                            'priority'    => 2,
+                            'contexts'    => [
+                                'post_types'   => [ 'post', 'page' ],
+                                'is_front_page' => false,
+                                'is_archive'    => true,
+                            ],
+                            'settings'    => [
+                                'delay'              => 12,
+                                'speed'              => 4000,
+                                'thumb_size'         => 140,
+                                'thumb_size_mobile'  => 90,
+                                'bg_opacity'         => 0.7,
+                                'accent_color'       => '#ff00ff',
+                                'autoplay_start'     => true,
+                                'show_share'         => false,
+                                'thumbs_layout'      => 'left',
+                                'effect'             => 'fade',
+                                'easing'             => 'ease',
+                                'background_style'   => 'blur',
+                                'style_preset'       => 'radix-ui',
+                            ],
+                        ],
+                        [
+                            'key'         => 'needs-key',
+                            'label'       => 'Needs key',
+                            'description' => '',
+                            'enabled'     => false,
+                            'priority'    => 10,
+                            'contexts'    => [],
+                            'settings'    => [],
+                        ],
+                    ],
+                ],
+            ],
         ];
     }
 

@@ -28,7 +28,7 @@ class Assets {
             return;
         }
 
-        $settings        = $this->settings->get_sanitized_settings();
+        $settings        = $this->settings->resolve_settings_for_context( $post );
         $defaults        = $this->settings->get_default_settings();
         $languages_path  = $this->plugin->get_languages_path();
         $has_languages   = $this->plugin->languages_directory_exists();

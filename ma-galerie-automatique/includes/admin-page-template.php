@@ -10,6 +10,15 @@ $defaults          = mga_get_default_settings();
 $sanitized_settings = mga_sanitize_settings( $settings, $settings );
 $settings          = wp_parse_args( $sanitized_settings, $defaults );
 $style_presets     = mga_get_style_presets();
+$contextual_presets = isset( $settings['contextual_presets'] ) && is_array( $settings['contextual_presets'] )
+    ? $settings['contextual_presets']
+    : mga_get_contextual_preset_catalog();
+$contextual_presets = is_array( $contextual_presets ) ? array_values( $contextual_presets ) : [];
+$available_post_types = get_post_types( [ 'public' => true ], 'objects' );
+
+if ( empty( $available_post_types ) ) {
+    $available_post_types = get_post_types( [], 'objects' );
+}
 
 ?>
 <div class="wrap mga-admin-wrap">
@@ -229,6 +238,287 @@ $style_presets     = mga_get_style_presets();
                                         <button type="button" class="button-link" data-mga-reset-style-preset><?php echo esc_html__( 'Revenir aux valeurs par défaut', 'lightbox-jlg' ); ?></button>
                                     </div>
                                     <p class="description mga-style-preset-description" id="mga_style_preset_description" data-mga-style-preset-description></p>
+                                </div>
+                            </div>
+
+                            <div class="mga-setting-row mga-setting-row--stacked">
+                                <div class="mga-setting-row__label">
+                                    <span class="mga-setting-row__label-text"><?php echo esc_html__( 'Presets contextualisés', 'lightbox-jlg' ); ?></span>
+                                </div>
+                                <div class="mga-setting-row__control">
+                                    <p class="description"><?php echo esc_html__( 'Activez des variations ciblées selon le type de contenu ou la page consultée. Chaque preset peut ajuster un sous-ensemble de réglages sans modifier votre configuration globale.', 'lightbox-jlg' ); ?></p>
+
+                                    <div class="mga-contextual-presets" data-mga-contextual-presets>
+                                        <?php if ( empty( $contextual_presets ) ) : ?>
+                                            <p class="description"><?php echo esc_html__( 'Aucun preset contextuel disponible.', 'lightbox-jlg' ); ?></p>
+                                        <?php else : ?>
+                                            <?php foreach ( $contextual_presets as $preset_index => $preset_definition ) :
+                                                if ( ! is_array( $preset_definition ) ) {
+                                                    continue;
+                                                }
+
+                                                $preset_key         = isset( $preset_definition['key'] ) ? sanitize_key( (string) $preset_definition['key'] ) : '';
+                                                $preset_key         = '' !== $preset_key ? $preset_key : 'preset-' . $preset_index;
+                                                $preset_label       = isset( $preset_definition['label'] ) && '' !== trim( (string) $preset_definition['label'] )
+                                                    ? $preset_definition['label']
+                                                    : ucwords( str_replace( '-', ' ', $preset_key ) );
+                                                $preset_description = isset( $preset_definition['description'] ) ? $preset_definition['description'] : '';
+                                                $preset_enabled     = ! empty( $preset_definition['enabled'] );
+                                                $preset_priority    = isset( $preset_definition['priority'] ) ? intval( $preset_definition['priority'] ) : ( 10 + $preset_index );
+                                                $preset_contexts    = isset( $preset_definition['contexts'] ) && is_array( $preset_definition['contexts'] ) ? $preset_definition['contexts'] : [];
+                                                $preset_settings    = isset( $preset_definition['settings'] ) && is_array( $preset_definition['settings'] ) ? $preset_definition['settings'] : [];
+                                                $context_post_types = isset( $preset_contexts['post_types'] ) && is_array( $preset_contexts['post_types'] )
+                                                    ? array_map( 'sanitize_key', $preset_contexts['post_types'] )
+                                                    : [];
+                                                $context_front_page = isset( $preset_contexts['is_front_page'] ) ? (bool) $preset_contexts['is_front_page'] : false;
+                                                $context_singular   = isset( $preset_contexts['is_singular'] ) ? (bool) $preset_contexts['is_singular'] : false;
+                                                $context_archive    = isset( $preset_contexts['is_archive'] ) ? (bool) $preset_contexts['is_archive'] : false;
+                                                $style_override     = array_key_exists( 'style_preset', $preset_settings ) ? sanitize_key( (string) $preset_settings['style_preset'] ) : null;
+                                                $delay_override     = isset( $preset_settings['delay'] ) ? intval( $preset_settings['delay'] ) : '';
+                                                $autoplay_override  = array_key_exists( 'autoplay_start', $preset_settings ) ? (bool) $preset_settings['autoplay_start'] : null;
+                                                $share_override     = array_key_exists( 'show_share', $preset_settings ) ? (bool) $preset_settings['show_share'] : null;
+                                                $download_override  = array_key_exists( 'show_download', $preset_settings ) ? (bool) $preset_settings['show_download'] : null;
+                                                $cta_override       = array_key_exists( 'show_cta', $preset_settings ) ? (bool) $preset_settings['show_cta'] : null;
+                                                $zoom_override      = array_key_exists( 'show_zoom', $preset_settings ) ? (bool) $preset_settings['show_zoom'] : null;
+                                                $thumbs_layout      = isset( $preset_settings['thumbs_layout'] ) ? strtolower( (string) $preset_settings['thumbs_layout'] ) : '';
+                                                ?>
+                                                <fieldset class="mga-contextual-presets__item">
+                                                    <legend>
+                                                        <span class="mga-contextual-presets__name"><?php echo esc_html( $preset_label ); ?></span>
+                                                        <span class="mga-contextual-presets__status<?php echo $preset_enabled ? ' is-active' : ' is-inactive'; ?>">
+                                                            <?php echo $preset_enabled ? esc_html__( 'Actif', 'lightbox-jlg' ) : esc_html__( 'Inactif', 'lightbox-jlg' ); ?>
+                                                        </span>
+                                                    </legend>
+
+                                                    <input type="hidden" name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][key]" value="<?php echo esc_attr( $preset_key ); ?>" />
+
+                                                    <div class="mga-contextual-presets__group">
+                                                        <label for="mga_contextual_label_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Nom affiché', 'lightbox-jlg' ); ?></label>
+                                                        <input
+                                                            type="text"
+                                                            id="mga_contextual_label_<?php echo esc_attr( $preset_key ); ?>"
+                                                            name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][label]"
+                                                            value="<?php echo esc_attr( $preset_label ); ?>"
+                                                            class="regular-text"
+                                                        />
+                                                    </div>
+
+                                                    <div class="mga-contextual-presets__group">
+                                                        <label for="mga_contextual_description_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Résumé interne', 'lightbox-jlg' ); ?></label>
+                                                        <textarea
+                                                            id="mga_contextual_description_<?php echo esc_attr( $preset_key ); ?>"
+                                                            name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][description]"
+                                                            rows="3"
+                                                            class="large-text"
+                                                        ><?php echo esc_textarea( $preset_description ); ?></textarea>
+                                                    </div>
+
+                                                    <div class="mga-contextual-presets__group mga-contextual-presets__group--compact">
+                                                        <input type="hidden" name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][enabled]" value="0" />
+                                                        <label for="mga_contextual_enabled_<?php echo esc_attr( $preset_key ); ?>" class="mga-inline-toggle">
+                                                            <input
+                                                                type="checkbox"
+                                                                id="mga_contextual_enabled_<?php echo esc_attr( $preset_key ); ?>"
+                                                                name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][enabled]"
+                                                                value="1"
+                                                                <?php checked( $preset_enabled, true ); ?>
+                                                            />
+                                                            <span><?php echo esc_html__( 'Activer ce preset', 'lightbox-jlg' ); ?></span>
+                                                        </label>
+                                                    </div>
+
+                                                    <div class="mga-contextual-presets__group mga-contextual-presets__group--compact">
+                                                        <label for="mga_contextual_priority_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Priorité', 'lightbox-jlg' ); ?></label>
+                                                        <input
+                                                            type="number"
+                                                            id="mga_contextual_priority_<?php echo esc_attr( $preset_key ); ?>"
+                                                            name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][priority]"
+                                                            value="<?php echo esc_attr( $preset_priority ); ?>"
+                                                            min="0"
+                                                            max="100"
+                                                            class="small-text"
+                                                        />
+                                                        <p class="description"><?php echo esc_html__( 'Les valeurs les plus basses sont évaluées en premier.', 'lightbox-jlg' ); ?></p>
+                                                    </div>
+
+                                                    <div class="mga-contextual-presets__group">
+                                                        <label for="mga_contextual_post_types_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Types de contenus ciblés', 'lightbox-jlg' ); ?></label>
+                                                        <select
+                                                            id="mga_contextual_post_types_<?php echo esc_attr( $preset_key ); ?>"
+                                                            name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][contexts][post_types][]"
+                                                            multiple
+                                                            size="5"
+                                                        >
+                                                            <?php foreach ( $available_post_types as $post_type_slug => $post_type_object ) :
+                                                                $post_type_slug = sanitize_key( (string) $post_type_slug );
+                                                                $post_type_label = isset( $post_type_object->labels->singular_name ) && '' !== $post_type_object->labels->singular_name
+                                                                    ? $post_type_object->labels->singular_name
+                                                                    : ( isset( $post_type_object->label ) ? $post_type_object->label : $post_type_slug );
+                                                                ?>
+                                                                <option value="<?php echo esc_attr( $post_type_slug ); ?>" <?php selected( in_array( $post_type_slug, $context_post_types, true ), true ); ?>>
+                                                                    <?php echo esc_html( $post_type_label ); ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                        <p class="description"><?php echo esc_html__( 'Laissez vide pour appliquer le preset à tous les types compatibles.', 'lightbox-jlg' ); ?></p>
+                                                    </div>
+
+                                                    <div class="mga-contextual-presets__group mga-contextual-presets__group--inline">
+                                                        <input type="hidden" name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][contexts][is_front_page]" value="0" />
+                                                        <label for="mga_contextual_front_page_<?php echo esc_attr( $preset_key ); ?>">
+                                                            <input
+                                                                type="checkbox"
+                                                                id="mga_contextual_front_page_<?php echo esc_attr( $preset_key ); ?>"
+                                                                name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][contexts][is_front_page]"
+                                                                value="1"
+                                                                <?php checked( $context_front_page, true ); ?>
+                                                            />
+                                                            <?php echo esc_html__( 'Page d’accueil', 'lightbox-jlg' ); ?>
+                                                        </label>
+
+                                                        <input type="hidden" name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][contexts][is_singular]" value="0" />
+                                                        <label for="mga_contextual_singular_<?php echo esc_attr( $preset_key ); ?>">
+                                                            <input
+                                                                type="checkbox"
+                                                                id="mga_contextual_singular_<?php echo esc_attr( $preset_key ); ?>"
+                                                                name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][contexts][is_singular]"
+                                                                value="1"
+                                                                <?php checked( $context_singular, true ); ?>
+                                                            />
+                                                            <?php echo esc_html__( 'Pages ou articles individuels', 'lightbox-jlg' ); ?>
+                                                        </label>
+
+                                                        <input type="hidden" name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][contexts][is_archive]" value="0" />
+                                                        <label for="mga_contextual_archive_<?php echo esc_attr( $preset_key ); ?>">
+                                                            <input
+                                                                type="checkbox"
+                                                                id="mga_contextual_archive_<?php echo esc_attr( $preset_key ); ?>"
+                                                                name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][contexts][is_archive]"
+                                                                value="1"
+                                                                <?php checked( $context_archive, true ); ?>
+                                                            />
+                                                            <?php echo esc_html__( 'Listes et archives', 'lightbox-jlg' ); ?>
+                                                        </label>
+                                                    </div>
+
+                                                    <div class="mga-contextual-presets__group">
+                                                        <label for="mga_contextual_style_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Preset de style appliqué', 'lightbox-jlg' ); ?></label>
+                                                        <select
+                                                            id="mga_contextual_style_<?php echo esc_attr( $preset_key ); ?>"
+                                                            name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][settings][style_preset]"
+                                                        >
+                                                            <option value="inherit" <?php selected( null === $style_override ); ?>><?php echo esc_html__( 'Respecter la sélection globale', 'lightbox-jlg' ); ?></option>
+                                                            <option value="" <?php selected( '' === $style_override ); ?>><?php echo esc_html__( 'Aucun (personnalisé)', 'lightbox-jlg' ); ?></option>
+                                                            <?php foreach ( $style_presets as $style_key => $definition ) :
+                                                                $style_key = sanitize_key( (string) $style_key );
+
+                                                                if ( '' === $style_key ) {
+                                                                    continue;
+                                                                }
+
+                                                                $style_label = isset( $definition['label'] ) && '' !== trim( (string) $definition['label'] )
+                                                                    ? $definition['label']
+                                                                    : ucwords( str_replace( '-', ' ', $style_key ) );
+                                                                ?>
+                                                                <option value="<?php echo esc_attr( $style_key ); ?>" <?php selected( $style_override, $style_key ); ?>>
+                                                                    <?php echo esc_html( $style_label ); ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="mga-contextual-presets__group mga-contextual-presets__group--compact">
+                                                        <label for="mga_contextual_delay_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Durée d’affichage personnalisée', 'lightbox-jlg' ); ?></label>
+                                                        <input
+                                                            type="number"
+                                                            id="mga_contextual_delay_<?php echo esc_attr( $preset_key ); ?>"
+                                                            name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][settings][delay]"
+                                                            value="<?php echo '' !== $delay_override ? esc_attr( $delay_override ) : ''; ?>"
+                                                            min="1"
+                                                            max="30"
+                                                            class="small-text"
+                                                        /> <?php echo esc_html__( 'secondes', 'lightbox-jlg' ); ?>
+                                                        <p class="description"><?php echo esc_html__( 'Laissez vide pour conserver la valeur principale.', 'lightbox-jlg' ); ?></p>
+                                                    </div>
+
+                                                    <div class="mga-contextual-presets__toggles">
+                                                        <div class="mga-contextual-presets__toggle">
+                                                            <label for="mga_contextual_autoplay_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Lecture auto.', 'lightbox-jlg' ); ?></label>
+                                                            <select
+                                                                id="mga_contextual_autoplay_<?php echo esc_attr( $preset_key ); ?>"
+                                                                name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][settings][autoplay_start]"
+                                                            >
+                                                                <option value="inherit" <?php selected( null === $autoplay_override ); ?>><?php echo esc_html__( 'Respecter la configuration globale', 'lightbox-jlg' ); ?></option>
+                                                                <option value="enable" <?php selected( true === $autoplay_override ); ?>><?php echo esc_html__( 'Toujours activer', 'lightbox-jlg' ); ?></option>
+                                                                <option value="disable" <?php selected( false === $autoplay_override ); ?>><?php echo esc_html__( 'Toujours désactiver', 'lightbox-jlg' ); ?></option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="mga-contextual-presets__toggle">
+                                                            <label for="mga_contextual_share_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Bouton partager', 'lightbox-jlg' ); ?></label>
+                                                            <select
+                                                                id="mga_contextual_share_<?php echo esc_attr( $preset_key ); ?>"
+                                                                name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][settings][show_share]"
+                                                            >
+                                                                <option value="inherit" <?php selected( null === $share_override ); ?>><?php echo esc_html__( 'Respecter la configuration globale', 'lightbox-jlg' ); ?></option>
+                                                                <option value="enable" <?php selected( true === $share_override ); ?>><?php echo esc_html__( 'Toujours afficher', 'lightbox-jlg' ); ?></option>
+                                                                <option value="disable" <?php selected( false === $share_override ); ?>><?php echo esc_html__( 'Toujours masquer', 'lightbox-jlg' ); ?></option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="mga-contextual-presets__toggle">
+                                                            <label for="mga_contextual_download_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Téléchargement', 'lightbox-jlg' ); ?></label>
+                                                            <select
+                                                                id="mga_contextual_download_<?php echo esc_attr( $preset_key ); ?>"
+                                                                name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][settings][show_download]"
+                                                            >
+                                                                <option value="inherit" <?php selected( null === $download_override ); ?>><?php echo esc_html__( 'Respecter la configuration globale', 'lightbox-jlg' ); ?></option>
+                                                                <option value="enable" <?php selected( true === $download_override ); ?>><?php echo esc_html__( 'Toujours afficher', 'lightbox-jlg' ); ?></option>
+                                                                <option value="disable" <?php selected( false === $download_override ); ?>><?php echo esc_html__( 'Toujours masquer', 'lightbox-jlg' ); ?></option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="mga-contextual-presets__toggle">
+                                                            <label for="mga_contextual_cta_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Bouton d’action', 'lightbox-jlg' ); ?></label>
+                                                            <select
+                                                                id="mga_contextual_cta_<?php echo esc_attr( $preset_key ); ?>"
+                                                                name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][settings][show_cta]"
+                                                            >
+                                                                <option value="inherit" <?php selected( null === $cta_override ); ?>><?php echo esc_html__( 'Respecter la configuration globale', 'lightbox-jlg' ); ?></option>
+                                                                <option value="enable" <?php selected( true === $cta_override ); ?>><?php echo esc_html__( 'Toujours afficher', 'lightbox-jlg' ); ?></option>
+                                                                <option value="disable" <?php selected( false === $cta_override ); ?>><?php echo esc_html__( 'Toujours masquer', 'lightbox-jlg' ); ?></option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="mga-contextual-presets__toggle">
+                                                            <label for="mga_contextual_zoom_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Zoom', 'lightbox-jlg' ); ?></label>
+                                                            <select
+                                                                id="mga_contextual_zoom_<?php echo esc_attr( $preset_key ); ?>"
+                                                                name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][settings][show_zoom]"
+                                                            >
+                                                                <option value="inherit" <?php selected( null === $zoom_override ); ?>><?php echo esc_html__( 'Respecter la configuration globale', 'lightbox-jlg' ); ?></option>
+                                                                <option value="enable" <?php selected( true === $zoom_override ); ?>><?php echo esc_html__( 'Toujours afficher', 'lightbox-jlg' ); ?></option>
+                                                                <option value="disable" <?php selected( false === $zoom_override ); ?>><?php echo esc_html__( 'Toujours masquer', 'lightbox-jlg' ); ?></option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="mga-contextual-presets__toggle">
+                                                            <label for="mga_contextual_thumbs_<?php echo esc_attr( $preset_key ); ?>"><?php echo esc_html__( 'Miniatures', 'lightbox-jlg' ); ?></label>
+                                                            <select
+                                                                id="mga_contextual_thumbs_<?php echo esc_attr( $preset_key ); ?>"
+                                                                name="mga_settings[contextual_presets][<?php echo esc_attr( $preset_index ); ?>][settings][thumbs_layout]"
+                                                            >
+                                                                <option value="" <?php selected( $thumbs_layout, '' ); ?>><?php echo esc_html__( 'Miniatures par défaut', 'lightbox-jlg' ); ?></option>
+                                                                <option value="bottom" <?php selected( $thumbs_layout, 'bottom' ); ?>><?php echo esc_html__( 'Barre inférieure', 'lightbox-jlg' ); ?></option>
+                                                                <option value="left" <?php selected( $thumbs_layout, 'left' ); ?>><?php echo esc_html__( 'Colonne latérale', 'lightbox-jlg' ); ?></option>
+                                                                <option value="hidden" <?php selected( $thumbs_layout, 'hidden' ); ?>><?php echo esc_html__( 'Masquer les miniatures', 'lightbox-jlg' ); ?></option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </fieldset>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                             </div>
                         </div>
