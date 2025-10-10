@@ -1,3 +1,6 @@
 node_modules/
 tests/e2e/assets/*
 !tests/e2e/assets/.gitkeep
+
+.wordpress-tests/
+tests/phpunit/wp-tests-config-extra.php

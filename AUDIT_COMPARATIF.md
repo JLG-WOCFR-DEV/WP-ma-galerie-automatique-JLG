@@ -15,6 +15,31 @@ etc.). Les recommandations sont classées par thématique demandée.
 | Bundles front | Chargement unique Swiper + visionneuse | Modules par fonctionnalité | Bundles différenciés (Core/Zoom/Video) | Bundles différenciés (Core/Effets) | Découper les scripts en modules optionnels + compatibilité `wp_register_*`. |
 | Analytics intégrées | Aucune | Add-on statistiques (vues, ventes) | Rapports clics + intégration GA | Statistiques basiques + webhooks | Proposer un module de suivi (opt-in) avec export CSV/webhook. |
 
+### Organisation Simple vs Expert
+
+| Critère | Lightbox – JLG | Envira/FooGallery/Modula | Axes d'amélioration |
+| --- | --- | --- | --- |
+| Découverte des réglages | Toggle « Vue simplifiée / Vue complète » sans onboarding spécifique.【F:ma-galerie-automatique/includes/admin-page-template.php†L63-L112】 | Parcours guidés + checklists (« Getting started », popovers d’aide). | Ajouter une check-list progressive et des bulles contextuelles par étape pour clarifier ce qui est couvert par le mode simple. |
+| Contenu du mode simple | Sections limitées mais champs identiques (libellés parfois techniques).【F:ma-galerie-automatique/includes/admin-page-template.php†L83-L112】 | Champs reformulés (langage métier) + presets verrouillés. | Simplifier la terminologie et proposer des profils préremplis liés au mode « Essentiel » afin de réduire le besoin d’interprétation. |
+| Passage au mode expert | Sélecteur instantané sans prévisualisation des nouveaux champs.【F:ma-galerie-automatique/includes/admin-page-template.php†L63-L112】 | Aperçu des fonctionnalités supplémentaires + sauvegarde distincte des profils. | Afficher un panneau de comparaison (nouveaux réglages, impacts attendus) et permettre d’enregistrer des brouillons de configuration avant activation globale. |
+| Assistance | Recherche instantanée + aperçu statique.【F:ma-galerie-automatique/includes/admin-page-template.php†L53-L124】 | Docs in-app, liens tutoriels vidéo, support chat. | Intégrer une base de connaissances contextuelle (tooltips + liens vers docs/vidéo) et un bouton de contact rapide pour se rapprocher du support premium. |
+
+- **Architecture UX globale** : distinguer visuellement les deux modes via des onglets fixes (Simple, Expert) combinés à un bandeau d’explication synthétique. Chaque onglet affiche un indicateur de complétude (progress bar) et rappelle la finalité du mode pour calquer l’approche d’Envira et de Modula.
+- **Mode simple scénarisé** : afficher une timeline « Configurer → Prévisualiser → Publier » avec textes pédagogiques, inspirée des checklists Envira. Sur mobile, proposer un résumé compact des options actives pour rester lisible.
+- **Mode simple guidé** : réduire le nombre de champs visibles à trois groupes (« Apparence », « Navigation », « Partage »), chaque carte contenant un bouton « Détails » qui renvoie vers l’onglet expert. Ajouter un aperçu visuel miniature alimenté par les presets (voir ci-dessous) pour rassurer les utilisateurs peu techniques.【F:ma-galerie-automatique/includes/admin-page-template.php†L63-L214】
+- **Mode expert documenté** : associer chaque section avancée à un encart « Quand l’utiliser ? » avec exemples d’usage (sites multilingues, CDN, debug). Rendre ces encarts repliables pour éviter la surcharge visuelle.
+- **Cartes expert structurées** : regrouper les options techniques dans des « cards » à onglets secondaires (Performances, Accessibilité, Diagnostics) avec badges d’avertissement lorsque des réglages sensibles sont activés, à l’instar des modes avancés de FooGallery Pro.【F:ma-galerie-automatique/includes/admin-page-template.php†L119-L520】
+- **Bascules sans frictions** : mémoriser l’onglet, la recherche et l’état de dépliement lors du passage simple ↔ expert pour éviter de perdre le contexte utilisateur, comme le font les panneaux React de FooGallery.
+- **Export/import ciblé** : permettre d’exporter uniquement les réglages du mode expert ou simple (JSON) pour favoriser le partage entre sites, à l’image des « Config packs » de Modula.
+- **Accessibilité cohérente** : prévoir des points d’entrée identiques (ordre des tabulations, raccourcis clavier, intitulés ARIA) dans les deux modes, avec un rappel explicite des impacts sur les animations (`prefers-reduced-motion`) pour se conformer aux standards pro.【F:ma-galerie-automatique/includes/admin-page-template.php†L63-L214】【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L3034-L3074】
+- **Suivi d’activités** : consigner la dernière modification par mode (timestamp, auteur) et l’afficher en pied de page avec un bouton « Journal complet », pour se rapprocher des historiques détaillés d’Envira/FooGallery.
+
+##### Parcours d’onboarding recommandé
+1. **Modalité découverte** : à la première activation, déclencher une modale pleine largeur qui présente les deux modes, leurs avantages et un bouton « Choisir automatiquement » basé sur un questionnaire rapide (nombre de galeries, niveau technique). La modale doit respecter le focus trap et offrir un résumé textuel court pour les lecteurs d’écran.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L2834-L2892】
+2. **Checklist progressive** : proposer un bandeau fixe en haut du mode simple listant 4 étapes (ajouter des médias, choisir un preset, vérifier l’accessibilité, publier). Chaque étape renvoie vers la section correspondante et affiche une coche à validation, comme les workflows d’Envira.
+3. **Raccourcis pro** : dans le mode expert, afficher une barre latérale sticky contenant des ancres rapides (Performances, Accessibilité, Fiabilité) et un bouton « Tester la galerie » qui ouvre la visionneuse de démonstration avec les options courantes pour aligner l’expérience sur les outils premium.【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L2509-L2832】
+4. **Assistance continue** : intégrer une zone « Tutoriels recommandés » alimentée par des articles/vidéos, filtrés selon le mode actif. Les liens doivent s’ouvrir dans un nouvel onglet avec un indicateur visuel et un `aria-describedby` pour signaler l’ouverture externe.
+
 ### Points solides
 - Les réglages globaux couvrent les paramètres essentiels d’un diaporama
   (vitesse, effets, couleur d’accent, arrière-plan, options de partage) et sont
@@ -240,6 +265,8 @@ etc.). Les recommandations sont classées par thématique demandée.
 - **Focus persistant sur miniatures** : après navigation clavier, renvoyez le
   focus sur la vignette active pour éviter la perte de contexte dans les longues
   galeries.
+- **Vue simplifiée inclusive** : enrichir le mode « Vue simplifiée » avec des aides audio/texte spécifiques aux lecteurs d’écran et une hiérarchisation automatique des sections prioritaires pour reproduire les parcours guidés des solutions premium.【F:ma-galerie-automatique/includes/admin-page-template.php†L53-L112】
+- **Gestion explicite du `prefers-reduced-motion`** : rendre le paramètre visible dans la vue simplifiée et documenter dans la vue experte comment chaque effet réagit, afin d’aligner l’interface avec les politiques d’accessibilité des suites pro.【F:ma-galerie-automatique/includes/admin-page-template.php†L63-L112】【F:ma-galerie-automatique/assets/js/gallery-slideshow.js†L3034-L3074】
 
 ### Pistes additionnelles
 
@@ -326,6 +353,31 @@ etc.). Les recommandations sont classées par thématique demandée.
   de métriques de hit/miss. Fournissez un panneau d’observation ou des hooks
   d’instrumentation (stats, alertes purge) pour sécuriser les déploiements sur
   des catalogues volumineux.【F:ma-galerie-automatique/includes/Content/Detection.php†L1206-L1241】
+
+## 8. Fiabilité, observabilité et qualité de service
+
+### Benchmark rapide
+
+- **Envira / FooGallery** : dashboards d’état (uptime CDN d’assets, télémétrie de détection), alertes email en cas d’échec de chargement, intégration native avec des services de monitoring.
+- **Lightbox – JLG** : logs WP-CLI et transients robustes, mais peu d’outils intégrés pour diagnostiquer les erreurs front/back au-delà des commandes existantes.【F:ma-galerie-automatique/includes/Cli/CacheCommand.php†L18-L205】【F:ma-galerie-automatique/includes/Content/Detection.php†L1206-L1241】
+
+### Pistes d’amélioration
+
+- **Centre de fiabilité** : ajouter un onglet « Fiabilité » dans le mode expert listant les derniers scans, leur durée, les caches utilisés, et un bouton de test instantané (similaire au « Health Checker » d’Envira). Ce panneau pourrait réutiliser les transients existants pour afficher le nombre de hits/miss du cache de détection.【F:ma-galerie-automatique/includes/Content/Detection.php†L1206-L1241】
+- **Alertes proactives** : déclencher des notifications (email ou webhook) lorsqu’un scan échoue ou lorsqu’un asset tiers est indisponible, en s’appuyant sur `CacheCommand::log_error()` et l’action `mga_swiper_asset_sources_refreshed` pour enrichir les alertes.【F:ma-galerie-automatique/includes/Cli/CacheCommand.php†L18-L205】【F:ma-galerie-automatique/includes/Frontend/Assets.php†L395-L418】
+- **Tests de régression guidés** : fournir une suite de scénarios « Fiabilité express » (bouton dans le mode expert) qui déclenche via WP-CLI ou Action Scheduler un parcours automatisé (détection, chargement front, purge). Les résultats pourraient être résumés dans l’interface, à la manière des checkers QA des plugins premium.
+- **Journal d’incidents** : permettre d’ajouter des annotations (dates de purge, changements d’options) stockées dans un CPT ou dans les logs WP-CLI afin de suivre l’historique des interventions et favoriser la collaboration entre administrateurs.
+- **Redondance des assets** : offrir une option pour définir une URL de secours pour Swiper / les icônes (CDN interne) et vérifier automatiquement leur disponibilité, ce que proposent les extensions pro orientées agences.
+- **Benchmarks intégrés** : afficher dans l’onglet « Fiabilité » un comparatif synthétique des performances (temps moyen de scan, poids moyen des assets) face à des cibles internes (SLA) ou à des benchmarks d’Envira/FooGallery, afin de matérialiser les écarts et d’alimenter le discours commercial.
+- **Cartographie des dépendances** : générer automatiquement un schéma des ressources chargées (CDN Swiper, fontes, scripts personnalisés) avec un statut « OK / Dégradé / Inaccessible ». Une mini-heatmap en mode simple (verts/jaunes/rouges) aide à repérer rapidement les problèmes, tandis que le mode expert affiche la pile détaillée (URL, latence, dernier check).
+- **Export support prêt à l’emploi** : proposer un bouton « Partager un rapport support » qui compile les données de diagnostic (logs, status caches, versions d’extensions) dans un ZIP, en reprenant le format des « System Info » premium. Ajouter un sélecteur de confidentialité pour exclure certaines métadonnées avant export.
+- **Alertes contextualisées** : dans le mode simple, afficher un encart résumé (icône + message) lorsque des anomalies critiques sont détectées (échec de CDN, cache saturé), avec un lien « Voir détails dans le mode expert ». L’encart respecte les ratios de contraste et expose un `role="alert"` pour vocaliser l’information.【F:ma-galerie-automatique/includes/admin-page-template.php†L63-L214】
+- **Accessibilité des diagnostics** : prévoir des labels et descriptions pour chaque métrique (ex. « Temps moyen de scan – 320 ms ») et permettre la navigation clavier dans les tableaux de logs via `aria-sort`, pour égaler les dashboards pro.
+
+### Lien avec l’organisation Simple/Expert
+
+- Afficher une synthèse « Santé du système » dans le mode simple (état du cache, dernières erreurs, check vert/rouge) pour rassurer les utilisateurs non techniques, tandis que le mode expert expose la granularité détaillée (logs, tests, bascules de CDN).
+- Proposer un bouton « Partager avec le support » qui exporte les diagnostics en JSON/ZIP, facilitant l’assistance et se rapprochant des standards de support premium.
 
 ---
 

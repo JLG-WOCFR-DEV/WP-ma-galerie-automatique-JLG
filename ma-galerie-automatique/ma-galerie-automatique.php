@@ -229,6 +229,22 @@ function mga_get_style_presets(): array {
     return $plugin ? $plugin->settings()->get_style_presets() : [];
 }
 
+function mga_get_contextual_preset_catalog(): array {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->settings()->get_contextual_preset_catalog() : [];
+}
+
+function mga_resolve_settings_for_context( $post = null, array $context = [] ): array {
+    $plugin = mga_plugin();
+
+    if ( ! $plugin ) {
+        return [];
+    }
+
+    return $plugin->settings()->resolve_settings_for_context( $post instanceof \WP_Post ? $post : null, $context );
+}
+
 function mga_sanitize_settings( $input, $existing_settings = null ): array {
     $plugin = mga_plugin();
 

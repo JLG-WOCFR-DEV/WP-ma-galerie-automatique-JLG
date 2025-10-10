@@ -695,6 +695,95 @@
     margin-top: 8px;
 }
 
+.mga-setting-row--stacked {
+    align-items: flex-start;
+}
+
+.mga-contextual-presets {
+    display: grid;
+    gap: 18px;
+}
+
+.mga-contextual-presets__item {
+    border: 1px solid var(--mga-admin-border-soft);
+    border-radius: var(--mga-admin-radius-md);
+    background: var(--mga-admin-surface-subtle);
+    padding: 18px;
+    margin: 0;
+}
+
+.mga-contextual-presets__item legend {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 14px;
+}
+
+.mga-contextual-presets__status {
+    font-size: 12px;
+    line-height: 1;
+    padding: 4px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: rgba(var(--mga-admin-accent-rgb), 0.16);
+    color: var(--mga-admin-accent);
+}
+
+.mga-contextual-presets__status.is-inactive {
+    background: rgba(148, 163, 184, 0.15);
+    color: var(--mga-admin-text-muted);
+}
+
+.mga-contextual-presets__status.is-active {
+    background: rgba(var(--mga-score-info-rgb), 0.16);
+    color: var(--mga-score-info);
+}
+
+.mga-contextual-presets__group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.mga-contextual-presets__group--compact {
+    max-width: 320px;
+}
+
+.mga-contextual-presets__group--compact .description {
+    margin: 0;
+}
+
+.mga-contextual-presets__group--inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    align-items: center;
+}
+
+.mga-contextual-presets__group--inline label {
+    font-weight: 600;
+}
+
+.mga-contextual-presets__group select[multiple] {
+    min-width: 220px;
+}
+
+.mga-contextual-presets__toggles {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    margin-top: 12px;
+}
+
+.mga-contextual-presets__toggle select {
+    width: 100%;
+}
+
 .mga-setting-row--fieldset {
     display: block;
     border: none;

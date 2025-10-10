@@ -289,6 +289,22 @@ Si votre thème n’utilise pas les classes habituelles comme `.entry-content`, 
   }, 10, 2 );
   ```
 
+## Tests automatisés
+
+### Préparer l'environnement PHPUnit
+1. Exécutez `scripts/install-wp-tests.sh` (optionnellement en passant `db-name`, `db-user`, `db-pass`, `db-host`, `wp-version`). Le script télécharge WordPress Core et la librairie de tests dans `.wordpress-tests/` puis crée `wp-tests-config.php` si nécessaire.
+2. Vérifiez que la base de données indiquée est accessible. Si `mysql` n'est pas disponible sur votre machine, créez la base manuellement avant de relancer le script.
+3. Exportez la variable d'environnement `WP_PHPUNIT__DIR` vers le dossier généré :
+   ```bash
+   export WP_PHPUNIT__DIR="$(pwd)/.wordpress-tests/wordpress-tests-lib"
+   ```
+4. Lancez la suite :
+   ```bash
+   phpunit -c phpunit.xml.dist
+   ```
+
+Vous pouvez ajouter des personnalisations locales sans les committer via `tests/phpunit/wp-tests-config-extra.php`, automatiquement inclus si présent.
+
 ## Licence et support
 Distribué sous licence [GPL 2.0 ou ultérieure](https://www.gnu.org/licenses/gpl-2.0.html).
 Pour toute question ou suggestion, ouvrez une issue sur ce dépôt ou contactez l’auteur.
