@@ -158,6 +158,52 @@ class DetectionHtmlParsingTest extends WP_UnitTestCase {
         }
     }
 
+    public function test_is_image_url_detects_extension_from_query_parameters(): void {
+        $detection = $this->detection();
+
+        $this->assertTrue(
+            $detection->is_image_url( 'https://images.example.com/render?format=webp&quality=80' ),
+            'Image services exposing the format via query parameters should be recognised.'
+        );
+
+        $this->assertTrue(
+            $detection->is_image_url( 'https://cdn.example.com/asset?fm=avif&w=1600' ),
+            'Alternative parameter names (fm) should also be detected.'
+        );
+
+        $this->assertFalse(
+            $detection->is_image_url( 'https://images.example.com/render?format=pdf' ),
+            'Unsupported format hints must not be treated as valid images.'
+        );
+    }
+
+    public function test_is_image_url_detects_nested_query_urls(): void {
+        $detection = $this->detection();
+
+        $proxied_url = 'https://cdn.example.com/_next/image?url=' . rawurlencode( 'https://example.com/photo.heic' ) . '&w=1920&q=75';
+
+        $this->assertTrue(
+            $detection->is_image_url( $proxied_url ),
+            'Proxy URLs that reference an image through a nested parameter should be accepted.'
+        );
+    }
+
+    public function test_gallery_html_detection_handles_proxied_images(): void {
+        $original = 'https://example.com/uploads/photo.jpeg';
+        $proxy    = 'https://cdn.example.com/_next/image?url=' . rawurlencode( $original ) . '&w=1600&q=80';
+
+        $html = sprintf(
+            '<div class="wp-block-gallery"><a href="%1$s"><img src="%2$s" alt="Proxy" /></a></div>',
+            esc_url( $original ),
+            esc_url( $proxy )
+        );
+
+        $this->assertTrue(
+            $this->detection()->gallery_html_has_linked_media( $html ),
+            'Gallery detection should treat proxied image URLs as meaningful sources.'
+        );
+    }
+
     private function create_test_attachment(): int {
         $image_data = base64_decode( 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAE/wH+ozH4QwAAAABJRU5ErkJggg==' );
         $this->assertNotFalse( $image_data, 'The fixture image should decode correctly.' );

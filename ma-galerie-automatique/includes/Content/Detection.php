@@ -1070,22 +1070,65 @@ class Detection {
     }
 
     public function is_image_url( $url ): bool {
-        if ( ! is_string( $url ) || '' === $url ) {
+        $allowed_extensions = $this->resolve_allowed_image_extensions();
+
+        return $this->is_image_url_internal( $url, $allowed_extensions, 0 );
+    }
+
+    /**
+     * @param string   $url
+     * @param string[] $allowed_extensions
+     */
+    private function is_image_url_internal( $url, array $allowed_extensions, int $depth ): bool {
+        if ( $depth > 3 ) {
+            return false;
+        }
+
+        if ( ! is_string( $url ) ) {
+            return false;
+        }
+
+        $url = trim( $url );
+
+        if ( '' === $url ) {
             return false;
         }
 
         $parsed_url = wp_parse_url( $url );
 
-        if ( empty( $parsed_url['path'] ) ) {
+        if ( ! is_array( $parsed_url ) ) {
             return false;
         }
 
-        $extension = strtolower( pathinfo( $parsed_url['path'], PATHINFO_EXTENSION ) );
+        $path = isset( $parsed_url['path'] ) ? (string) $parsed_url['path'] : '';
 
-        if ( '' === $extension ) {
+        if ( '' !== $path ) {
+            $extension = strtolower( pathinfo( $path, PATHINFO_EXTENSION ) );
+
+            if ( '' !== $extension && in_array( $extension, $allowed_extensions, true ) ) {
+                return true;
+            }
+        }
+
+        if ( empty( $parsed_url['query'] ) ) {
             return false;
         }
 
+        $query_params = [];
+        wp_parse_str( (string) $parsed_url['query'], $query_params );
+
+        if ( empty( $query_params ) ) {
+            return false;
+        }
+
+        if ( $this->query_params_contain_image_hint( $query_params, $allowed_extensions, $depth ) ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function resolve_allowed_image_extensions(): array {
         $allowed_extensions = [ 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'avif', 'heic', 'heif', 'jxl', 'jpegxl' ];
         $settings           = $this->settings->get_sanitized_settings();
 
@@ -1115,9 +1158,148 @@ class Detection {
         $allowed_extensions = array_filter( $allowed_extensions, static function ( $value ): bool {
             return '' !== trim( strtolower( (string) $value ) );
         } );
-        $allowed_extensions = array_values( array_unique( array_map( 'strtolower', $allowed_extensions ) ) );
 
-        return in_array( $extension, $allowed_extensions, true );
+        return array_values( array_unique( array_map( 'strtolower', $allowed_extensions ) ) );
+    }
+
+    private function query_params_contain_image_hint( array $params, array $allowed_extensions, int $depth ): bool {
+        $params = $this->normalize_query_params( $params );
+
+        if ( empty( $params ) ) {
+            return false;
+        }
+
+        /**
+         * Filters the list of query string keys that hint the requested image format.
+         *
+         * This allows integrations to support custom optimisation services exposing
+         * their target format through non-standard parameter names.
+         *
+         * @since 1.8.2
+         *
+         * @param string[] $extension_keys Default list of query keys.
+         * @param array    $params         Normalised query parameters for the inspected URL.
+         */
+        $extension_keys = apply_filters(
+            'mga_image_url_extension_query_keys',
+            [ 'format', 'fm', 'ext', 'extension', 'type', 'mime', 'mimetype', 'contenttype' ],
+            $params
+        );
+
+        foreach ( $extension_keys as $key ) {
+            if ( ! is_string( $key ) || ! array_key_exists( $key, $params ) ) {
+                continue;
+            }
+
+            $values = $this->flatten_query_param_values( $params[ $key ] );
+
+            foreach ( $values as $value ) {
+                $candidate_extension = $this->normalize_extension_hint( $value );
+
+                if ( '' !== $candidate_extension && in_array( $candidate_extension, $allowed_extensions, true ) ) {
+                    return true;
+                }
+            }
+        }
+
+        /**
+         * Filters the list of query string keys that may contain nested image URLs.
+         *
+         * @since 1.8.2
+         *
+         * @param string[] $nested_url_keys Default list of query keys to inspect.
+         * @param array    $params          Normalised query parameters for the inspected URL.
+         */
+        $nested_url_keys = apply_filters(
+            'mga_image_url_nested_query_keys',
+            [ 'url', 'u', 'img', 'image', 'src', 'href', 'file' ],
+            $params
+        );
+
+        foreach ( $nested_url_keys as $key ) {
+            if ( ! is_string( $key ) || ! array_key_exists( $key, $params ) ) {
+                continue;
+            }
+
+            $values = $this->flatten_query_param_values( $params[ $key ] );
+
+            foreach ( $values as $value ) {
+                $value = rawurldecode( $value );
+
+                if ( $this->is_image_url_internal( $value, $allowed_extensions, $depth + 1 ) ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function normalize_query_params( array $params ): array {
+        $normalized = [];
+
+        foreach ( $params as $key => $value ) {
+            if ( is_string( $key ) ) {
+                $normalized[ strtolower( $key ) ] = $value;
+            }
+        }
+
+        return $normalized;
+    }
+
+    private function flatten_query_param_values( $value ): array {
+        if ( is_scalar( $value ) ) {
+            $string_value = (string) $value;
+
+            return '' === $string_value ? [] : [ $string_value ];
+        }
+
+        if ( is_array( $value ) ) {
+            $flattened = [];
+
+            array_walk_recursive(
+                $value,
+                static function ( $inner ) use ( &$flattened ): void {
+                    if ( is_scalar( $inner ) ) {
+                        $string_inner = (string) $inner;
+
+                        if ( '' !== $string_inner ) {
+                            $flattened[] = $string_inner;
+                        }
+                    }
+                }
+            );
+
+            return $flattened;
+        }
+
+        return [];
+    }
+
+    private function normalize_extension_hint( string $value ): string {
+        $value = strtolower( trim( $value ) );
+
+        if ( '' === $value ) {
+            return '';
+        }
+
+        $semicolon_position = strpos( $value, ';' );
+
+        if ( false !== $semicolon_position ) {
+            $value = trim( (string) substr( $value, 0, $semicolon_position ) );
+        }
+
+        $value = preg_replace( '#^image/#', '', $value );
+
+        $plus_position = strpos( $value, '+' );
+
+        if ( false !== $plus_position ) {
+            $value = substr( $value, 0, $plus_position );
+        }
+
+        $value = preg_replace( '/[^a-z0-9]/', '', $value );
+
+        return $value;
     }
 
     public function is_attachment_permalink( $url ): bool {
