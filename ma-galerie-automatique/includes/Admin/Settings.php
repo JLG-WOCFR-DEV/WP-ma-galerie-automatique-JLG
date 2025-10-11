@@ -6,6 +6,7 @@ use MaGalerieAutomatique\Plugin;
 use WP_Post;
 
 class Settings {
+
     private Plugin $plugin;
 
     private array $sanitized_settings_cache = [];
@@ -522,6 +523,24 @@ class Settings {
         }
     }
 
+    public function get_trigger_scenarios(): array {
+        $default_label = __( 'Images liées ou pièces jointes', 'lightbox-jlg' );
+
+        return apply_filters(
+            'mga_trigger_scenarios',
+            [
+                'linked-media'      => [
+                    'label'       => $default_label,
+                    'description' => __( 'Déclenche la visionneuse dès qu’une image renvoie vers un média existant (fichier ou page de pièce jointe).', 'lightbox-jlg' ),
+                ],
+                'self-linked-media' => [
+                    'label'       => __( 'Images liées à leur fichier média', 'lightbox-jlg' ),
+                    'description' => __( 'N’intègre que les images dont le lien pointe directement vers leur propre fichier (option « Lien vers le fichier média »).', 'lightbox-jlg' ),
+                ],
+            ]
+        );
+    }
+
     private function get_settings_baseline(): array {
         return [
             'delay'              => 4,
@@ -556,6 +575,7 @@ class Settings {
             'load_on_archives'   => false,
             'include_svg'        => true,
             'tracked_post_types' => [ 'post', 'page' ],
+            'trigger_scenario'   => 'linked-media',
         ];
     }
 
@@ -697,6 +717,29 @@ class Settings {
 
         foreach ( $general_toggle_keys as $checkbox_key ) {
             $output[ $checkbox_key ] = $resolve_checkbox_value( $checkbox_key );
+        }
+
+        $trigger_scenarios       = array_keys( $this->get_trigger_scenarios() );
+        $default_trigger_scenario = $defaults['trigger_scenario'] ?? 'linked-media';
+
+        $resolve_trigger_scenario = static function ( $value ) use ( $trigger_scenarios, $default_trigger_scenario ) {
+            if ( ! is_string( $value ) ) {
+                return $default_trigger_scenario;
+            }
+
+            $candidate = strtolower( trim( $value ) );
+
+            return in_array( $candidate, $trigger_scenarios, true )
+                ? $candidate
+                : $default_trigger_scenario;
+        };
+
+        if ( array_key_exists( 'trigger_scenario', $input ) ) {
+            $output['trigger_scenario'] = $resolve_trigger_scenario( $input['trigger_scenario'] );
+        } elseif ( isset( $existing_settings['trigger_scenario'] ) ) {
+            $output['trigger_scenario'] = $resolve_trigger_scenario( $existing_settings['trigger_scenario'] );
+        } else {
+            $output['trigger_scenario'] = $default_trigger_scenario;
         }
 
         $sanitize_group_attribute = static function ( $value ) use ( $defaults ) {

@@ -159,6 +159,72 @@ class DetectionHtmlParsingTest extends WP_UnitTestCase {
         }
     }
 
+    public function test_self_linked_trigger_requires_direct_file_links(): void {
+        $attachment_id = $this->create_test_attachment();
+
+        $attachment_link = get_attachment_link( $attachment_id );
+        $file_url        = wp_get_attachment_url( $attachment_id );
+        $thumbnail_url   = wp_get_attachment_image_url( $attachment_id, 'thumbnail' );
+
+        $this->assertNotEmpty( $attachment_link );
+        $this->assertNotEmpty( $file_url );
+        $this->assertNotEmpty( $thumbnail_url );
+
+        $attachment_post_id = self::factory()->post->create(
+            [
+                'post_content' => sprintf(
+                    '<figure class="wp-block-image"><a href="%s"><img src="%s" alt="Attachment" /></a></figure>',
+                    esc_url( $attachment_link ),
+                    esc_url( $thumbnail_url )
+                ),
+            ]
+        );
+
+        $file_post_id = self::factory()->post->create(
+            [
+                'post_content' => sprintf(
+                    '<figure class="wp-block-image"><a href="%s"><img src="%s" alt="File" /></a></figure>',
+                    esc_url( $file_url ),
+                    esc_url( $thumbnail_url )
+                ),
+            ]
+        );
+
+        $settings = mga_get_default_settings();
+        $settings['trigger_scenario'] = 'self-linked-media';
+        update_option( 'mga_settings', $settings );
+
+        $plugin = mga_plugin();
+        $this->assertInstanceOf( \MaGalerieAutomatique\Plugin::class, $plugin );
+        $plugin->settings()->invalidate_settings_cache();
+
+        $attachment_post = get_post( $attachment_post_id );
+        $file_post       = get_post( $file_post_id );
+
+        $this->assertInstanceOf( WP_Post::class, $attachment_post );
+        $this->assertInstanceOf( WP_Post::class, $file_post );
+
+        $this->assertFalse(
+            $this->detection()->detect_post_linked_images( $attachment_post ),
+            'Attachment page links should be ignored when the trigger scenario is limited to self-linked images.'
+        );
+
+        $this->assertTrue(
+            $this->detection()->detect_post_linked_images( $file_post ),
+            'Direct media file links should be detected when the self-linked trigger scenario is enabled.'
+        );
+
+        $this->assertFalse(
+            $this->detection()->post_has_eligible_images( $attachment_post ),
+            'Legacy gallery detection should align with the self-linked trigger scenario for attachment links.'
+        );
+
+        $this->assertTrue(
+            $this->detection()->post_has_eligible_images( $file_post ),
+            'Legacy gallery detection should still recognise direct media file links.'
+        );
+    }
+
     public function test_gallery_html_ignores_images_without_sources(): void {
         $html = '<div class="wp-block-gallery"><a href="https://example.com/full.jpg"><img alt="Empty" /></a></div>';
 

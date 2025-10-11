@@ -130,6 +130,85 @@ describe('resolveLinkGroupId rel token filtering', () => {
     });
 });
 
+describe('trigger scenario filtering', () => {
+    let helpers;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = '<main></main>';
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        global.Swiper = function() {};
+    });
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        document.body.innerHTML = '';
+    });
+
+    const createLinkWithImage = (href, imgConfig = {}) => {
+        const link = document.createElement('a');
+        link.setAttribute('href', href);
+        const img = document.createElement('img');
+
+        Object.entries(imgConfig).forEach(([key, value]) => {
+            if (key === 'dataset') {
+                Object.entries(value).forEach(([datasetKey, datasetValue]) => {
+                    img.dataset[datasetKey] = datasetValue;
+                });
+                return;
+            }
+
+            img.setAttribute(key, value);
+        });
+
+        link.appendChild(img);
+        return { link, img };
+    };
+
+    it('accepts direct file links matching image sources', () => {
+        window.mga_settings = { trigger_scenario: 'self-linked-media', include_svg: true };
+        ({ helpers } = require('../../ma-galerie-automatique/assets/js/gallery-slideshow'));
+
+        const imageUrl = 'https://example.com/uploads/photo.jpg';
+        const { link } = createLinkWithImage(imageUrl, {
+            src: 'https://example.com/uploads/photo-300x200.jpg',
+            dataset: { fullUrl: imageUrl },
+        });
+
+        expect(helpers.linkMatchesTriggerScenario(link)).toBe(true);
+    });
+
+    it('rejects attachment page links when self-linked scenario is active', () => {
+        window.mga_settings = { trigger_scenario: 'self-linked-media', include_svg: true };
+        ({ helpers } = require('../../ma-galerie-automatique/assets/js/gallery-slideshow'));
+
+        const { link } = createLinkWithImage('https://example.com/?attachment_id=42', {
+            src: 'https://example.com/uploads/photo-300x200.jpg',
+            dataset: { fullUrl: 'https://example.com/uploads/photo.jpg' },
+        });
+
+        expect(helpers.linkMatchesTriggerScenario(link)).toBe(false);
+    });
+
+    it('falls back to permissive behaviour for the default trigger scenario', () => {
+        window.mga_settings = { trigger_scenario: 'linked-media', include_svg: true };
+        ({ helpers } = require('../../ma-galerie-automatique/assets/js/gallery-slideshow'));
+
+        const { link } = createLinkWithImage('https://example.com/elsewhere.jpg', {
+            src: 'https://example.com/uploads/photo-300x200.jpg',
+        });
+
+        expect(helpers.linkMatchesTriggerScenario(link)).toBe(true);
+    });
+});
+
 function createSwiperMockFactory() {
     const instances = {
         main: null,

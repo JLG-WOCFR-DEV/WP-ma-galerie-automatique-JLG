@@ -17,6 +17,7 @@ class Plugin {
         'allowBodyFallback',
         'include_svg',
         'groupAttribute',
+        'trigger_scenario',
     ];
     private string $plugin_file;
 
@@ -409,6 +410,17 @@ class Plugin {
                 }
 
                 return strtolower( trim( $value ) );
+            case 'trigger_scenario':
+                $candidate = is_string( $value ) ? sanitize_key( $value ) : '';
+
+                $allowed = array_keys( $this->settings->get_trigger_scenarios() );
+
+                if ( ! in_array( $candidate, $allowed, true ) ) {
+                    $defaults  = $this->settings->get_default_settings();
+                    $candidate = isset( $defaults['trigger_scenario'] ) ? sanitize_key( (string) $defaults['trigger_scenario'] ) : 'linked-media';
+                }
+
+                return $candidate ?: 'linked-media';
             default:
                 return $value;
         }
