@@ -2,6 +2,7 @@ import {
     createSprintf,
     createTranslate,
     createIconSvg,
+    createSvgElement as sharedCreateSvgElement,
     ensureSwiper,
     getSharedI18n,
     sanitizeIconKey,
@@ -52,17 +53,11 @@ import {
     };
 
     const createSvgElement = (tag, attributes = {}) => {
-        if (!document || typeof document.createElementNS !== 'function') {
+        if (typeof document === 'undefined') {
             return null;
         }
 
-        const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
-
-        Object.keys(attributes || {}).forEach((attribute) => {
-            element.setAttribute(attribute, attributes[attribute]);
-        });
-
-        return element;
+        return sharedCreateSvgElement(document, tag, attributes);
     };
 
     function normalizeShareChannels(rawChannels) {
@@ -335,6 +330,7 @@ import {
             return Boolean(value);
         };
 
+        const debugEnabled = normalizeFlag(settings.debug_mode, false);
         const includeSvg = normalizeFlag(settings.include_svg, true);
         const baseImagePattern = 'jpe?g|png|gif|bmp|webp|avif';
         const imagePatternSource = includeSvg ? `${baseImagePattern}|svg` : baseImagePattern;
@@ -349,18 +345,39 @@ import {
             triggerScenario = TRIGGER_SCENARIO_LINKED_MEDIA;
         }
         const isSvgLikeUrl = (url) => typeof url === 'string' && /\.svg(?:\?.*)?(?:#.*)?$/i.test(url);
-        const debug = window.mgaDebug || {
-            enabled: false,
-            init: noop,
-            log: noop,
-            updateInfo: noop,
-            updateVisibleSlides: noop,
-            onForceOpen: noop,
-            stopTimer: noop,
-            restartTimer: noop,
-            table: noop,
-            shareAction: noop,
-        };
+        const rawDebug = (typeof window !== 'undefined'
+            && window.mgaDebug
+            && typeof window.mgaDebug === 'object')
+            ? window.mgaDebug
+            : null;
+
+        if (rawDebug) {
+            rawDebug.enabled = debugEnabled === true;
+
+            if (!rawDebug.enabled && typeof rawDebug.destroy === 'function') {
+                rawDebug.destroy({ reason: 'settings-disabled' });
+            }
+
+            if (!rawDebug.enabled && typeof rawDebug.log === 'function') {
+                rawDebug.log(mga__( 'Mode diagnostic désactivé dans les réglages.', 'lightbox-jlg' ));
+            }
+        }
+
+        const debug = rawDebug && rawDebug.enabled
+            ? rawDebug
+            : {
+                enabled: false,
+                init: noop,
+                log: noop,
+                updateInfo: noop,
+                updateVisibleSlides: noop,
+                onForceOpen: noop,
+                stopTimer: noop,
+                restartTimer: noop,
+                table: noop,
+                shareAction: noop,
+                destroy: noop,
+            };
         const buildComparisonTokens = (value) => {
             const sanitized = sanitizeHighResUrl(value);
             if (!sanitized) {
@@ -665,7 +682,13 @@ import {
             isTemporaryMessageActive: false,
         };
 
-        debug.init();
+        if (debug.enabled && typeof debug.init === 'function') {
+            debug.init();
+
+            if (typeof debug.log === 'function') {
+                debug.log(mga__( 'Mode diagnostic activé.', 'lightbox-jlg' ));
+            }
+        }
 
         const shareToolbarHandlerConfig = {
             selector: '#mga-share',

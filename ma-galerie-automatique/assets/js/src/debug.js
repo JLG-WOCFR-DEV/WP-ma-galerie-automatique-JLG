@@ -184,6 +184,30 @@ import { createSprintf, createTranslate, resolveI18n } from './shared';
         }
     }
 
+    function destroy(options = {}) {
+        const reason = typeof options === 'string'
+            ? options
+            : (options && typeof options.reason === 'string' ? options.reason : 'manual');
+
+        stopTimer();
+
+        if (state.panel && state.panel.parentNode) {
+            state.panel.parentNode.removeChild(state.panel);
+        }
+
+        state.panel = null;
+        state.logContainer = null;
+        state.forceOpenAttached = false;
+        state.active = false;
+
+        if (typeof console !== 'undefined' && typeof console.info === 'function') {
+            const label = reason && typeof reason === 'string' && reason.trim()
+                ? reason.trim()
+                : 'manual';
+            console.info(mgaSprintf(mga__( 'Debug MGA désactivé (%s).', 'lightbox-jlg' ), label));
+        }
+    }
+
     function init() {
         if (!state.active) {
             createPanel();
@@ -302,5 +326,6 @@ import { createSprintf, createTranslate, resolveI18n } from './shared';
         restartTimer,
         table,
         shareAction,
+        destroy,
     };
 })(window);
