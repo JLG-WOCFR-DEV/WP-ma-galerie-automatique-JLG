@@ -1484,16 +1484,143 @@ class Detection {
                 continue;
             }
 
-            if ( $picture->getElementsByTagName( 'img' )->length > 0 ) {
-                return true;
-            }
-
-            if ( $picture->getElementsByTagName( 'source' )->length > 0 ) {
+            if ( $this->dom_picture_node_contains_media( $picture ) ) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private function dom_picture_node_contains_media( DOMElement $picture ): bool {
+        foreach ( $picture->getElementsByTagName( 'img' ) as $image ) {
+            if ( $image instanceof DOMElement && $this->dom_image_node_is_meaningful( $image ) ) {
+                return true;
+            }
+        }
+
+        foreach ( $picture->getElementsByTagName( 'source' ) as $source ) {
+            if ( ! $source instanceof DOMElement ) {
+                continue;
+            }
+
+            if ( $this->dom_source_node_is_meaningful( $source ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function dom_source_node_is_meaningful( DOMElement $source ): bool {
+        $type_attribute = '';
+
+        if ( $source->hasAttribute( 'type' ) ) {
+            $type_attribute = trim( (string) $source->getAttribute( 'type' ) );
+        }
+
+        if ( '' !== $type_attribute && 0 !== stripos( $type_attribute, 'image/' ) ) {
+            return false;
+        }
+
+        $default_attributes = [ 'srcset', 'data-srcset', 'src', 'data-src' ];
+
+        /**
+         * Filters the list of attributes inspected to determine whether a <source>
+         * node inside a <picture> element exposes a meaningful image candidate.
+         *
+         * @since 1.8.1
+         *
+         * @param string[]   $attributes Default list of attribute names.
+         * @param DOMElement $source     Current DOM source node being evaluated.
+         */
+        $attributes_to_check = apply_filters( 'mga_picture_source_attributes', $default_attributes, $source );
+
+        if ( ! is_array( $attributes_to_check ) ) {
+            $attributes_to_check = $default_attributes;
+        } else {
+            $attributes_to_check = array_values(
+                array_unique(
+                    array_filter(
+                        array_map(
+                            static function ( $attribute ): string {
+                                return is_string( $attribute ) ? trim( $attribute ) : '';
+                            },
+                            $attributes_to_check
+                        ),
+                        static function ( string $attribute ): bool {
+                            return '' !== $attribute;
+                        }
+                    )
+                )
+            );
+
+            if ( empty( $attributes_to_check ) ) {
+                $attributes_to_check = $default_attributes;
+            }
+        }
+
+        foreach ( $attributes_to_check as $attribute ) {
+            if ( ! $source->hasAttribute( $attribute ) ) {
+                continue;
+            }
+
+            $raw_value = (string) $source->getAttribute( $attribute );
+            $value     = trim( $raw_value );
+
+            if ( '' === $value ) {
+                continue;
+            }
+
+            if ( in_array( $attribute, [ 'srcset', 'data-srcset' ], true ) ) {
+                $candidates = preg_split( '/\s*,\s*/', $value );
+
+                if ( ! is_array( $candidates ) ) {
+                    continue;
+                }
+
+                foreach ( $candidates as $candidate ) {
+                    $candidate_url = trim( (string) $candidate );
+
+                    if ( '' === $candidate_url ) {
+                        continue;
+                    }
+
+                    $parts                 = preg_split( '/\s+/', $candidate_url );
+                    $url_without_descriptor = is_array( $parts ) ? trim( (string) ( $parts[0] ?? '' ) ) : '';
+
+                    if ( '' === $url_without_descriptor ) {
+                        continue;
+                    }
+
+                    if ( $this->image_source_candidate_is_valid( $url_without_descriptor ) ) {
+                        return true;
+                    }
+                }
+
+                continue;
+            }
+
+            if ( $this->image_source_candidate_is_valid( $value ) ) {
+                return true;
+            }
+        }
+
+        /**
+         * Filters the final evaluation of a <source> node when no usable source has
+         * been detected.
+         *
+         * Returning true here allows custom integrations to mark a node as
+         * meaningful even if none of the inspected attributes matched the default
+         * heuristics.
+         *
+         * @since 1.8.1
+         *
+         * @param bool       $is_meaningful Whether the node should be treated as meaningful.
+         * @param DOMElement $source        Current DOM source node being evaluated.
+         * @param string[]   $attributes    List of attributes that were inspected.
+         */
+        return (bool) apply_filters( 'mga_is_picture_source_meaningful', false, $source, $attributes_to_check );
     }
 
     private function dom_image_node_is_meaningful( DOMElement $image ): bool {
