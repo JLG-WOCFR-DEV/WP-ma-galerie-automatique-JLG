@@ -71,6 +71,42 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
         );
     }
 
+    public function test_enqueue_adds_resource_hints_for_cdn_swiper_assets(): void {
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<!-- wp:paragraph --><p>Content</p><!-- /wp:paragraph -->',
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        update_option(
+            'mga_swiper_asset_sources',
+            [
+                'css'        => 'cdn',
+                'js'         => 'cdn',
+                'checked_at' => time(),
+            ]
+        );
+
+        $this->assets()->enqueue_assets();
+
+        $preconnect = apply_filters( 'wp_resource_hints', [], 'preconnect' );
+        $dns        = apply_filters( 'wp_resource_hints', [], 'dns-prefetch' );
+
+        $this->assertContains(
+            'https://cdn.jsdelivr.net',
+            $preconnect,
+            'CDN-hosted Swiper assets should register a preconnect hint to improve first paint.'
+        );
+
+        $this->assertContains(
+            '//cdn.jsdelivr.net',
+            $dns,
+            'CDN-hosted Swiper assets should register a DNS prefetch hint.'
+        );
+    }
+
     /**
      * Ensures SRI metadata is omitted when a custom URL is injected via filters.
      */
@@ -120,6 +156,61 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
         $this->assertFalse(
             wp_scripts()->get_data( 'mga-swiper-js', 'crossorigin' ),
             'The Swiper JS handle should not declare crossorigin metadata when a custom URL is injected.'
+        );
+    }
+
+    public function test_share_module_enqueues_share_styles_conditionally(): void {
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+            ]
+        );
+
+        $permalink = get_permalink( $post_id );
+
+        $this->go_to( $permalink );
+
+        update_option(
+            'mga_settings',
+            [
+                'show_share'     => false,
+                'share_copy'     => false,
+                'share_download' => false,
+                'share_channels' => [],
+            ]
+        );
+
+        $plugin = mga_plugin();
+
+        if ( $plugin instanceof \MaGalerieAutomatique\Plugin ) {
+            $plugin->settings()->invalidate_settings_cache();
+        }
+
+        $this->assets()->enqueue_assets();
+
+        $this->assertFalse(
+            wp_style_is( 'mga-gallery-share-style', 'enqueued' ),
+            'Share stylesheet should remain unloaded when all share features are disabled.'
+        );
+
+        wp_styles()->reset();
+        wp_scripts()->reset();
+        wp_styles();
+        wp_scripts();
+
+        delete_option( 'mga_settings' );
+
+        if ( $plugin instanceof \MaGalerieAutomatique\Plugin ) {
+            $plugin->settings()->invalidate_settings_cache();
+        }
+
+        $this->go_to( $permalink );
+
+        $this->assets()->enqueue_assets();
+
+        $this->assertTrue(
+            wp_style_is( 'mga-gallery-share-style', 'enqueued' ),
+            'Share stylesheet should load automatically when share controls are enabled.'
         );
     }
 

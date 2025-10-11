@@ -1,0 +1,198 @@
+.mga-toolbar-button .mga-share-icon { width: 20px; height: 20px; }
+
+.mga-share-modal {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 60;
+}
+
+.mga-share-modal.is-visible {
+    display: flex;
+}
+
+.mga-share-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.mga-share-modal__dialog {
+    position: relative;
+    z-index: 1;
+    width: min(420px, 100%);
+    padding: 22px 24px;
+    border-radius: 14px;
+    background: rgba(20, 20, 20, 0.96);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.mga-share-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mga-share-modal__title {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 600;
+}
+
+.mga-share-modal__close {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.7rem;
+    line-height: 1;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mga-share-modal__close:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.mga-share-modal__close:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--mga-accent-color, #fff), 0 0 0 5px rgba(0, 0, 0, 0.65);
+}
+
+.mga-share-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.mga-share-modal__description {
+    margin: 0;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.mga-share-modal__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mga-share-modal__item {
+    margin: 0;
+}
+
+.mga-share-option {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: inherit;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.mga-share-option__content {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.mga-share-option__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: inherit;
+}
+
+.mga-share-option__icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.mga-share-option__label {
+    font-weight: 600;
+    text-align: left;
+    flex: 1;
+    min-width: 0;
+}
+
+.mga-share-option__chevron {
+    font-size: 1.4rem;
+    line-height: 1;
+    opacity: 0.7;
+}
+
+.mga-share-option:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+}
+
+.mga-share-option:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--mga-accent-color, #fff), 0 0 0 5px rgba(0, 0, 0, 0.55);
+}
+
+.mga-share-modal__feedback {
+    margin: 0;
+    min-height: 1em;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.mga-share-modal__feedback[data-mga-state='success'] {
+    color: #9ae6b4;
+}
+
+.mga-share-modal__feedback[data-mga-state='error'] {
+    color: #fca5a5;
+}
+
+.mga-share-modal__feedback[data-mga-state='info'] {
+    color: #c3ddff;
+}
+
+@media (max-width: 600px) {
+    .mga-share-modal__dialog {
+        width: min(100%, 320px);
+        padding: 18px 16px;
+        gap: 14px;
+    }
+
+    .mga-share-modal__title {
+        font-size: 1.2rem;
+    }
+
+    .mga-share-option {
+        font-size: 0.95rem;
+        padding: 11px 14px;
+    }
+}

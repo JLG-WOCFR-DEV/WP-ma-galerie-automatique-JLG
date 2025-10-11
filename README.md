@@ -59,8 +59,9 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 
 ### Internationalisation et assets
 - **Traductions** : le chargement du domaine de traduction tente d’abord la méthode WordPress standard, puis retombe sur un fichier `.mo` encodé en base64 lorsque le dossier `languages` est indisponible.【F:ma-galerie-automatique/includes/Translation/Manager.php†L9-L76】
-- **Gestion des dépendances** : Swiper (CSS/JS) est servi en local ou via CDN selon disponibilité, avec gestion conditionnelle des attributs SRI et d’un rafraîchissement automatique après mise à jour du plugin.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L23-L177】
-- **Variables dynamiques** : la taille des miniatures, la couleur d’accent et l’opacité du fond sont injectées via CSS personnalisé pour s’aligner sur les réglages actifs.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L161-L177】
+- **Gestion des dépendances** : Swiper (CSS/JS) est servi en local ou via CDN selon disponibilité, avec gestion conditionnelle des attributs SRI et d’un rafraîchissement automatique après mise à jour du plugin.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L26-L205】
+- **Chargement modulaire des assets** : la visionneuse enregistre désormais chaque module (coeur, partage, debug) via `wp_register_*`, ajoute automatiquement des `preconnect`/`dns-prefetch` vers le CDN Swiper et n’enfile la feuille `gallery-share.css` que lorsque le partage est actif. Le filtre `mga_frontend_asset_modules` permet d’ajuster les bundles chargés selon le contexte ou un thème enfant.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L35-L433】【F:ma-galerie-automatique/assets/css/gallery-share.css†L1-L98】
+- **Variables dynamiques** : la taille des miniatures, la couleur d’accent et l’opacité du fond sont injectées via CSS personnalisé pour s’aligner sur les réglages actifs.【F:ma-galerie-automatique/includes/Frontend/Assets.php†L220-L304】
 
 ### Internationalisation renforcée et instrumentation des assets
 - **Cache persistant des traductions** : un gestionnaire dédié décode les `.mo` encodés en base64 dans un cache uploads (`wp-content/uploads/mga-translations/`) et réutilise les fichiers tant que le hash source reste identique, ce qui limite les lectures disque à chaque requête.【F:ma-galerie-automatique/includes/Translation/Manager.php†L9-L108】
