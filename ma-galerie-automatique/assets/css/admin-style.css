@@ -4,6 +4,17 @@
  * des rayons généreux afin d’obtenir une hiérarchie visuelle claire.
  */
 
+.wrap.mga-admin-wrap {
+    max-width: min(1280px, calc(100% - 40px));
+    margin-right: 20px;
+}
+
+@media (min-width: 1400px) {
+    .wrap.mga-admin-wrap {
+        max-width: min(1440px, calc(100% - 64px));
+    }
+}
+
 .mga-admin-wrap {
     --mga-admin-page: #f6f7f7;
     --mga-admin-surface: #ffffff;
@@ -170,8 +181,8 @@
 
 .mga-settings-layout {
     display: grid;
-    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-    gap: 32px;
+    grid-template-columns: clamp(240px, 26%, 320px) minmax(0, 1fr);
+    gap: 36px;
 }
 
 .mga-settings-layout__sidebar {

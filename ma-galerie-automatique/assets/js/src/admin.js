@@ -61,6 +61,659 @@ import {
         return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
     };
 
+    const normalizeHexColor = (value) => {
+        if (!isValidHexColor(value)) {
+            return '';
+        }
+
+        const trimmed = value.trim();
+
+        if (trimmed.length === 4) {
+            const r = trimmed[1];
+            const g = trimmed[2];
+            const b = trimmed[3];
+            return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+        }
+
+        return trimmed.toLowerCase();
+    };
+
+    const hexToRgb = (hex) => {
+        const normalized = normalizeHexColor(hex);
+
+        if (!normalized) {
+            return null;
+        }
+
+        const value = normalized.slice(1);
+        const red = parseInt(value.slice(0, 2), 16);
+        const green = parseInt(value.slice(2, 4), 16);
+        const blue = parseInt(value.slice(4, 6), 16);
+
+        if ([red, green, blue].some((component) => Number.isNaN(component))) {
+            return null;
+        }
+
+        return { red, green, blue };
+    };
+
+    const relativeLuminance = (hex) => {
+        const rgb = hexToRgb(hex);
+
+        if (!rgb) {
+            return null;
+        }
+
+        const transform = (channel) => {
+            const value = channel / 255;
+            return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        };
+
+        const r = transform(rgb.red);
+        const g = transform(rgb.green);
+        const b = transform(rgb.blue);
+
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+
+    const computeContrastRatio = (foreground, background) => {
+        const fgLuminance = relativeLuminance(foreground);
+        const bgLuminance = relativeLuminance(background);
+
+        if (fgLuminance === null || bgLuminance === null) {
+            return null;
+        }
+
+        const [lighter, darker] = fgLuminance > bgLuminance
+            ? [fgLuminance, bgLuminance]
+            : [bgLuminance, fgLuminance];
+
+        const ratio = (lighter + 0.05) / (darker + 0.05);
+
+        return Number.isFinite(ratio) ? ratio : null;
+    };
+
+    const formatRatioText = (ratio) => {
+        if (!Number.isFinite(ratio)) {
+            return '—';
+        }
+
+        return `${ratio.toFixed(2)}:1`;
+    };
+
+    const createContrastInspector = () => {
+        const inspector = doc.querySelector('[data-mga-contrast-inspector]');
+
+        if (!inspector) {
+            return null;
+        }
+
+        const rowNodes = {
+            light: {
+                swatch: inspector.querySelector('[data-mga-contrast-swatch="light"]'),
+                value: inspector.querySelector('[data-mga-contrast-value="light"]'),
+            },
+            dark: {
+                swatch: inspector.querySelector('[data-mga-contrast-swatch="dark"]'),
+                value: inspector.querySelector('[data-mga-contrast-value="dark"]'),
+            },
+        };
+
+        const messageNode = inspector.querySelector('[data-mga-contrast-message]');
+        const contexts = [
+            { key: 'light', label: mgaAdmin__('Fond clair', 'lightbox-jlg'), background: '#ffffff' },
+            { key: 'dark', label: mgaAdmin__('Fond sombre', 'lightbox-jlg'), background: '#111827' },
+        ];
+
+        let audit = { entries: [] };
+
+        const resolveAccentFallback = () => {
+            const accentInput = doc.getElementById('mga_accent_color');
+
+            if (!accentInput) {
+                return '#6366f1';
+            }
+
+            const defaultAttr = accentInput.getAttribute('data-default-color');
+            const normalizedDefault = normalizeHexColor(defaultAttr);
+
+            if (normalizedDefault) {
+                return normalizedDefault;
+            }
+
+            return '#6366f1';
+        };
+
+        const getSeverityFromRatio = (ratio) => {
+            if (!Number.isFinite(ratio)) {
+                return 'error';
+            }
+
+            if (ratio >= 4.5) {
+                return 'success';
+            }
+
+            if (ratio >= 3) {
+                return 'warning';
+            }
+
+            return 'error';
+        };
+
+        const formatSeverityMessage = (entry) => {
+            if (!entry) {
+                return '';
+            }
+
+            if (entry.severity === 'success') {
+                return mgaAdminSprintf(
+                    mgaAdmin__('Contraste validé sur %1$s (%2$s).', 'lightbox-jlg'),
+                    entry.label,
+                    entry.ratioText
+                );
+            }
+
+            if (entry.severity === 'warning') {
+                return mgaAdminSprintf(
+                    mgaAdmin__('Contraste limite sur %1$s (%2$s). Renforcez légèrement pour atteindre 4,5:1.', 'lightbox-jlg'),
+                    entry.label,
+                    entry.ratioText
+                );
+            }
+
+            return mgaAdminSprintf(
+                mgaAdmin__('Contraste insuffisant sur %1$s (%2$s). Ajustez la couleur ou le fond.', 'lightbox-jlg'),
+                entry.label,
+                entry.ratioText
+            );
+        };
+
+        const update = (rawAccent) => {
+            const normalizedAccent = normalizeHexColor(rawAccent);
+            const accentColor = normalizedAccent || resolveAccentFallback();
+
+            if (!accentColor) {
+                inspector.setAttribute('hidden', 'hidden');
+                inspector.removeAttribute('data-mga-severity');
+                audit = { entries: [] };
+
+                if (messageNode) {
+                    messageNode.textContent = '';
+                }
+
+                Object.values(rowNodes).forEach((row) => {
+                    if (row.value) {
+                        row.value.textContent = '—';
+                    }
+                    if (row.swatch) {
+                        row.swatch.style.removeProperty('--mga-contrast-foreground');
+                        row.swatch.style.removeProperty('--mga-contrast-background');
+                    }
+                });
+
+            } else {
+                inspector.removeAttribute('hidden');
+
+                const entries = contexts.map((context) => {
+                    const ratio = computeContrastRatio(accentColor, context.background);
+                    const ratioText = formatRatioText(ratio);
+                    const severity = getSeverityFromRatio(ratio);
+
+                    const row = rowNodes[context.key];
+
+                    if (row) {
+                        if (row.value) {
+                            row.value.textContent = ratioText;
+                        }
+
+                        if (row.swatch) {
+                            row.swatch.style.setProperty('--mga-contrast-foreground', accentColor);
+                            row.swatch.style.setProperty('--mga-contrast-background', context.background);
+                        }
+                    }
+
+                    return {
+                        key: context.key,
+                        label: context.label,
+                        ratio: ratio || 0,
+                        ratioText,
+                        severity,
+                    };
+                });
+
+                audit = { entries };
+
+                const worstEntry = entries.reduce((worst, entry) => {
+                    if (!worst) {
+                        return entry;
+                    }
+
+                    if (!Number.isFinite(entry.ratio)) {
+                        return entry;
+                    }
+
+                    if (!Number.isFinite(worst.ratio)) {
+                        return entry;
+                    }
+
+                    return entry.ratio < worst.ratio ? entry : worst;
+                }, null);
+
+                const severity = worstEntry ? worstEntry.severity : 'success';
+
+                inspector.setAttribute('data-mga-severity', severity);
+
+                if (messageNode) {
+                    messageNode.textContent = formatSeverityMessage(worstEntry);
+                }
+            }
+
+            return audit;
+        };
+
+        update();
+
+        return {
+            update,
+            readAudit() {
+                return audit;
+            },
+        };
+    };
+
+    const createPresetDiffTracker = (defaults = {}) => {
+        if (!doc) {
+            return null;
+        }
+
+        const formatMissing = () => '—';
+
+        const formatNumber = (value) => {
+            if (!Number.isFinite(value)) {
+                return formatMissing();
+            }
+
+            return String(value);
+        };
+
+        const formatSeconds = (value) => {
+            if (!Number.isFinite(value)) {
+                return formatMissing();
+            }
+
+            const rounded = Math.round(value * 10) / 10;
+            const display = Math.abs(rounded - Math.round(rounded)) < 0.01
+                ? String(Math.round(rounded))
+                : rounded.toFixed(1);
+
+            return mgaAdminSprintf(mgaAdmin__('%1$s s', 'lightbox-jlg'), display);
+        };
+
+        const formatMilliseconds = (value) => {
+            if (!Number.isFinite(value)) {
+                return formatMissing();
+            }
+
+            return mgaAdminSprintf(mgaAdmin__('%1$s ms', 'lightbox-jlg'), formatNumber(value));
+        };
+
+        const formatPixels = (value) => {
+            if (!Number.isFinite(value)) {
+                return formatMissing();
+            }
+
+            return mgaAdminSprintf(mgaAdmin__('%1$s px', 'lightbox-jlg'), formatNumber(value));
+        };
+
+        const formatOpacity = (value) => {
+            if (!Number.isFinite(value)) {
+                return formatMissing();
+            }
+
+            const rounded = Math.round(value * 100) / 100;
+            return String(rounded).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+        };
+
+        const formatBoolean = (value) => (value
+            ? mgaAdmin__('Activé', 'lightbox-jlg')
+            : mgaAdmin__('Désactivé', 'lightbox-jlg'));
+
+        const getSelectLabel = (controlId, value, fallback = '') => {
+            if (!value) {
+                return fallback || formatMissing();
+            }
+
+            const element = doc.getElementById(controlId);
+
+            if (!element) {
+                return value;
+            }
+
+            const option = Array.from(element.options || []).find((candidate) => candidate.value === value);
+
+            if (option && option.textContent) {
+                return option.textContent.trim();
+            }
+
+            return value;
+        };
+
+        const getControlLabel = (controlId, fallback = '') => {
+            const label = doc.querySelector(`label[for="${controlId}"]`);
+
+            if (!label) {
+                return fallback;
+            }
+
+            const text = label.textContent || '';
+            return text.replace(/\s+/g, ' ').trim() || fallback;
+        };
+
+        const fieldConfigs = [
+            {
+                key: 'delay',
+                controlId: 'mga_delay',
+                sectionId: 'mga-section-playback',
+                type: 'float',
+                format: formatSeconds,
+            },
+            {
+                key: 'speed',
+                controlId: 'mga_speed',
+                sectionId: 'mga-section-playback',
+                type: 'int',
+                format: formatMilliseconds,
+            },
+            {
+                key: 'effect',
+                controlId: 'mga_effect',
+                sectionId: 'mga-section-playback',
+                type: 'select',
+                format: (value) => getSelectLabel('mga_effect', value, value),
+            },
+            {
+                key: 'easing',
+                controlId: 'mga_easing',
+                sectionId: 'mga-section-playback',
+                type: 'select',
+                format: (value) => getSelectLabel('mga_easing', value, value),
+            },
+            {
+                key: 'thumbs_layout',
+                controlId: 'mga_thumbs_layout',
+                sectionId: 'mga-section-thumbnails',
+                type: 'select',
+                format: (value) => getSelectLabel('mga_thumbs_layout', value, value),
+            },
+            {
+                key: 'thumb_size',
+                controlId: 'mga_thumb_size',
+                sectionId: 'mga-section-thumbnails',
+                type: 'int',
+                format: formatPixels,
+            },
+            {
+                key: 'thumb_size_mobile',
+                controlId: 'mga_thumb_size_mobile',
+                sectionId: 'mga-section-thumbnails',
+                type: 'int',
+                format: formatPixels,
+            },
+            {
+                key: 'show_thumbs_mobile',
+                controlId: 'mga_show_thumbs_mobile',
+                sectionId: 'mga-section-thumbnails',
+                type: 'boolean',
+                format: formatBoolean,
+            },
+            {
+                key: 'accent_color',
+                controlId: 'mga_accent_color',
+                sectionId: 'mga-section-appearance',
+                type: 'color',
+                format: (value) => (value ? value.toUpperCase() : formatMissing()),
+            },
+            {
+                key: 'bg_opacity',
+                controlId: 'mga_bg_opacity',
+                sectionId: 'mga-section-appearance',
+                type: 'float',
+                format: formatOpacity,
+            },
+            {
+                key: 'background_style',
+                controlId: 'mga_background_style',
+                sectionId: 'mga-section-appearance',
+                type: 'select',
+                format: (value) => getSelectLabel('mga_background_style', value, value),
+            },
+            {
+                key: 'autoplay_start',
+                controlId: 'mga_autoplay_start',
+                sectionId: 'mga-section-playback',
+                type: 'boolean',
+                format: formatBoolean,
+            },
+            {
+                key: 'loop',
+                controlId: 'mga_loop',
+                sectionId: 'mga-section-playback',
+                type: 'boolean',
+                format: formatBoolean,
+            },
+            {
+                key: 'show_zoom',
+                controlId: 'mga_show_zoom',
+                sectionId: 'mga-section-toolbar',
+                type: 'boolean',
+                format: formatBoolean,
+            },
+            {
+                key: 'show_download',
+                controlId: 'mga_show_download',
+                sectionId: 'mga-section-toolbar',
+                type: 'boolean',
+                format: formatBoolean,
+            },
+            {
+                key: 'show_share',
+                controlId: 'mga_show_share',
+                sectionId: 'mga-section-toolbar',
+                type: 'boolean',
+                format: formatBoolean,
+            },
+            {
+                key: 'show_cta',
+                controlId: 'mga_show_cta',
+                sectionId: 'mga-section-toolbar',
+                type: 'boolean',
+                format: formatBoolean,
+            },
+            {
+                key: 'show_fullscreen',
+                controlId: 'mga_show_fullscreen',
+                sectionId: 'mga-section-toolbar',
+                type: 'boolean',
+                format: formatBoolean,
+            },
+        ];
+
+        const getDefaultLabel = () => mgaAdmin__('Réglages recommandés', 'lightbox-jlg');
+
+        const normalizeValue = (config, rawValue) => {
+            switch (config.type) {
+                case 'int': {
+                    const number = parseInt(rawValue, 10);
+                    return Number.isFinite(number) ? number : null;
+                }
+                case 'float': {
+                    const number = parseFloat(rawValue);
+                    return Number.isFinite(number) ? Math.round(number * 100) / 100 : null;
+                }
+                case 'boolean':
+                    return Boolean(rawValue);
+                case 'color':
+                    return normalizeHexColor(rawValue);
+                case 'select':
+                    return typeof rawValue === 'string' ? rawValue : '';
+                default:
+                    return rawValue;
+            }
+        };
+
+        const normalizeSettings = (settings = {}) => {
+            const normalized = {};
+
+            fieldConfigs.forEach((config) => {
+                if (Object.prototype.hasOwnProperty.call(settings, config.key)) {
+                    normalized[config.key] = normalizeValue(config, settings[config.key]);
+                }
+            });
+
+            return normalized;
+        };
+
+        const defaultNormalized = normalizeSettings(defaults);
+
+        let navigationApi = null;
+        let lastSectionStates = new Map();
+
+        let baseline = {
+            key: '',
+            label: getDefaultLabel(),
+            settings: { ...defaultNormalized },
+        };
+
+        const readCurrentValue = (config) => {
+            const element = doc.getElementById(config.controlId);
+
+            if (!element) {
+                return config.type === 'boolean' ? false : config.type === 'select' ? '' : null;
+            }
+
+            switch (config.type) {
+                case 'boolean':
+                    return Boolean(element.checked);
+                case 'select':
+                    return element.value || '';
+                case 'color':
+                    return normalizeHexColor(element.value);
+                default:
+                    return element.value;
+            }
+        };
+
+        const areValuesEqual = (config, a, b) => {
+            if (config.type === 'float') {
+                if (a === null && b === null) {
+                    return true;
+                }
+
+                if (a === null || b === null) {
+                    return false;
+                }
+
+                return Math.abs(a - b) < 0.01;
+            }
+
+            return a === b;
+        };
+
+        const ensureLabels = () => {
+            fieldConfigs.forEach((config) => {
+                if (!config.label) {
+                    config.label = getControlLabel(config.controlId, '');
+                }
+            });
+        };
+
+        const updateNavigationState = (sectionStates) => {
+            if (!navigationApi || typeof navigationApi.setSectionModified !== 'function') {
+                return;
+            }
+
+            sectionStates.forEach((isModified, sectionId) => {
+                const sectionElement = sectionId ? doc.getElementById(sectionId) : null;
+
+                if (sectionElement) {
+                    navigationApi.setSectionModified(sectionElement, Boolean(isModified));
+                }
+            });
+        };
+
+        const refresh = () => {
+            ensureLabels();
+
+            const diff = [];
+            const sectionStates = new Map();
+
+            fieldConfigs.forEach((config) => {
+                const baselineValue = Object.prototype.hasOwnProperty.call(baseline.settings, config.key)
+                    ? baseline.settings[config.key]
+                    : defaultNormalized[config.key];
+                const currentValue = normalizeValue(config, readCurrentValue(config));
+                const changed = !areValuesEqual(config, baselineValue, currentValue);
+
+                if (changed) {
+                    diff.push({
+                        key: config.key,
+                        label: config.label || '',
+                        baselineLabel: config.format(baselineValue),
+                        currentLabel: config.format(currentValue),
+                    });
+                }
+
+                if (!sectionStates.has(config.sectionId)) {
+                    sectionStates.set(config.sectionId, changed);
+                } else if (changed) {
+                    sectionStates.set(config.sectionId, true);
+                }
+            });
+
+            updateNavigationState(sectionStates);
+
+            lastSectionStates = sectionStates;
+
+            return diff;
+        };
+
+        const setBaseline = ({ key = '', label = '', settings = {} } = {}) => {
+            baseline = {
+                key,
+                label: label && label.trim() !== '' ? label : getDefaultLabel(),
+                settings: {
+                    ...defaultNormalized,
+                    ...normalizeSettings(settings),
+                },
+            };
+
+            refresh();
+        };
+
+        const setNavigationApi = (api) => {
+            navigationApi = api;
+
+            if (lastSectionStates.size > 0) {
+                updateNavigationState(lastSectionStates);
+            }
+        };
+
+        const getBaselineInfo = () => ({
+            key: baseline.key,
+            label: baseline.label,
+        });
+
+        setBaseline({ settings: baseline.settings });
+
+        return {
+            refresh,
+            setBaseline,
+            getBaselineInfo,
+            getDefaultLabel,
+            setNavigationApi,
+        };
+    };
+
     if (!doc || typeof doc.addEventListener !== 'function') {
         return;
     }
@@ -69,6 +722,8 @@ import {
         const form = doc.querySelector('[data-mga-settings-form]') || doc.querySelector('.mga-admin-wrap form');
         const adminRoot = doc.querySelector('.mga-admin-wrap');
         let scheduleSummaryRefresh = () => {};
+        let contrastInspector = null;
+        let presetDiffTracker = null;
 
         const THEME_STORAGE_KEY = 'mgaAdminThemePreference';
         const THEME_OPTIONS = ['light', 'dark', 'system'];
