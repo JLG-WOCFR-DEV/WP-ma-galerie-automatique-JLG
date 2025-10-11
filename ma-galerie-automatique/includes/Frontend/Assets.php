@@ -15,6 +15,8 @@ class Assets {
 
     private Detection $detection;
 
+    private bool $resource_hints_registered = false;
+
     public function __construct( Plugin $plugin, Settings $settings, Detection $detection ) {
         $this->plugin    = $plugin;
         $this->settings  = $settings;
@@ -30,6 +32,7 @@ class Assets {
 
         $settings        = $this->settings->resolve_settings_for_context( $post );
         $defaults        = $this->settings->get_default_settings();
+        $modules         = $this->determine_frontend_modules( $settings, $post );
         $languages_path  = $this->plugin->get_languages_path();
         $has_languages   = $this->plugin->languages_directory_exists();
         $swiper_version  = '11.1.4';
@@ -62,7 +65,8 @@ class Assets {
         $swiper_js = 'local' === $asset_sources['js'] ? $local_js_url : $cdn_swiper_js;
         $swiper_js = apply_filters( 'mga_swiper_js', $swiper_js, $swiper_version );
 
-        wp_enqueue_style( 'mga-swiper-css', $swiper_css, [], $swiper_version );
+        wp_register_style( 'mga-swiper-css', $swiper_css, [], $swiper_version );
+        wp_enqueue_style( 'mga-swiper-css' );
 
         $css_sri_attributes = [];
 
@@ -87,7 +91,8 @@ class Assets {
             wp_style_add_data( 'mga-swiper-css', $attribute, $value );
         }
 
-        wp_enqueue_script( 'mga-swiper-js', $swiper_js, [], $swiper_version, true );
+        wp_register_script( 'mga-swiper-js', $swiper_js, [], $swiper_version, true );
+        wp_enqueue_script( 'mga-swiper-js' );
 
         $js_sri_attributes = [];
 
@@ -143,11 +148,33 @@ class Assets {
             wp_add_inline_script( 'mga-swiper-js', $loader_inline, 'before' );
         }
 
-        wp_enqueue_style( 'mga-gallery-style', $this->plugin->get_plugin_dir_url() . 'assets/css/gallery-slideshow.css', [], MGA_VERSION );
+        $this->maybe_add_swiper_resource_hints( $asset_sources, $swiper_css, $swiper_js );
+
+        wp_register_style(
+            'mga-gallery-style',
+            $this->plugin->get_plugin_dir_url() . 'assets/css/gallery-slideshow.css',
+            [],
+            MGA_VERSION
+        );
+
+        wp_register_style(
+            'mga-gallery-share-style',
+            $this->plugin->get_plugin_dir_url() . 'assets/css/gallery-share.css',
+            [ 'mga-gallery-style' ],
+            MGA_VERSION
+        );
+
+        if ( in_array( 'core', $modules, true ) ) {
+            wp_enqueue_style( 'mga-gallery-style' );
+        }
+
+        if ( in_array( 'share', $modules, true ) ) {
+            wp_enqueue_style( 'mga-gallery-share-style' );
+        }
 
         $script_dependencies = [ 'mga-swiper-js', 'wp-i18n' ];
 
-        if ( ! empty( $settings['debug_mode'] ) ) {
+        if ( in_array( 'debug', $modules, true ) ) {
             $can_view_debug = apply_filters( 'mga_user_can_view_debug', is_user_logged_in() && current_user_can( 'manage_options' ) );
 
             if ( $can_view_debug ) {
@@ -275,6 +302,134 @@ class Assets {
         if ( ! empty( $css_chunks ) ) {
             wp_add_inline_style( 'mga-gallery-style', implode( '', $css_chunks ) );
         }
+    }
+
+    private function determine_frontend_modules( array $settings, ?WP_Post $post ): array {
+        $modules = [ 'core' ];
+
+        $thumbs_layout = isset( $settings['thumbs_layout'] ) ? (string) $settings['thumbs_layout'] : '';
+
+        if ( 'hidden' !== strtolower( $thumbs_layout ) ) {
+            $modules[] = 'thumbs';
+        }
+
+        $share_channels = [];
+
+        if ( isset( $settings['share_channels'] ) && is_array( $settings['share_channels'] ) ) {
+            $share_channels = array_filter( $settings['share_channels'], static function ( $channel ) {
+                return is_array( $channel ) && ! empty( $channel['enabled'] ) && ! empty( $channel['template'] );
+            } );
+        }
+
+        $share_copy     = ! empty( $settings['share_copy'] );
+        $share_download = ! empty( $settings['share_download'] );
+        $show_share     = ! empty( $settings['show_share'] );
+
+        if ( $show_share && ( ! empty( $share_channels ) || $share_copy || $share_download ) ) {
+            $modules[] = 'share';
+        }
+
+        if ( ! empty( $settings['debug_mode'] ) ) {
+            $modules[] = 'debug';
+        }
+
+        /**
+         * Filters the list of frontend asset modules that should be enqueued for the current request.
+         *
+         * Modules describe optional feature bundles such as the share modal or debug console so themes
+         * and child plugins can opt-out of specific assets or register custom replacements.
+         *
+         * @param string[]   $modules  List of module identifiers scheduled for enqueue.
+         * @param array      $settings Sanitized plugin settings resolved for the current context.
+         * @param WP_Post|null $post   The post currently being rendered when assets are enqueued.
+         */
+        $modules = apply_filters( 'mga_frontend_asset_modules', $modules, $settings, $post );
+
+        if ( ! is_array( $modules ) ) {
+            $modules = [ 'core' ];
+        }
+
+        $modules = array_filter(
+            array_map( 'strval', $modules ),
+            static function ( $module ): bool {
+                return '' !== trim( $module );
+            }
+        );
+
+        if ( ! in_array( 'core', $modules, true ) ) {
+            array_unshift( $modules, 'core' );
+        }
+
+        return array_values( array_unique( $modules ) );
+    }
+
+    private function maybe_add_swiper_resource_hints( array $asset_sources, string $swiper_css, string $swiper_js ): void {
+        if ( $this->resource_hints_registered ) {
+            return;
+        }
+
+        $hosts = [];
+
+        if ( isset( $asset_sources['css'] ) && 'cdn' === $asset_sources['css'] ) {
+            $host = $this->extract_url_host( $swiper_css );
+
+            if ( '' !== $host ) {
+                $hosts[ $host ] = true;
+            }
+        }
+
+        if ( isset( $asset_sources['js'] ) && 'cdn' === $asset_sources['js'] ) {
+            $host = $this->extract_url_host( $swiper_js );
+
+            if ( '' !== $host ) {
+                $hosts[ $host ] = true;
+            }
+        }
+
+        if ( empty( $hosts ) ) {
+            return;
+        }
+
+        $this->resource_hints_registered = true;
+
+        add_filter(
+            'wp_resource_hints',
+            function ( array $urls, string $relation_type ) use ( $hosts ): array {
+                if ( 'preconnect' === $relation_type ) {
+                    foreach ( array_keys( $hosts ) as $host ) {
+                        $preconnect = 'https://' . $host;
+
+                        if ( ! in_array( $preconnect, $urls, true ) ) {
+                            $urls[] = $preconnect;
+                        }
+                    }
+                }
+
+                if ( 'dns-prefetch' === $relation_type ) {
+                    foreach ( array_keys( $hosts ) as $host ) {
+                        $prefetch = '//' . $host;
+
+                        if ( ! in_array( $prefetch, $urls, true ) ) {
+                            $urls[] = $prefetch;
+                        }
+                    }
+                }
+
+                return $urls;
+            },
+            10,
+            2
+        );
+    }
+
+    private function extract_url_host( string $url ): string {
+        $host = wp_parse_url( $url, PHP_URL_HOST );
+
+        if ( ! is_string( $host ) ) {
+            return '';
+        }
+
+        return strtolower( trim( $host ) );
     }
 
     private function build_dynamic_style_rules( array $settings, array $defaults ): array {
