@@ -15,6 +15,11 @@ $contextual_presets = isset( $settings['contextual_presets'] ) && is_array( $set
     : mga_get_contextual_preset_catalog();
 $contextual_presets = is_array( $contextual_presets ) ? array_values( $contextual_presets ) : [];
 $available_post_types = get_post_types( [ 'public' => true ], 'objects' );
+$trigger_scenarios     = mga_get_trigger_scenarios();
+$trigger_scenarios     = is_array( $trigger_scenarios ) ? $trigger_scenarios : [];
+$current_trigger_scenario = isset( $settings['trigger_scenario'] ) && is_string( $settings['trigger_scenario'] )
+    ? sanitize_key( $settings['trigger_scenario'] )
+    : 'linked-media';
 
 if ( empty( $available_post_types ) ) {
     $available_post_types = get_post_types( [], 'objects' );
@@ -893,6 +898,50 @@ if ( empty( $available_post_types ) ) {
                             <p class="mga-settings-section__description"><?php echo esc_html__( 'Ciblez précisément les contenus pris en charge et ajustez les comportements d’intégration.', 'lightbox-jlg' ); ?></p>
                         </header>
                         <div class="mga-settings-section__body">
+                            <fieldset class="mga-setting-row mga-setting-row--fieldset">
+                                <legend><?php echo esc_html__( 'Scénario de déclenchement', 'lightbox-jlg' ); ?></legend>
+                                <div class="mga-setting-row__fieldset mga-setting-row__fieldset--radios">
+                                    <?php foreach ( $trigger_scenarios as $scenario_key => $scenario_data ) : ?>
+                                        <?php
+                                        if ( ! is_string( $scenario_key ) ) {
+                                            continue;
+                                        }
+
+                                        $scenario_slug = sanitize_key( $scenario_key );
+
+                                        if ( '' === $scenario_slug ) {
+                                            continue;
+                                        }
+
+                                        $scenario        = is_array( $scenario_data ) ? $scenario_data : [];
+                                        $scenario_label  = isset( $scenario['label'] ) && '' !== trim( (string) $scenario['label'] )
+                                            ? (string) $scenario['label']
+                                            : $scenario_slug;
+                                        $scenario_help   = isset( $scenario['description'] ) ? trim( (string) $scenario['description'] ) : '';
+                                        $input_id        = sprintf( 'mga-trigger-scenario-%s', $scenario_slug );
+                                        ?>
+                                        <div class="mga-radio-option">
+                                            <label for="<?php echo esc_attr( $input_id ); ?>">
+                                                <input
+                                                    type="radio"
+                                                    name="mga_settings[trigger_scenario]"
+                                                    id="<?php echo esc_attr( $input_id ); ?>"
+                                                    value="<?php echo esc_attr( $scenario_slug ); ?>"
+                                                    <?php checked( $current_trigger_scenario, $scenario_slug ); ?>
+                                                />
+                                                <span><?php echo esc_html( $scenario_label ); ?></span>
+                                            </label>
+                                            <?php if ( '' !== $scenario_help ) : ?>
+                                                <p class="description"><?php echo esc_html( $scenario_help ); ?></p>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    <?php if ( empty( $trigger_scenarios ) ) : ?>
+                                        <p class="description"><?php echo esc_html__( 'Aucun scénario n’est disponible pour le moment.', 'lightbox-jlg' ); ?></p>
+                                    <?php endif; ?>
+                                </div>
+                            </fieldset>
+
                             <div class="mga-setting-row">
                                 <div class="mga-setting-row__label">
                                     <label for="mga_group_attribute"><?php echo esc_html__( 'Attribut de regroupement', 'lightbox-jlg' ); ?></label>

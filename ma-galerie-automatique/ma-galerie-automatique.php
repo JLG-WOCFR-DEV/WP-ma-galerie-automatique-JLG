@@ -229,6 +229,12 @@ function mga_get_style_presets(): array {
     return $plugin ? $plugin->settings()->get_style_presets() : [];
 }
 
+function mga_get_trigger_scenarios(): array {
+    $plugin = mga_plugin();
+
+    return $plugin ? $plugin->settings()->get_trigger_scenarios() : [];
+}
+
 function mga_get_contextual_preset_catalog(): array {
     $plugin = mga_plugin();
 

@@ -201,6 +201,24 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                     'background_style'  => $defaults['background_style'],
                 ],
             ],
+            'trigger_scenario_validation' => [
+                [
+                    'trigger_scenario' => 'self-linked-media',
+                ],
+                [],
+                [
+                    'trigger_scenario' => 'self-linked-media',
+                ],
+            ],
+            'trigger_scenario_invalid_fallback' => [
+                [
+                    'trigger_scenario' => 'attachment-only',
+                ],
+                [],
+                [
+                    'trigger_scenario' => $defaults['trigger_scenario'],
+                ],
+            ],
             'toolbar_toggles_casting_and_defaults' => [
                 [
                     'show_zoom'       => '0',

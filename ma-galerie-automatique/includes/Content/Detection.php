@@ -24,12 +24,15 @@ class Detection {
         'allowBodyFallback',
         'include_svg',
         'groupAttribute',
+        'trigger_scenario',
     ];
     private Plugin $plugin;
 
     private Settings $settings;
 
     private array $request_detection_cache = [];
+
+    private string $active_trigger_scenario = 'linked-media';
 
     /**
      * Cache the result of archive-wide detection for the current main query.
@@ -95,6 +98,33 @@ class Detection {
         $this->reusable_block_traversal_depth      = 0;
         $this->prefetched_reusable_block_ids       = [];
         $this->reusable_block_traversal_initialized = false;
+    }
+
+    private function set_active_trigger_scenario_from_settings( ?array $settings = null ): void {
+        if ( null === $settings ) {
+            $settings = $this->settings->get_sanitized_settings();
+        }
+
+        $scenario = 'linked-media';
+
+        if ( isset( $settings['trigger_scenario'] ) ) {
+            $candidate = sanitize_key( (string) $settings['trigger_scenario'] );
+            $allowed   = apply_filters( 'mga_allowed_trigger_scenarios', [ 'linked-media', 'self-linked-media' ], $settings );
+
+            if ( ! is_array( $allowed ) ) {
+                $allowed = [ 'linked-media', 'self-linked-media' ];
+            }
+
+            if ( in_array( $candidate, $allowed, true ) ) {
+                $scenario = $candidate;
+            }
+        }
+
+        $this->active_trigger_scenario = $scenario;
+    }
+
+    private function trigger_allows_attachment_links(): bool {
+        return 'self-linked-media' !== $this->active_trigger_scenario;
     }
 
     public function should_enqueue_assets( $post ): bool {
@@ -174,7 +204,7 @@ class Detection {
         $has_linked_images = $this->get_cached_post_linked_images( $post );
 
         if ( null === $has_linked_images ) {
-            $has_linked_images = $this->detect_post_linked_images( $post );
+        $has_linked_images = $this->detect_post_linked_images( $post, $settings );
             $this->update_post_linked_images_cache( $post->ID, $has_linked_images );
         } else {
             if ( is_array( $this->latest_detection_snapshot ) ) {
@@ -352,9 +382,15 @@ class Detection {
         return false;
     }
 
-    public function detect_post_linked_images( WP_Post $post ): bool {
+    public function detect_post_linked_images( WP_Post $post, ?array $settings = null ): bool {
         $this->latest_detection_snapshot = null;
         $this->reset_reusable_block_traversal_state();
+
+        $this->set_active_trigger_scenario_from_settings( $settings );
+
+        if ( null === $settings ) {
+            $settings = $this->settings->get_sanitized_settings();
+        }
 
         $parsed_blocks = [];
 
@@ -415,7 +451,7 @@ class Detection {
             }
         }
 
-        $this->latest_detection_snapshot = $this->build_detection_snapshot( $post, $has_linked_images );
+        $this->latest_detection_snapshot = $this->build_detection_snapshot( $post, $has_linked_images, $settings );
         $this->reset_reusable_block_traversal_state();
 
         return $has_linked_images;
@@ -441,7 +477,7 @@ class Detection {
             return;
         }
 
-        $has_linked_images = $this->detect_post_linked_images( $post );
+        $has_linked_images = $this->detect_post_linked_images( $post, $settings );
         $this->update_post_linked_images_cache( $post_id, $has_linked_images );
     }
 
@@ -819,6 +855,8 @@ class Detection {
     }
 
     public function block_attributes_link_to_media( array $attrs ): bool {
+        $this->set_active_trigger_scenario_from_settings();
+
         if ( empty( $attrs ) ) {
             return false;
         }
@@ -853,7 +891,9 @@ class Detection {
             }
         }
 
-        $allowed_destination_values = [ 'media', 'attachment', 'attachment-page', 'file' ];
+        $allowed_destination_values = $this->trigger_allows_attachment_links()
+            ? [ 'media', 'attachment', 'attachment-page', 'file' ]
+            : [ 'media', 'file' ];
         $destination_keys           = [ 'linkdestination', 'linkto' ];
         $destination_values         = [];
 
@@ -895,7 +935,7 @@ class Detection {
             $link_value = $normalized_attrs[ $link_key ];
 
             if ( is_string( $link_value ) ) {
-                if ( $this->is_image_url( $link_value ) || $this->is_attachment_permalink( $link_value ) ) {
+                if ( $this->is_image_url( $link_value ) || ( $this->trigger_allows_attachment_links() && $this->is_attachment_permalink( $link_value ) ) ) {
                     return true;
                 }
             }
@@ -903,7 +943,7 @@ class Detection {
             if ( is_array( $link_value ) ) {
                 foreach ( [ 'url', 'href' ] as $url_key ) {
                     if ( isset( $link_value[ $url_key ] ) && is_string( $link_value[ $url_key ] ) ) {
-                        if ( $this->is_image_url( $link_value[ $url_key ] ) || $this->is_attachment_permalink( $link_value[ $url_key ] ) ) {
+                        if ( $this->is_image_url( $link_value[ $url_key ] ) || ( $this->trigger_allows_attachment_links() && $this->is_attachment_permalink( $link_value[ $url_key ] ) ) ) {
                             return true;
                         }
                     }
@@ -919,7 +959,7 @@ class Detection {
             $bound_link_value = $this->get_bound_attribute_value( $attrs, $binding_key );
 
             if ( is_string( $bound_link_value ) ) {
-                if ( $this->is_image_url( $bound_link_value ) || $this->is_attachment_permalink( $bound_link_value ) ) {
+                if ( $this->is_image_url( $bound_link_value ) || ( $this->trigger_allows_attachment_links() && $this->is_attachment_permalink( $bound_link_value ) ) ) {
                     return true;
                 }
             }
@@ -1329,26 +1369,38 @@ class Detection {
     }
 
     public function gallery_attributes_link_to_media( array $attributes ): bool {
+        $this->set_active_trigger_scenario_from_settings();
+
         if ( empty( $attributes ) ) {
             return false;
         }
 
         $attributes = array_change_key_case( $attributes, CASE_LOWER );
 
+        $attachment_allowed = $this->trigger_allows_attachment_links();
+        $direct_values       = [ 'file', 'media' ];
+        $attachment_values   = [ 'attachment', 'attachment-page' ];
+
+        if ( $attachment_allowed ) {
+            $direct_values = array_merge( $direct_values, $attachment_values );
+        }
+
         if ( isset( $attributes['link'] ) && is_string( $attributes['link'] ) ) {
-            if ( in_array( $attributes['link'], [ 'file', 'attachment', 'media' ], true ) ) {
+            if ( in_array( strtolower( $attributes['link'] ), $direct_values, true ) ) {
                 return true;
             }
         }
 
         if ( isset( $attributes['linkdestination'] ) && is_string( $attributes['linkdestination'] ) ) {
-            if ( in_array( $attributes['linkdestination'], [ 'media', 'attachment' ], true ) ) {
+            $candidate = strtolower( $attributes['linkdestination'] );
+
+            if ( in_array( $candidate, $direct_values, true ) ) {
                 return true;
             }
         }
 
         if ( isset( $attributes['linkto'] ) && is_string( $attributes['linkto'] ) ) {
-            if ( in_array( $attributes['linkto'], [ 'file', 'attachment', 'media' ], true ) ) {
+            if ( in_array( strtolower( $attributes['linkto'] ), $direct_values, true ) ) {
                 return true;
             }
         }
@@ -1357,6 +1409,8 @@ class Detection {
     }
 
     public function gallery_html_has_linked_media( $html ): bool {
+        $this->set_active_trigger_scenario_from_settings();
+
         if ( ! is_string( $html ) || '' === trim( $html ) ) {
             return false;
         }
@@ -1375,6 +1429,8 @@ class Detection {
     }
 
     public function post_has_eligible_images( $post = null ): bool {
+        $this->set_active_trigger_scenario_from_settings();
+
         $post = get_post( $post );
 
         if ( ! $post instanceof WP_Post ) {
@@ -1473,18 +1529,38 @@ class Detection {
     }
 
     private function dom_element_contains_media( DOMElement $element ): bool {
+        $candidate_images = [];
+
         foreach ( $element->getElementsByTagName( 'img' ) as $image ) {
             if ( $image instanceof DOMElement && $this->dom_image_node_is_meaningful( $image ) ) {
-                return true;
+                $candidate_images[] = $image;
             }
         }
 
-        foreach ( $element->getElementsByTagName( 'picture' ) as $picture ) {
-            if ( ! $picture instanceof DOMElement ) {
-                continue;
-            }
+        if ( empty( $candidate_images ) ) {
+            foreach ( $element->getElementsByTagName( 'picture' ) as $picture ) {
+                if ( ! $picture instanceof DOMElement ) {
+                    continue;
+                }
 
-            if ( $this->dom_picture_node_contains_media( $picture ) ) {
+                if ( ! $this->dom_picture_node_contains_media( $picture ) ) {
+                    continue;
+                }
+
+                foreach ( $picture->getElementsByTagName( 'img' ) as $picture_image ) {
+                    if ( $picture_image instanceof DOMElement && $this->dom_image_node_is_meaningful( $picture_image ) ) {
+                        $candidate_images[] = $picture_image;
+                    }
+                }
+            }
+        }
+
+        if ( empty( $candidate_images ) ) {
+            return false;
+        }
+
+        foreach ( $candidate_images as $image_node ) {
+            if ( $this->anchor_matches_trigger_scenario( $element, $image_node ) ) {
                 return true;
             }
         }
@@ -1769,6 +1845,14 @@ class Detection {
                 continue;
             }
 
+            if ( 'self-linked-media' === $this->active_trigger_scenario ) {
+                if ( $this->fallback_inner_html_matches_trigger_scenario( $href, $inner_html ) ) {
+                    return true;
+                }
+
+                continue;
+            }
+
             if ( false !== stripos( $inner_html, '<img' ) || false !== stripos( $inner_html, '<picture' ) ) {
                 return true;
             }
@@ -1777,9 +1861,350 @@ class Detection {
         return false;
     }
 
+    private function anchor_matches_trigger_scenario( DOMElement $anchor, ?DOMElement $primary_image = null ): bool {
+        if ( 'self-linked-media' !== $this->active_trigger_scenario ) {
+            return true;
+        }
+
+        if ( ! $anchor->hasAttribute( 'href' ) ) {
+            return false;
+        }
+
+        $normalized_href = $this->normalize_image_url_candidate( (string) $anchor->getAttribute( 'href' ) );
+
+        if ( '' === $normalized_href || ! $this->is_image_url( $normalized_href ) ) {
+            return false;
+        }
+
+        $href_tokens = $this->build_url_comparison_tokens( $normalized_href );
+
+        if ( empty( $href_tokens ) ) {
+            return false;
+        }
+
+        $candidate_tokens = $this->collect_anchor_image_tokens( $anchor, $primary_image );
+
+        if ( empty( $candidate_tokens ) ) {
+            return false;
+        }
+
+        return ! empty( array_intersect( $href_tokens, $candidate_tokens ) );
+    }
+
+    private function collect_anchor_image_tokens( DOMElement $anchor, ?DOMElement $primary_image = null ): array {
+        $tokens = [];
+
+        if ( $primary_image instanceof DOMElement ) {
+            $tokens = array_merge( $tokens, $this->collect_image_element_tokens( $primary_image ) );
+        }
+
+        foreach ( $anchor->getElementsByTagName( 'img' ) as $image ) {
+            if ( ! $image instanceof DOMElement ) {
+                continue;
+            }
+
+            $tokens = array_merge( $tokens, $this->collect_image_element_tokens( $image ) );
+        }
+
+        foreach ( $anchor->getElementsByTagName( 'source' ) as $source ) {
+            if ( ! $source instanceof DOMElement ) {
+                continue;
+            }
+
+            $tokens = array_merge( $tokens, $this->collect_source_element_tokens( $source ) );
+        }
+
+        $tokens = array_filter( array_unique( $tokens ) );
+
+        return array_values( $tokens );
+    }
+
+    private function collect_image_element_tokens( DOMElement $image ): array {
+        $candidates = [];
+
+        $attributes = [
+            'src',
+            'data-mga-highres',
+            'data-full-url',
+            'data-large-file',
+            'data-orig-file',
+            'data-src',
+            'data-lazy-src',
+        ];
+
+        $attributes = apply_filters( 'mga_image_source_attributes', $attributes, $image );
+
+        foreach ( $attributes as $attribute ) {
+            if ( ! is_string( $attribute ) || '' === trim( $attribute ) ) {
+                continue;
+            }
+
+            if ( ! $image->hasAttribute( $attribute ) ) {
+                continue;
+            }
+
+            $normalized = $this->normalize_image_url_candidate( (string) $image->getAttribute( $attribute ) );
+
+            if ( '' !== $normalized ) {
+                $candidates[] = $normalized;
+            }
+        }
+
+        foreach ( [ 'srcset', 'data-srcset' ] as $srcset_attribute ) {
+            if ( ! $image->hasAttribute( $srcset_attribute ) ) {
+                continue;
+            }
+
+            $candidates = array_merge(
+                $candidates,
+                $this->parse_srcset_attribute( (string) $image->getAttribute( $srcset_attribute ) )
+            );
+        }
+
+        $tokens = [];
+
+        foreach ( array_unique( $candidates ) as $candidate ) {
+            $tokens = array_merge( $tokens, $this->build_url_comparison_tokens( $candidate ) );
+        }
+
+        $tokens = array_filter( array_unique( $tokens ) );
+
+        return array_values( $tokens );
+    }
+
+    private function collect_source_element_tokens( DOMElement $source ): array {
+        $candidates = [];
+
+        foreach ( [ 'srcset', 'data-srcset', 'src', 'data-src', 'data-lazy-src' ] as $attribute ) {
+            if ( ! $source->hasAttribute( $attribute ) ) {
+                continue;
+            }
+
+            if ( in_array( $attribute, [ 'srcset', 'data-srcset' ], true ) ) {
+                $candidates = array_merge(
+                    $candidates,
+                    $this->parse_srcset_attribute( (string) $source->getAttribute( $attribute ) )
+                );
+                continue;
+            }
+
+            $normalized = $this->normalize_image_url_candidate( (string) $source->getAttribute( $attribute ) );
+
+            if ( '' !== $normalized ) {
+                $candidates[] = $normalized;
+            }
+        }
+
+        $tokens = [];
+
+        foreach ( array_unique( $candidates ) as $candidate ) {
+            $tokens = array_merge( $tokens, $this->build_url_comparison_tokens( $candidate ) );
+        }
+
+        $tokens = array_filter( array_unique( $tokens ) );
+
+        return array_values( $tokens );
+    }
+
+    private function normalize_image_url_candidate( string $value ): string {
+        $decoded = html_entity_decode( $value, ENT_QUOTES );
+        $trimmed = trim( $decoded );
+
+        if ( '' === $trimmed ) {
+            return '';
+        }
+
+        if ( preg_match( '/^(javascript:|about:|#)/i', $trimmed ) ) {
+            return '';
+        }
+
+        if ( 0 === strpos( $trimmed, 'data:' ) ) {
+            return '';
+        }
+
+        if ( 0 === strpos( $trimmed, '//' ) ) {
+            $trimmed = ( is_ssl() ? 'https:' : 'http:' ) . $trimmed;
+        }
+
+        if ( preg_match( '/^[a-z][a-z0-9+.-]*:/i', $trimmed ) && ! preg_match( '/^https?:/i', $trimmed ) ) {
+            return '';
+        }
+
+        return $trimmed;
+    }
+
+    private function build_url_comparison_tokens( string $url ): array {
+        $normalized = $this->normalize_image_url_candidate( $url );
+
+        if ( '' === $normalized ) {
+            return [];
+        }
+
+        $tokens  = [ $normalized ];
+        $decoded = rawurldecode( $normalized );
+
+        if ( $decoded !== $normalized ) {
+            $tokens[] = $decoded;
+        }
+
+        $parsed = wp_parse_url( $normalized );
+
+        if ( is_array( $parsed ) ) {
+            $path = isset( $parsed['path'] ) ? (string) $parsed['path'] : '';
+            $host = isset( $parsed['host'] ) ? strtolower( (string) $parsed['host'] ) : '';
+
+            if ( '' !== $path ) {
+                $tokens[] = $path;
+
+                if ( '' !== $host ) {
+                    $tokens[] = $host . $path;
+                }
+            }
+        } else {
+            $tokens[] = ltrim( $normalized, './' );
+        }
+
+        $unique_tokens = [];
+
+        foreach ( $tokens as $token ) {
+            if ( ! is_string( $token ) ) {
+                continue;
+            }
+
+            $trimmed = trim( $token );
+
+            if ( '' === $trimmed ) {
+                continue;
+            }
+
+            $unique_tokens[ $trimmed ] = true;
+        }
+
+        return array_keys( $unique_tokens );
+    }
+
+    private function parse_srcset_attribute( string $value ): array {
+        $normalized = trim( html_entity_decode( $value, ENT_QUOTES ) );
+
+        if ( '' === $normalized ) {
+            return [];
+        }
+
+        $entries    = array_map( 'trim', explode( ',', $normalized ) );
+        $candidates = [];
+
+        foreach ( $entries as $entry ) {
+            if ( '' === $entry ) {
+                continue;
+            }
+
+            $parts = preg_split( '/\s+/', $entry );
+
+            if ( empty( $parts ) ) {
+                continue;
+            }
+
+            $candidate = $this->normalize_image_url_candidate( (string) $parts[0] );
+
+            if ( '' !== $candidate ) {
+                $candidates[] = $candidate;
+            }
+        }
+
+        return array_values( array_unique( $candidates ) );
+    }
+
+    private function fallback_inner_html_matches_trigger_scenario( string $href, string $inner_html ): bool {
+        if ( 'self-linked-media' !== $this->active_trigger_scenario ) {
+            return false;
+        }
+
+        $normalized_href = $this->normalize_image_url_candidate( $href );
+
+        if ( '' === $normalized_href || ! $this->is_image_url( $normalized_href ) ) {
+            return false;
+        }
+
+        $href_tokens = $this->build_url_comparison_tokens( $normalized_href );
+
+        if ( empty( $href_tokens ) ) {
+            return false;
+        }
+
+        $candidate_tokens = [];
+
+        if ( preg_match_all( '#<img\\b[^>]*>#i', $inner_html, $image_matches ) ) {
+            foreach ( $image_matches[0] as $image_html ) {
+                $candidate_tokens = array_merge( $candidate_tokens, $this->extract_image_tokens_from_html( $image_html ) );
+            }
+        }
+
+        if ( preg_match_all( '#<source\\b[^>]*>#i', $inner_html, $source_matches ) ) {
+            foreach ( $source_matches[0] as $source_html ) {
+                $candidate_tokens = array_merge( $candidate_tokens, $this->extract_source_tokens_from_html( $source_html ) );
+            }
+        }
+
+        $candidate_tokens = array_filter( array_unique( $candidate_tokens ) );
+
+        if ( empty( $candidate_tokens ) ) {
+            return false;
+        }
+
+        return ! empty( array_intersect( $href_tokens, $candidate_tokens ) );
+    }
+
+    private function extract_image_tokens_from_html( string $img_html ): array {
+        $document = new DOMDocument();
+        $previous = libxml_use_internal_errors( true );
+        $loaded   = $document->loadHTML( '<!DOCTYPE html><html><body>' . $img_html . '</body></html>' );
+        libxml_clear_errors();
+        libxml_use_internal_errors( $previous );
+
+        if ( ! $loaded ) {
+            return [];
+        }
+
+        $tokens = [];
+
+        foreach ( $document->getElementsByTagName( 'img' ) as $image ) {
+            if ( $image instanceof DOMElement ) {
+                $tokens = array_merge( $tokens, $this->collect_image_element_tokens( $image ) );
+            }
+        }
+
+        return array_values( array_unique( $tokens ) );
+    }
+
+    private function extract_source_tokens_from_html( string $source_html ): array {
+        $document = new DOMDocument();
+        $previous = libxml_use_internal_errors( true );
+        $loaded   = $document->loadHTML( '<!DOCTYPE html><html><body>' . $source_html . '</body></html>' );
+        libxml_clear_errors();
+        libxml_use_internal_errors( $previous );
+
+        if ( ! $loaded ) {
+            return [];
+        }
+
+        $tokens = [];
+
+        foreach ( $document->getElementsByTagName( 'source' ) as $source ) {
+            if ( $source instanceof DOMElement ) {
+                $tokens = array_merge( $tokens, $this->collect_source_element_tokens( $source ) );
+            }
+        }
+
+        return array_values( array_unique( $tokens ) );
+    }
+
     private function is_image_candidate_href( string $href ): bool {
         if ( $this->is_image_url( $href ) ) {
             return true;
+        }
+
+        if ( ! $this->trigger_allows_attachment_links() ) {
+            return false;
         }
 
         return $this->is_attachment_permalink( $href );
@@ -1909,6 +2334,10 @@ class Detection {
                     }
 
                     $normalized[ $key ] = strtolower( trim( $value ) );
+                    break;
+                case 'trigger_scenario':
+                    $value = isset( $settings[ $key ] ) ? sanitize_key( (string) $settings[ $key ] ) : '';
+                    $normalized[ $key ] = $value ? $value : 'linked-media';
                     break;
                 default:
                     $normalized[ $key ] = $settings[ $key ] ?? null;

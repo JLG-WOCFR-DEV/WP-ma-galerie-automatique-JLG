@@ -51,6 +51,20 @@ import {
         return wrapper;
     };
 
+    const createSvgElement = (tag, attributes = {}) => {
+        if (!document || typeof document.createElementNS !== 'function') {
+            return null;
+        }
+
+        const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
+
+        Object.keys(attributes || {}).forEach((attribute) => {
+            element.setAttribute(attribute, attributes[attribute]);
+        });
+
+        return element;
+    };
+
     function normalizeShareChannels(rawChannels) {
         const entries = [];
 
@@ -325,6 +339,15 @@ import {
         const baseImagePattern = 'jpe?g|png|gif|bmp|webp|avif';
         const imagePatternSource = includeSvg ? `${baseImagePattern}|svg` : baseImagePattern;
         const IMAGE_FILE_PATTERN = new RegExp(`\.(${imagePatternSource})(?:\\?.*)?(?:#.*)?$`, 'i');
+        const TRIGGER_SCENARIO_LINKED_MEDIA = 'linked-media';
+        const TRIGGER_SCENARIO_SELF_LINKED = 'self-linked-media';
+        const allowedTriggerScenarios = new Set([TRIGGER_SCENARIO_LINKED_MEDIA, TRIGGER_SCENARIO_SELF_LINKED]);
+        let triggerScenario = typeof settings.trigger_scenario === 'string'
+            ? settings.trigger_scenario.trim().toLowerCase()
+            : TRIGGER_SCENARIO_LINKED_MEDIA;
+        if (!allowedTriggerScenarios.has(triggerScenario)) {
+            triggerScenario = TRIGGER_SCENARIO_LINKED_MEDIA;
+        }
         const isSvgLikeUrl = (url) => typeof url === 'string' && /\.svg(?:\?.*)?(?:#.*)?$/i.test(url);
         const debug = window.mgaDebug || {
             enabled: false,
@@ -337,6 +360,204 @@ import {
             restartTimer: noop,
             table: noop,
             shareAction: noop,
+        };
+        const buildComparisonTokens = (value) => {
+            const sanitized = sanitizeHighResUrl(value);
+            if (!sanitized) {
+                return [];
+            }
+
+            const tokens = new Set();
+            const pushToken = (token) => {
+                if (typeof token === 'string') {
+                    const trimmed = token.trim();
+                    if (trimmed) {
+                        tokens.add(trimmed);
+                    }
+                }
+            };
+
+            pushToken(sanitized);
+
+            try {
+                const decoded = decodeURIComponent(sanitized);
+                pushToken(decoded);
+            } catch (error) {
+                // Ignored.
+            }
+
+            try {
+                const base = typeof window !== 'undefined' && window.location ? window.location.href : undefined;
+                const parsed = new URL(sanitized, base);
+                if (parsed.pathname) {
+                    pushToken(parsed.pathname);
+                }
+                if (parsed.hostname && parsed.pathname) {
+                    pushToken(`${parsed.hostname.toLowerCase()}${parsed.pathname}`);
+                }
+            } catch (error) {
+                pushToken(sanitized.replace(/^\.\/+/, ''));
+            }
+
+            return Array.from(tokens);
+        };
+
+        const collectSrcsetUrls = (rawValue) => {
+            if (typeof rawValue !== 'string') {
+                return [];
+            }
+
+            return rawValue
+                .split(',')
+                .map(entry => entry.trim())
+                .filter(entry => entry.length > 0)
+                .map(entry => entry.split(/\s+/)[0])
+                .map(candidate => sanitizeHighResUrl(candidate))
+                .filter(candidate => !!candidate);
+        };
+
+        const collectImageCandidateUrls = (innerImg) => {
+            const urls = new Set();
+
+            if (!innerImg) {
+                return urls;
+            }
+
+            const attributePriority = [
+                'src',
+                'data-mga-highres',
+                'data-full-url',
+                'data-large-file',
+                'data-orig-file',
+                'data-src',
+                'data-lazy-src',
+            ];
+
+            const addCandidate = (candidate) => {
+                const sanitized = sanitizeHighResUrl(candidate);
+                if (sanitized) {
+                    urls.add(sanitized);
+                }
+            };
+
+            attributePriority.forEach((attr) => {
+                if (innerImg.hasAttribute && innerImg.hasAttribute(attr)) {
+                    addCandidate(innerImg.getAttribute(attr));
+                }
+            });
+
+            if (innerImg.dataset) {
+                ['mgaHighres', 'fullUrl', 'largeFile', 'origFile', 'src', 'lazySrc'].forEach((key) => {
+                    if (innerImg.dataset[key]) {
+                        addCandidate(innerImg.dataset[key]);
+                    }
+                });
+            }
+
+            collectSrcsetUrls(innerImg.srcset).forEach((url) => urls.add(url));
+
+            if (innerImg.dataset && innerImg.dataset.srcset) {
+                collectSrcsetUrls(innerImg.dataset.srcset).forEach((url) => urls.add(url));
+            }
+
+            return urls;
+        };
+
+        const collectSourceCandidateUrls = (source) => {
+            const urls = new Set();
+
+            if (!source) {
+                return urls;
+            }
+
+            ['srcset', 'data-srcset', 'src', 'data-src', 'data-lazy-src'].forEach((attr) => {
+                if (!source.hasAttribute || !source.hasAttribute(attr)) {
+                    return;
+                }
+
+                if (attr === 'srcset' || attr === 'data-srcset') {
+                    collectSrcsetUrls(source.getAttribute(attr)).forEach((url) => urls.add(url));
+                    return;
+                }
+
+                const sanitized = sanitizeHighResUrl(source.getAttribute(attr));
+                if (sanitized) {
+                    urls.add(sanitized);
+                }
+            });
+
+            if (source.dataset) {
+                ['src', 'lazySrc', 'srcset'].forEach((key) => {
+                    if (!source.dataset[key]) {
+                        return;
+                    }
+
+                    if (key.toLowerCase().includes('srcset')) {
+                        collectSrcsetUrls(source.dataset[key]).forEach((url) => urls.add(url));
+                        return;
+                    }
+
+                    const sanitized = sanitizeHighResUrl(source.dataset[key]);
+                    if (sanitized) {
+                        urls.add(sanitized);
+                    }
+                });
+            }
+
+            return urls;
+        };
+
+        const collectLinkCandidateTokens = (linkElement) => {
+            const tokens = new Set();
+
+            if (!(linkElement instanceof Element)) {
+                return [];
+            }
+
+            linkElement.querySelectorAll('img').forEach((img) => {
+                collectImageCandidateUrls(img).forEach((url) => {
+                    buildComparisonTokens(url).forEach((token) => tokens.add(token));
+                });
+            });
+
+            linkElement.querySelectorAll('source').forEach((source) => {
+                collectSourceCandidateUrls(source).forEach((url) => {
+                    buildComparisonTokens(url).forEach((token) => tokens.add(token));
+                });
+            });
+
+            return Array.from(tokens);
+        };
+
+        const doesLinkMatchTriggerScenario = (linkElement) => {
+            if (triggerScenario !== TRIGGER_SCENARIO_SELF_LINKED) {
+                return true;
+            }
+
+            if (!(linkElement instanceof Element)) {
+                return false;
+            }
+
+            const hrefValue = linkElement.getAttribute('href');
+            const sanitizedHref = sanitizeHighResUrl(hrefValue);
+
+            if (!sanitizedHref || !IMAGE_FILE_PATTERN.test(sanitizedHref)) {
+                return false;
+            }
+
+            const hrefTokens = buildComparisonTokens(sanitizedHref);
+
+            if (!hrefTokens.length) {
+                return false;
+            }
+
+            const candidateTokens = collectLinkCandidateTokens(linkElement);
+
+            if (!candidateTokens.length) {
+                return false;
+            }
+
+            return hrefTokens.some((token) => candidateTokens.includes(token));
         };
         const showZoom = normalizeFlag(settings.show_zoom, true);
         const showDownload = normalizeFlag(settings.show_download, true);
@@ -2112,6 +2333,10 @@ import {
                     return accumulator;
                 }
 
+                if (!doesLinkMatchTriggerScenario(link)) {
+                    return accumulator;
+                }
+
                 const highResUrl = getHighResUrl(link);
                 if (!highResUrl) {
                     return accumulator;
@@ -2562,7 +2787,7 @@ import {
         if (!contentArea) {
             debug.updateInfo('mga-debug-content-area', foundSelector, '#F44336');
             debug.log(mga__( 'Aucune zone de contenu valide détectée. Initialisation du diaporama interrompue.', 'lightbox-jlg' ), true);
-            return;
+            return false;
         }
 
         debug.updateInfo('mga-debug-content-area', foundSelector, '#4CAF50');
@@ -2668,7 +2893,9 @@ import {
         };
 
         const getTriggerLinks = (shouldUpdateDebug = true) => {
-            const links = Array.from(contentArea.querySelectorAll('a')).filter(a => a.querySelector('img'));
+            const links = Array.from(contentArea.querySelectorAll('a'))
+                .filter(a => a.querySelector('img'))
+                .filter(link => doesLinkMatchTriggerScenario(link));
             const grouped = links.reduce((accumulator, link) => {
                 const groupId = resolveLinkGroupId(link);
                 if (!accumulator[groupId]) {
@@ -2694,6 +2921,7 @@ import {
             sanitizeThumbnailUrl,
             resolveThumbnailUrl,
             getImageDataAttributes,
+            linkMatchesTriggerScenario: doesLinkMatchTriggerScenario,
         };
 
         if (typeof module !== 'undefined' && module.exports) {
@@ -4338,9 +4566,28 @@ import {
                 }
             }, 250);
         }
+        return true;
     }
 
+    let galleryInitializationSucceeded = false;
+
+    const runInitGalleryViewer = () => {
+        if (galleryInitializationSucceeded) {
+            return true;
+        }
+
+        const result = initGalleryViewer();
+
+        if (result) {
+            galleryInitializationSucceeded = true;
+        }
+
+        return result;
+    };
+
     const bootstrapGalleryViewer = () => {
+        const initialResult = runInitGalleryViewer();
+
         ensureSwiper(window, { namespace: 'frontend' })
             .catch((error) => {
                 if (window.console && typeof window.console.error === 'function') {
@@ -4348,7 +4595,9 @@ import {
                 }
             })
             .finally(() => {
-                initGalleryViewer();
+                if (!galleryInitializationSucceeded || initialResult !== true) {
+                    runInitGalleryViewer();
+                }
             });
     };
 
