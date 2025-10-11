@@ -115,6 +115,50 @@ class DetectionHtmlParsingTest extends WP_UnitTestCase {
         }
     }
 
+    public function test_gallery_html_ignores_picture_without_sources(): void {
+        $html = '<div class="wp-block-gallery"><a href="https://example.com/full.jpg"><picture><source type="image/webp"></picture></a></div>';
+
+        $this->assertFalse(
+            $this->detection()->gallery_html_has_linked_media( $html ),
+            'Picture elements without any usable image candidates should be ignored to avoid false positives.'
+        );
+    }
+
+    public function test_gallery_html_detection_handles_lazy_picture_sources(): void {
+        $html = '<div class="wp-block-gallery"><a href="https://example.com/full.jpg"><picture><source data-srcset="https://example.com/lazy.webp 1x, https://example.com/lazy@2x.webp 2x" type="image/webp"></picture></a></div>';
+
+        $this->assertTrue(
+            $this->detection()->gallery_html_has_linked_media( $html ),
+            'Picture sources exposing lazy-loaded srcset attributes should be treated as meaningful.'
+        );
+    }
+
+    public function test_gallery_html_detection_supports_custom_picture_source_filter(): void {
+        $html = '<div class="wp-block-gallery"><a href="https://example.com/full.jpg"><picture><source data-custom-src="https://example.com/lazy.webp" type="image/webp"></picture></a></div>';
+
+        $this->assertFalse(
+            $this->detection()->gallery_html_has_linked_media( $html ),
+            'Custom picture source attributes should be ignored by default to avoid false positives.'
+        );
+
+        $filter = static function ( array $attributes, \DOMElement $source ): array {
+            $attributes[] = 'data-custom-src';
+
+            return $attributes;
+        };
+
+        add_filter( 'mga_picture_source_attributes', $filter, 10, 2 );
+
+        try {
+            $this->assertTrue(
+                $this->detection()->gallery_html_has_linked_media( $html ),
+                'Attributes injected via the picture source filter should be taken into account when evaluating <source> nodes.'
+            );
+        } finally {
+            remove_filter( 'mga_picture_source_attributes', $filter, 10 );
+        }
+    }
+
     public function test_gallery_html_ignores_images_without_sources(): void {
         $html = '<div class="wp-block-gallery"><a href="https://example.com/full.jpg"><img alt="Empty" /></a></div>';
 
