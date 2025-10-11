@@ -82,33 +82,52 @@ class Manager {
             return false;
         }
 
-        $cache_path = $this->get_cache_directory();
+        $cache_path      = $this->get_cache_directory();
+        $mo_filename     = $domain . '-' . $locale . '.mo';
+        $cached_hash     = null;
+        $using_temp_file = false;
 
-        if ( ! $cache_path ) {
-            return false;
-        }
+        if ( $cache_path ) {
+            $cached_mo = \trailingslashit( $cache_path ) . $mo_filename;
+            $cached_hash = $cached_mo . '.hash';
+            $needs_refresh = true;
 
-        $mo_filename   = $domain . '-' . $locale . '.mo';
-        $cached_mo     = \trailingslashit( $cache_path ) . $mo_filename;
-        $cached_hash   = $cached_mo . '.hash';
-        $needs_refresh = true;
+            if ( file_exists( $cached_mo ) && file_exists( $cached_hash ) ) {
+                $stored_hash = trim( (string) file_get_contents( $cached_hash ) );
 
-        if ( file_exists( $cached_mo ) && file_exists( $cached_hash ) ) {
-            $stored_hash = trim( (string) file_get_contents( $cached_hash ) );
-
-            if ( $stored_hash && hash_equals( $hash, $stored_hash ) ) {
-                $needs_refresh = false;
+                if ( $stored_hash && hash_equals( $hash, $stored_hash ) ) {
+                    $needs_refresh = false;
+                }
             }
+        } else {
+            $cached_mo = $this->create_temp_mo_path( $mo_filename );
+
+            if ( ! $cached_mo ) {
+                return false;
+            }
+
+            $needs_refresh    = true;
+            $using_temp_file  = true;
         }
 
         if ( $needs_refresh && ! $this->rebuild_cached_mo_file( $base64_path, $cached_mo, $cached_hash, $hash ) ) {
+            if ( $using_temp_file && file_exists( $cached_mo ) ) {
+                \unlink( $cached_mo );
+            }
+
             return false;
         }
 
-        return \load_textdomain( $domain, $cached_mo );
+        $loaded = \load_textdomain( $domain, $cached_mo );
+
+        if ( $using_temp_file && file_exists( $cached_mo ) ) {
+            \unlink( $cached_mo );
+        }
+
+        return $loaded;
     }
 
-    private function rebuild_cached_mo_file( string $base64_path, string $cached_mo, string $cached_hash, string $hash ): bool {
+    private function rebuild_cached_mo_file( string $base64_path, string $cached_mo, ?string $cached_hash, string $hash ): bool {
         $encoded = file_get_contents( $base64_path );
 
         if ( false === $encoded ) {
@@ -127,9 +146,35 @@ class Manager {
             return false;
         }
 
-        file_put_contents( $cached_hash, $hash, LOCK_EX );
+        if ( $cached_hash ) {
+            file_put_contents( $cached_hash, $hash, LOCK_EX );
+        }
 
         return true;
+    }
+
+    private function create_temp_mo_path( string $mo_filename ): string {
+        if ( function_exists( '\\wp_tempnam' ) ) {
+            $temporary = \wp_tempnam( $mo_filename );
+
+            if ( $temporary ) {
+                return $temporary;
+            }
+        }
+
+        $temp_dir = function_exists( '\\get_temp_dir' ) ? \get_temp_dir() : \sys_get_temp_dir();
+
+        if ( ! $temp_dir ) {
+            return '';
+        }
+
+        $temporary = \tempnam( $temp_dir, 'mga-' );
+
+        if ( false === $temporary ) {
+            return '';
+        }
+
+        return $temporary;
     }
 
     private function get_cache_directory(): string {

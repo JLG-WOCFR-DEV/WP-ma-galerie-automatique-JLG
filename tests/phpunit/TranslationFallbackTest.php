@@ -77,6 +77,50 @@ class TranslationFallbackTest extends WP_UnitTestCase {
         }
     }
 
+    public function test_unwritable_uploads_directory_uses_temporary_fallback(): void {
+        $plugin = mga_plugin();
+        $this->assertInstanceOf( \MaGalerieAutomatique\Plugin::class, $plugin );
+
+        $manager = $plugin->translation_manager();
+        $this->assertInstanceOf( \MaGalerieAutomatique\Translation\Manager::class, $manager );
+
+        $filter = static function ( $uploads ) {
+            $uploads['basedir'] = '/dev/null';
+            $uploads['path']    = '/dev/null';
+            $uploads['error']   = 'Simulated unwritable uploads directory.';
+
+            return $uploads;
+        };
+
+        add_filter( 'upload_dir', $filter );
+
+        $locale_switched = false;
+
+        if ( function_exists( 'switch_to_locale' ) ) {
+            $locale_switched = switch_to_locale( 'fr_FR' );
+        }
+
+        try {
+            $loaded = $manager->load_textdomain( true );
+
+            $this->assertTrue(
+                $loaded,
+                'Translations should load successfully even when the uploads directory is not writable.'
+            );
+
+            $this->assertFileDoesNotExist(
+                trailingslashit( '/dev/null' ) . 'mga-translations/lightbox-jlg-fr_FR.mo',
+                'The fallback should not attempt to persist the translation file in an unwritable uploads directory.'
+            );
+        } finally {
+            if ( $locale_switched && function_exists( 'restore_previous_locale' ) ) {
+                restore_previous_locale();
+            }
+
+            remove_filter( 'upload_dir', $filter );
+        }
+    }
+
     private function purge_cache_directory(): void {
         if ( ! $this->cache_dir || ! is_dir( $this->cache_dir ) ) {
             return;
