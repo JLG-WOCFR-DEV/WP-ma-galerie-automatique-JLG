@@ -288,7 +288,7 @@ class Plugin {
         }
 
         $autoplay = $normalize_boolean( $settings, 'autoplay_start', (bool) ( $defaults['autoplay_start'] ?? false ) );
-        $start_on_clicked_image = $normalize_boolean( $settings, 'start_on_clicked_image', (bool) ( $defaults['start_on_clicked_image'] ?? false ) );
+        $start_on_clicked_image = $normalize_boolean( $settings, 'start_on_clicked_image', (bool) ( $defaults['start_on_clicked_image'] ?? true ) );
         $loop = $normalize_boolean( $settings, 'loop', (bool) ( $defaults['loop'] ?? true ) );
         $show_thumbs_mobile = $normalize_boolean( $settings, 'show_thumbs_mobile', (bool) ( $defaults['show_thumbs_mobile'] ?? true ) );
         $show_zoom          = $normalize_boolean( $settings, 'show_zoom', (bool) ( $defaults['show_zoom'] ?? true ) );
