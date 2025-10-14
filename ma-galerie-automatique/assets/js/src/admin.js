@@ -18,6 +18,14 @@ import {
     const mgaAdmin__ = createTranslate(mgaAdminI18n);
     const mgaAdminSprintf = createSprintf(mgaAdminI18n);
 
+    const EFFECT_LABELS = {
+        slide: mgaAdmin__('Glissement', 'lightbox-jlg'),
+        fade: mgaAdmin__('Fondu', 'lightbox-jlg'),
+        cube: mgaAdmin__('Cube 3D', 'lightbox-jlg'),
+        coverflow: mgaAdmin__('Coverflow 3D', 'lightbox-jlg'),
+        flip: mgaAdmin__('Flip 3D', 'lightbox-jlg'),
+    };
+
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = {
             detectFocusOptionsSupport,
