@@ -588,7 +588,7 @@ import {
             Object.prototype.hasOwnProperty.call(settings, 'start_on_clicked_image')
                 ? settings.start_on_clicked_image
                 : settings.startOnClickedImage;
-        const startOnClickedImage = normalizeFlag(startOnClickedImageSetting, false);
+        const startOnClickedImage = normalizeFlag(startOnClickedImageSetting, true);
         let shareCopyEnabled = normalizeFlag(settings.share_copy, true);
         let shareDownloadEnabled = normalizeFlag(settings.share_download, true);
         let shareChannels = normalizeShareChannels(settings.share_channels);
