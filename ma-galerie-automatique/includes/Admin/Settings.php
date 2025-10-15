@@ -7,9 +7,23 @@ use WP_Post;
 
 class Settings {
 
+    public const MIN_OVERLAY_OPACITY = 0.6;
+
+    private const ACCENT_CONTRAST_MIN_TEXT = 4.5;
+
+    private const ACCENT_CONTRAST_MIN_ICON = 3.0;
+
+    private const CTA_TEXT_COLOR = '#111111';
+
+    private const BACKDROP_BASE_COLOR = '#0a0a0a';
+
     private Plugin $plugin;
 
     private array $sanitized_settings_cache = [];
+
+    private bool $accent_contrast_error_recorded = false;
+
+    private bool $bg_opacity_error_recorded = false;
 
     public function __construct( Plugin $plugin ) {
         $this->plugin = $plugin;
@@ -50,6 +64,137 @@ class Settings {
         }
 
         return (bool) $value;
+    }
+
+    public static function accent_color_meets_contrast_requirements( string $color ): bool {
+        if ( '' === $color ) {
+            return false;
+        }
+
+        $contrast_with_text = self::calculate_contrast_ratio( $color, self::CTA_TEXT_COLOR );
+        $contrast_with_backdrop = self::calculate_contrast_ratio( $color, self::BACKDROP_BASE_COLOR );
+
+        return $contrast_with_text >= self::ACCENT_CONTRAST_MIN_TEXT
+            && $contrast_with_backdrop >= self::ACCENT_CONTRAST_MIN_ICON;
+    }
+
+    private static function calculate_contrast_ratio( string $color_a, string $color_b ): float {
+        $luminance_a = self::relative_luminance_from_hex( $color_a );
+        $luminance_b = self::relative_luminance_from_hex( $color_b );
+
+        $lighter = max( $luminance_a, $luminance_b );
+        $darker  = min( $luminance_a, $luminance_b );
+
+        return ( $lighter + 0.05 ) / ( $darker + 0.05 );
+    }
+
+    private static function relative_luminance_from_hex( string $color ): float {
+        $components = self::hex_to_rgb_components( $color );
+
+        $transform = static function ( float $channel ): float {
+            if ( $channel <= 0.03928 ) {
+                return $channel / 12.92;
+            }
+
+            return pow( ( $channel + 0.055 ) / 1.055, 2.4 );
+        };
+
+        $linear_r = $transform( $components['r'] );
+        $linear_g = $transform( $components['g'] );
+        $linear_b = $transform( $components['b'] );
+
+        return ( 0.2126 * $linear_r ) + ( 0.7152 * $linear_g ) + ( 0.0722 * $linear_b );
+    }
+
+    private static function hex_to_rgb_components( string $color ): array {
+        $hex = ltrim( strtolower( $color ), '#' );
+
+        if ( 3 === strlen( $hex ) ) {
+            $hex = sprintf(
+                '%1$s%1$s%2$s%2$s%3$s%3$s',
+                $hex[0],
+                $hex[1],
+                $hex[2]
+            );
+        }
+
+        $default = [ 'r' => 1.0, 'g' => 1.0, 'b' => 1.0 ];
+
+        if ( 6 !== strlen( $hex ) ) {
+            return $default;
+        }
+
+        return [
+            'r' => hexdec( substr( $hex, 0, 2 ) ) / 255,
+            'g' => hexdec( substr( $hex, 2, 2 ) ) / 255,
+            'b' => hexdec( substr( $hex, 4, 2 ) ) / 255,
+        ];
+    }
+
+    private function resolve_accent_color_from_sources( $raw_value, $existing_value, $default_value ): string {
+        if ( null !== $raw_value ) {
+            $candidate = sanitize_hex_color( (string) $raw_value );
+
+            if ( $candidate && self::accent_color_meets_contrast_requirements( $candidate ) ) {
+                return $candidate;
+            }
+
+            if ( $candidate ) {
+                $this->add_accent_color_contrast_error();
+            }
+        }
+
+        if ( null !== $existing_value ) {
+            $candidate = sanitize_hex_color( (string) $existing_value );
+
+            if ( $candidate && self::accent_color_meets_contrast_requirements( $candidate ) ) {
+                return $candidate;
+            }
+        }
+
+        if ( null !== $default_value ) {
+            $candidate = sanitize_hex_color( (string) $default_value );
+
+            if ( $candidate && self::accent_color_meets_contrast_requirements( $candidate ) ) {
+                return $candidate;
+            }
+        }
+
+        return '#ffffff';
+    }
+
+    private function add_accent_color_contrast_error(): void {
+        if ( $this->accent_contrast_error_recorded ) {
+            return;
+        }
+
+        if ( function_exists( 'add_settings_error' ) ) {
+            add_settings_error(
+                'mga_settings',
+                'mga_settings_accent_color_contrast',
+                __( 'La couleur d’accentuation doit offrir un contraste suffisant (≥ 4,5:1 avec le texte et ≥ 3:1 sur fond sombre).', 'lightbox-jlg' ),
+                'error'
+            );
+        }
+
+        $this->accent_contrast_error_recorded = true;
+    }
+
+    private function add_bg_opacity_error(): void {
+        if ( $this->bg_opacity_error_recorded ) {
+            return;
+        }
+
+        if ( function_exists( 'add_settings_error' ) ) {
+            add_settings_error(
+                'mga_settings',
+                'mga_settings_bg_opacity_min',
+                __( 'Pour garantir la lisibilité, l’opacité du fond ne peut pas être inférieure à 0,6.', 'lightbox-jlg' ),
+                'error'
+            );
+        }
+
+        $this->bg_opacity_error_recorded = true;
     }
 
     private function get_builtin_share_channel_catalog(): array {
@@ -663,31 +808,26 @@ class Settings {
             return $candidate;
         };
 
-        $resolve_hex_color = function ( string $key ) use ( $input, $existing_settings, $defaults ): string {
-            $candidate = null;
-
-            if ( array_key_exists( $key, $input ) ) {
-                $candidate = sanitize_hex_color( $input[ $key ] );
-            } elseif ( isset( $existing_settings[ $key ] ) ) {
-                $candidate = sanitize_hex_color( $existing_settings[ $key ] );
-            }
-
-            if ( $candidate ) {
-                return $candidate;
-            }
-
-            $default_color = $defaults[ $key ] ?? '';
-            $sanitized_default = $default_color ? sanitize_hex_color( $default_color ) : null;
-
-            return $sanitized_default ? $sanitized_default : '#ffffff';
-        };
-
         $output['delay']             = $resolve_bounded_int( 'delay', 1, 30 );
         $output['speed']             = $resolve_bounded_int( 'speed', 100, 5000 );
         $output['thumb_size']        = $resolve_bounded_int( 'thumb_size', 50, 150 );
         $output['thumb_size_mobile'] = $resolve_bounded_int( 'thumb_size_mobile', 40, 100 );
-        $output['accent_color']      = $resolve_hex_color( 'accent_color' );
-        $output['bg_opacity']        = $resolve_bounded_float( 'bg_opacity', 0, 1 );
+        $output['accent_color']      = $this->resolve_accent_color_from_sources(
+            $input['accent_color'] ?? null,
+            $existing_settings['accent_color'] ?? null,
+            $defaults['accent_color'] ?? null
+        );
+
+        if (
+            array_key_exists( 'bg_opacity', $input )
+            && '' !== $input['bg_opacity']
+            && null !== $input['bg_opacity']
+            && (float) $input['bg_opacity'] < self::MIN_OVERLAY_OPACITY
+        ) {
+            $this->add_bg_opacity_error();
+        }
+
+        $output['bg_opacity'] = $resolve_bounded_float( 'bg_opacity', self::MIN_OVERLAY_OPACITY, 1 );
 
         $resolve_checkbox_value = function ( string $key ) use ( $input, $existing_settings, $defaults ) {
             if ( is_array( $input ) && array_key_exists( $key, $input ) ) {
@@ -1844,32 +1984,28 @@ class Settings {
             $raw_value = $raw_settings['bg_opacity'];
 
             if ( '' !== $raw_value && null !== $raw_value ) {
-                $sanitized['bg_opacity'] = $clamp_float( $raw_value, 0.0, 1.0 );
+                if ( (float) $raw_value < self::MIN_OVERLAY_OPACITY ) {
+                    $this->add_bg_opacity_error();
+                }
+
+                $sanitized['bg_opacity'] = $clamp_float( $raw_value, self::MIN_OVERLAY_OPACITY, 1.0 );
             }
         } elseif ( array_key_exists( 'bg_opacity', $existing_settings ) ) {
-            $sanitized['bg_opacity'] = $clamp_float( $existing_settings['bg_opacity'], 0.0, 1.0 );
+            $sanitized['bg_opacity'] = $clamp_float( $existing_settings['bg_opacity'], self::MIN_OVERLAY_OPACITY, 1.0 );
         } elseif ( array_key_exists( 'bg_opacity', $default_settings ) ) {
-            $sanitized['bg_opacity'] = $clamp_float( $default_settings['bg_opacity'], 0.0, 1.0 );
+            $sanitized['bg_opacity'] = $clamp_float( $default_settings['bg_opacity'], self::MIN_OVERLAY_OPACITY, 1.0 );
         }
 
-        if ( array_key_exists( 'accent_color', $raw_settings ) ) {
-            $color = sanitize_hex_color( (string) $raw_settings['accent_color'] );
+        $accent_raw      = array_key_exists( 'accent_color', $raw_settings ) ? $raw_settings['accent_color'] : null;
+        $accent_existing = array_key_exists( 'accent_color', $existing_settings ) ? $existing_settings['accent_color'] : null;
+        $accent_default  = array_key_exists( 'accent_color', $default_settings ) ? $default_settings['accent_color'] : null;
 
-            if ( $color ) {
-                $sanitized['accent_color'] = $color;
-            }
-        } elseif ( array_key_exists( 'accent_color', $existing_settings ) ) {
-            $color = sanitize_hex_color( (string) $existing_settings['accent_color'] );
-
-            if ( $color ) {
-                $sanitized['accent_color'] = $color;
-            }
-        } elseif ( array_key_exists( 'accent_color', $default_settings ) ) {
-            $color = sanitize_hex_color( (string) $default_settings['accent_color'] );
-
-            if ( $color ) {
-                $sanitized['accent_color'] = $color;
-            }
+        if ( null !== $accent_raw || null !== $accent_existing || null !== $accent_default ) {
+            $sanitized['accent_color'] = $this->resolve_accent_color_from_sources(
+                $accent_raw,
+                $accent_existing,
+                $accent_default
+            );
         }
 
         foreach ( [

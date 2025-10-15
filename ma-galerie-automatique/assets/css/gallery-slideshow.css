@@ -185,8 +185,9 @@
 .mga-toolbar-button { position: relative; background: rgba(0, 0, 0, 0.28); border: none; color: var(--mga-accent-color, #fff); cursor: pointer; padding: 8px; min-width: 36px; min-height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease; line-height: 0; }
 .mga-toolbar-button[hidden],
 .mga-toolbar-button.is-hidden { display: none !important; }
-.mga-toolbar-button:focus { outline: none; }
-.mga-toolbar-button:focus-visible { box-shadow: 0 0 0 2px var(--mga-accent-color, #fff), 0 0 0 5px rgba(0, 0, 0, 0.65); }
+.mga-toolbar-button:focus { outline: 2px solid var(--mga-accent-color, #fff); outline-offset: 2px; }
+.mga-toolbar-button:focus:not(:focus-visible) { box-shadow: none; }
+.mga-toolbar-button:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--mga-accent-color, #fff), 0 0 0 5px rgba(0, 0, 0, 0.65); }
 .mga-toolbar-button:hover { background-color: rgba(255, 255, 255, 0.28); transform: translateY(-1px); }
 .mga-toolbar-button .mga-icon { width: 20px; height: 20px; fill: var(--mga-accent-color, #fff); position: relative; z-index: 1; }
 .mga-toolbar-button .mga-download-icon { width: 20px; height: 20px; }
@@ -268,6 +269,11 @@
 }
 .mga-main-swiper .swiper-button-next:hover,
 .mga-main-swiper .swiper-button-prev:hover { background-color: rgba(0, 0, 0, 0.6); }
+.mga-main-swiper .swiper-button-next:focus,
+.mga-main-swiper .swiper-button-prev:focus {
+    outline: 2px solid var(--mga-accent-color, #fff);
+    outline-offset: 2px;
+}
 .mga-main-swiper .swiper-button-next:focus-visible,
 .mga-main-swiper .swiper-button-prev:focus-visible {
     box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55);
@@ -411,9 +417,13 @@
     border-radius: inherit;
 }
 .mga-thumbs-swiper .swiper-slide .mga-thumb-button:focus {
-    outline: none;
+    outline: 2px solid var(--mga-accent-color, #fff);
+    outline-offset: 2px;
+    border-radius: inherit;
+    box-shadow: none;
 }
 .mga-thumbs-swiper .swiper-slide .mga-thumb-button:focus-visible {
+    outline: none;
     box-shadow: 0 0 0 3px var(--mga-accent-color, #fff);
     border-radius: inherit;
 }

@@ -772,10 +772,10 @@ if ( empty( $available_post_types ) ) {
                                         type="range"
                                         id="mga_bg_opacity"
                                         value="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
-                                        min="0.5"
+                                        min="0.6"
                                         max="1"
                                         step="0.05"
-                                        aria-valuemin="0.5"
+                                        aria-valuemin="0.6"
                                         aria-valuemax="1"
                                         aria-valuenow="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
                                         aria-valuetext="<?php echo esc_attr( sprintf( __( '%s opacity', 'lightbox-jlg' ), $settings['bg_opacity'] ) ); ?>"
@@ -784,7 +784,7 @@ if ( empty( $available_post_types ) ) {
                                     <output id="mga_bg_opacity_value" for="mga_bg_opacity" class="mga-range-output" aria-live="polite">
                                         <?php echo esc_html( $settings['bg_opacity'] ); ?>
                                     </output>
-                                    <p class="description"><?php echo esc_html__( "Réglez la transparence du fond de la galerie (0.5 = transparent, 1 = opaque).", 'lightbox-jlg' ); ?></p>
+                                    <p class="description"><?php echo esc_html__( "Réglez la transparence du fond de la galerie (0.6 = transparent, 1 = opaque).", 'lightbox-jlg' ); ?></p>
                                 </div>
                             </div>
 

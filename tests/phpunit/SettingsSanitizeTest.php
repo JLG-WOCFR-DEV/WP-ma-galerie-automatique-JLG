@@ -1,10 +1,16 @@
 <?php
+
+use MaGalerieAutomatique\Admin\Settings;
 /**
  * @group settings
  */
 class SettingsSanitizeTest extends WP_UnitTestCase {
     public function setUp(): void {
         parent::setUp();
+
+        global $wp_settings_errors;
+
+        $wp_settings_errors = [];
 
         update_option( 'mga_settings', [] );
 
@@ -176,7 +182,7 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 ],
                 [],
                 [
-                    'bg_opacity' => 0.0,
+                    'bg_opacity' => Settings::MIN_OVERLAY_OPACITY,
                 ],
             ],
             'invalid_color_and_selectors' => [
@@ -538,6 +544,60 @@ class SettingsSanitizeTest extends WP_UnitTestCase {
                 ],
             ],
         ];
+    }
+
+    public function test_sanitize_settings_rejects_low_contrast_accent_colour(): void {
+        $result = $this->settings()->sanitize_settings(
+            [
+                'accent_color' => '#111111',
+            ],
+            []
+        );
+
+        $this->assertSame(
+            '#ffffff',
+            $result['accent_color'],
+            'Low-contrast accent colours should fall back to the default value.'
+        );
+
+        $errors = get_settings_errors( 'mga_settings' );
+
+        $this->assertNotEmpty(
+            array_filter(
+                $errors,
+                static function ( $error ) {
+                    return isset( $error['code'] ) && 'mga_settings_accent_color_contrast' === $error['code'];
+                }
+            ),
+            'A settings error should be registered when the accent colour fails the contrast requirements.'
+        );
+    }
+
+    public function test_sanitize_settings_enforces_minimum_background_opacity(): void {
+        $result = $this->settings()->sanitize_settings(
+            [
+                'bg_opacity' => '0.2',
+            ],
+            []
+        );
+
+        $this->assertSame(
+            Settings::MIN_OVERLAY_OPACITY,
+            $result['bg_opacity'],
+            'Background opacity should clamp to the minimum accessible threshold.'
+        );
+
+        $errors = get_settings_errors( 'mga_settings' );
+
+        $this->assertNotEmpty(
+            array_filter(
+                $errors,
+                static function ( $error ) {
+                    return isset( $error['code'] ) && 'mga_settings_bg_opacity_min' === $error['code'];
+                }
+            ),
+            'A settings error should be registered when the background opacity falls below the minimum threshold.'
+        );
     }
 
     private function map_share_channels_by_key( array $channels ): array {
