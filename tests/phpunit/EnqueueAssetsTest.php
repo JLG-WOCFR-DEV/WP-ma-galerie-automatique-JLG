@@ -1,4 +1,6 @@
 <?php
+
+use MaGalerieAutomatique\Admin\Settings;
 /**
  * @group enqueue
  */
@@ -255,7 +257,13 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
         $this->assertStringContainsString( '--mga-thumb-size-desktop:150px', $styles_blob, 'Desktop thumb size should clamp to 150px.' );
         $this->assertStringContainsString( '--mga-thumb-size-mobile:40px', $styles_blob, 'Mobile thumb size should clamp to 40px.' );
         $this->assertStringContainsString( '--mga-accent-color:#ffffff', $styles_blob, 'Invalid accent colors should fall back to the default.' );
-        $this->assertStringContainsString( '--mga-bg-opacity:0', $styles_blob, 'Opacity values should be clamped to zero when negative.' );
+        $min_overlay_css_value = rtrim( rtrim( sprintf( '%.4F', Settings::MIN_OVERLAY_OPACITY ), '0' ), '.' );
+
+        $this->assertStringContainsString(
+            '--mga-bg-opacity:' . $min_overlay_css_value,
+            $styles_blob,
+            'Opacity values should clamp to the minimum accessible threshold when negative.'
+        );
         $this->assertStringContainsString( '--mga-z-index:0', $styles_blob, 'Negative z-index values should be coerced to zero.' );
 
         $script_data = wp_scripts()->get_data( 'mga-gallery-script', 'before' );
@@ -266,7 +274,11 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
         $this->assertSame( 150, $settings['thumb_size'], 'Desktop thumb size should be clamped to 150 in the script payload.' );
         $this->assertSame( 40, $settings['thumb_size_mobile'], 'Mobile thumb size should clamp to 40 in the script payload.' );
         $this->assertSame( '#ffffff', $settings['accent_color'], 'Accent color should fall back to the default hex value.' );
-        $this->assertSame( 0.0, $settings['bg_opacity'], 'Negative opacity values should clamp to zero in the script payload.' );
+        $this->assertSame(
+            Settings::MIN_OVERLAY_OPACITY,
+            $settings['bg_opacity'],
+            'Negative opacity values should clamp to the minimum accessible threshold in the script payload.'
+        );
         $this->assertSame( 0, $settings['z_index'], 'Negative z-index values should be coerced to zero in the script payload.' );
         $this->assertArrayHasKey( 'include_svg', $settings, 'The include_svg flag should be present in the script payload.' );
         $this->assertFalse( $settings['include_svg'], 'The include_svg flag should cast to false when disabled.' );

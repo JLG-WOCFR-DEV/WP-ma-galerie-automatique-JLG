@@ -223,11 +223,19 @@ class Plugin {
         $accent_color = null;
 
         if ( array_key_exists( 'accent_color', $settings ) ) {
-            $accent_color = sanitize_hex_color( $settings['accent_color'] );
+            $candidate = sanitize_hex_color( $settings['accent_color'] );
+
+            if ( $candidate && Settings::accent_color_meets_contrast_requirements( $candidate ) ) {
+                $accent_color = $candidate;
+            }
         }
 
         if ( ! $accent_color && isset( $defaults['accent_color'] ) ) {
-            $accent_color = sanitize_hex_color( $defaults['accent_color'] );
+            $candidate = sanitize_hex_color( $defaults['accent_color'] );
+
+            if ( $candidate && Settings::accent_color_meets_contrast_requirements( $candidate ) ) {
+                $accent_color = $candidate;
+            }
         }
 
         if ( ! $accent_color ) {
@@ -274,7 +282,7 @@ class Plugin {
         }
 
         $bg_opacity = isset( $settings['bg_opacity'] ) ? (float) $settings['bg_opacity'] : (float) ( $defaults['bg_opacity'] ?? 0.95 );
-        $bg_opacity = max( 0, min( 1, $bg_opacity ) );
+        $bg_opacity = max( Settings::MIN_OVERLAY_OPACITY, min( 1, $bg_opacity ) );
 
         $allowed_thumb_layouts = [ 'bottom', 'left', 'hidden' ];
         $thumbs_layout         = isset( $defaults['thumbs_layout'] ) ? (string) $defaults['thumbs_layout'] : 'bottom';

@@ -473,7 +473,7 @@ class Assets {
             $bg_opacity = 0.95;
         }
 
-        $bg_opacity = max( 0, min( 1, $bg_opacity ) );
+        $bg_opacity = max( Settings::MIN_OVERLAY_OPACITY, min( 1, $bg_opacity ) );
 
         return [
             ':root' => [
@@ -511,7 +511,7 @@ class Assets {
         }
 
         $bg_opacity = isset( $settings['bg_opacity'] ) ? floatval( $settings['bg_opacity'] ) : ( $defaults['bg_opacity'] ?? 0.95 );
-        $bg_opacity = max( 0, min( 1, (float) $bg_opacity ) );
+        $bg_opacity = max( Settings::MIN_OVERLAY_OPACITY, min( 1, (float) $bg_opacity ) );
 
         $inline_styles = sprintf(
             ':root{--mga-accent-color:%1$s;--mga-bg-opacity:%2$s;--mga-editor-note-bg:rgba(10,10,10,%2$s);}',

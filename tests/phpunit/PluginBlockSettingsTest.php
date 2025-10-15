@@ -1,5 +1,6 @@
 <?php
 
+use MaGalerieAutomatique\Admin\Settings;
 use MaGalerieAutomatique\Plugin;
 
 /**
@@ -107,7 +108,7 @@ class PluginBlockSettingsTest extends WP_UnitTestCase {
 
         $this->assertSame( 1, $below_min['delay'], 'Delay should clamp to the minimum supported interval.' );
         $this->assertSame( 100, $below_min['speed'], 'Speed should clamp to the minimum supported value.' );
-        $this->assertSame( 0.0, $below_min['bgOpacity'], 'Opacity should not drop below zero.' );
+        $this->assertSame( Settings::MIN_OVERLAY_OPACITY, $below_min['bgOpacity'], 'Opacity should not drop below the minimum accessible threshold.' );
         $this->assertSame( 'echo', $below_min['backgroundStyle'], 'Unsupported background styles should fallback to the default.' );
         $this->assertSame( 'bottom', $below_min['thumbsLayout'], 'Unsupported thumbnail layouts should fallback to the default.' );
         $this->assertSame( 'slide', $below_min['effect'], 'Unsupported effects should fallback to the default transition.' );
