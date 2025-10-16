@@ -48,6 +48,8 @@ class Plugin {
         add_action( 'admin_menu', [ $this->settings, 'add_admin_menu' ] );
         add_action( 'admin_init', [ $this->settings, 'register_settings' ] );
         add_action( 'admin_enqueue_scripts', [ $this->settings, 'enqueue_assets' ] );
+        add_action( 'admin_notices', [ $this, 'maybe_show_missing_google_sdk_notice' ] );
+        add_action( 'network_admin_notices', [ $this, 'maybe_show_missing_google_sdk_notice' ] );
         add_action( 'init', [ $this, 'register_block' ] );
         add_action( 'update_option_mga_settings', [ $this, 'maybe_purge_detection_cache' ], 10, 3 );
         add_action( 'switch_blog', [ $this, 'handle_switch_blog' ], 10, 2 );
@@ -123,6 +125,35 @@ class Plugin {
                 is_string( $old_locale ) ? $old_locale : ''
             );
         }
+    }
+
+    public function maybe_show_missing_google_sdk_notice(): void {
+        static $displayed = false;
+
+        if ( $displayed || ! is_admin() || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) {
+            return;
+        }
+
+        if ( class_exists( '\\Google\\Client' ) ) {
+            return;
+        }
+
+        if ( ! current_user_can( 'activate_plugins' ) ) {
+            return;
+        }
+
+        $displayed = true;
+
+        printf(
+            '<div class="notice notice-error"><p>%s</p></div>',
+            wp_kses_post(
+                sprintf(
+                    /* translators: %s: composer install command */
+                    __( 'Le SDK Google est indisponible. Exécutez <code>%s</code> dans le dossier du plugin pour installer les dépendances nécessaires.', 'lightbox-jlg' ),
+                    'composer install --no-dev'
+                )
+            )
+        );
     }
 
     public function settings(): Settings {

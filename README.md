@@ -10,8 +10,13 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 
 ## Installation et activation
 1. Téléchargez ou clonez ce dépôt dans `wp-content/plugins/`.
-2. Dans l'administration WordPress, rendez-vous dans **Extensions → Ajouter** puis activez **Lightbox - JLG**.
-3. Accédez aux paramètres via **Réglages → Ma Galerie Automatique**.
+2. Depuis le dossier `wp-content/plugins/ma-galerie-automatique/`, exécutez `composer install --no-dev` afin de récupérer le SDK Google et les dépendances PHP du plugin.
+3. Dans l'administration WordPress, rendez-vous dans **Extensions → Ajouter** puis activez **Lightbox - JLG**.
+4. Accédez aux paramètres via **Réglages → Ma Galerie Automatique**.
+
+Le dossier `vendor/` généré par Composer est ignoré dans Git : pensez à lancer `composer install --no-dev` avant de créer une archive ZIP ou de déployer l'extension pour inclure le SDK Google.
+
+En cas de notice « Le SDK Google est indisponible » dans l'administration, vérifiez que `composer install --no-dev` a bien été exécuté et que WordPress dispose des droits d'écriture nécessaires dans le dossier `vendor/` du plugin.
 
 ## Fonctionnalités détaillées
 
