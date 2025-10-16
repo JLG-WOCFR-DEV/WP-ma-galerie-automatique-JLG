@@ -64,6 +64,9 @@ class CacheCommand extends WP_CLI_Command {
      *   - swiper
      * ---
      *
+     * [--batch-size=<number>]
+     * : Size of each deletion batch when purging detection caches. Defaults to 500.
+     *
      * [--network]
      * : Run the command on every site of the current network.
      *
@@ -74,11 +77,16 @@ class CacheCommand extends WP_CLI_Command {
      *     wp mga cache purge --network
      */
     public function purge( $args, $assoc_args ): void {
-        $scope   = isset( $assoc_args['scope'] ) ? strtolower( (string) $assoc_args['scope'] ) : 'all';
-        $network = isset( $assoc_args['network'] );
+        $scope      = isset( $assoc_args['scope'] ) ? strtolower( (string) $assoc_args['scope'] ) : 'all';
+        $network    = isset( $assoc_args['network'] );
+        $batch_size = isset( $assoc_args['batch-size'] ) ? absint( $assoc_args['batch-size'] ) : 500;
 
         if ( ! in_array( $scope, [ 'all', 'detection', 'swiper' ], true ) ) {
             WP_CLI::error( sprintf( 'Unknown scope "%s". Use "all", "detection" or "swiper".', $scope ) );
+        }
+
+        if ( $batch_size < 1 ) {
+            WP_CLI::error( '--batch-size must be a positive integer.' );
         }
 
         if ( $network ) {
@@ -88,7 +96,7 @@ class CacheCommand extends WP_CLI_Command {
             foreach ( $site_ids as $site_id ) {
                 switch_to_blog( $site_id );
                 WP_CLI::log( sprintf( 'Purging caches on site #%d (%s)...', $site_id, home_url() ) );
-                $result = $this->purge_site_caches( $scope );
+                $result = $this->purge_site_caches( $scope, $batch_size );
                 $this->render_purge_summary( $result );
                 restore_current_blog();
             }
@@ -98,7 +106,7 @@ class CacheCommand extends WP_CLI_Command {
             return;
         }
 
-        $result = $this->purge_site_caches( $scope );
+        $result = $this->purge_site_caches( $scope, $batch_size );
         $this->render_purge_summary( $result );
         WP_CLI::success( 'Cache purge completed.' );
     }
@@ -171,7 +179,7 @@ class CacheCommand extends WP_CLI_Command {
         \WP_CLI\Utils\format_items( 'table', $rows, [ 'Cache', 'Key', 'Count', 'Notes' ] );
     }
 
-    private function purge_site_caches( string $scope ): array {
+    private function purge_site_caches( string $scope, int $batch_size ): array {
         $result = [
             'meta_deleted'      => 0,
             'transients_deleted' => 0,
@@ -179,7 +187,7 @@ class CacheCommand extends WP_CLI_Command {
         ];
 
         if ( in_array( $scope, [ 'all', 'detection' ], true ) ) {
-            $result = array_merge( $result, $this->purge_detection_cache() );
+            $result = array_merge( $result, $this->purge_detection_cache( $batch_size ) );
         }
 
         if ( in_array( $scope, [ 'all', 'swiper' ], true ) ) {
@@ -189,34 +197,19 @@ class CacheCommand extends WP_CLI_Command {
         return $result;
     }
 
-    private function purge_detection_cache(): array {
+    private function purge_detection_cache( int $batch_size ): array {
         global $wpdb;
 
-        $meta_deleted = $wpdb->query(
-            $wpdb->prepare(
-                "DELETE FROM {$wpdb->postmeta} WHERE meta_key = %s",
-                '_mga_has_linked_images'
-            )
-        );
+        $batch_size = max( 1, $batch_size );
 
-        if ( ! is_int( $meta_deleted ) ) {
-            $meta_deleted = 0;
-        }
+        $this->log_cli_message( sprintf( 'Deleting cached post meta in batches of %d…', $batch_size ) );
+        $meta_deleted = $this->delete_post_meta_in_batches( $batch_size );
 
         $transient_pattern = $wpdb->esc_like( '_transient_mga_det_' ) . '%';
         $timeout_pattern   = $wpdb->esc_like( '_transient_timeout_mga_det_' ) . '%';
 
-        $transients_deleted = $wpdb->query(
-            $wpdb->prepare(
-                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-                $transient_pattern,
-                $timeout_pattern
-            )
-        );
-
-        if ( ! is_int( $transients_deleted ) ) {
-            $transients_deleted = 0;
-        }
+        $this->log_cli_message( sprintf( 'Deleting detection transients in batches of %d…', $batch_size ) );
+        $transients_deleted = $this->delete_transients_in_batches( [ $transient_pattern, $timeout_pattern ], $batch_size );
 
         Detection::bump_global_cache_version();
 
@@ -226,6 +219,102 @@ class CacheCommand extends WP_CLI_Command {
             'meta_deleted'      => max( 0, $meta_deleted ),
             'transients_deleted' => max( 0, $transients_deleted ),
         ];
+    }
+
+    private function delete_post_meta_in_batches( int $batch_size ): int {
+        global $wpdb;
+
+        $total_deleted = 0;
+
+        do {
+            $meta_ids = $wpdb->get_col(
+                $wpdb->prepare(
+                    "SELECT meta_id FROM {$wpdb->postmeta} WHERE meta_key = %s LIMIT %d",
+                    '_mga_has_linked_images',
+                    $batch_size
+                )
+            );
+
+            $count = is_array( $meta_ids ) ? count( $meta_ids ) : 0;
+
+            if ( $count > 0 ) {
+                $placeholders = implode( ',', array_fill( 0, $count, '%d' ) );
+                $deleted      = $wpdb->query(
+                    $wpdb->prepare(
+                        "DELETE FROM {$wpdb->postmeta} WHERE meta_id IN ({$placeholders})",
+                        ...array_map( 'intval', $meta_ids )
+                    )
+                );
+
+                if ( is_int( $deleted ) && $deleted > 0 ) {
+                    $total_deleted += $deleted;
+                    $this->log_cli_message(
+                        sprintf(
+                            'Deleted %1$d cached post meta rows this batch (%2$d total).',
+                            $deleted,
+                            $total_deleted
+                        )
+                    );
+                }
+            }
+        } while ( $count === $batch_size );
+
+        return $total_deleted;
+    }
+
+    private function delete_transients_in_batches( array $patterns, int $batch_size ): int {
+        global $wpdb;
+
+        $total_deleted = 0;
+
+        foreach ( $patterns as $pattern ) {
+            $last_option_id = 0;
+
+            do {
+                $rows = $wpdb->get_results(
+                    $wpdb->prepare(
+                        "SELECT option_id, option_name FROM {$wpdb->options} WHERE option_name LIKE %s AND option_id > %d ORDER BY option_id ASC LIMIT %d",
+                        $pattern,
+                        $last_option_id,
+                        $batch_size
+                    ),
+                    ARRAY_A
+                );
+
+                $count = is_array( $rows ) ? count( $rows ) : 0;
+
+                if ( $count > 0 ) {
+                    $last_option_id = (int) $rows[ $count - 1 ]['option_id'];
+                    $option_names   = wp_list_pluck( $rows, 'option_name' );
+                    $placeholders   = implode( ',', array_fill( 0, $count, '%s' ) );
+                    $deleted        = $wpdb->query(
+                        $wpdb->prepare(
+                            "DELETE FROM {$wpdb->options} WHERE option_name IN ({$placeholders})",
+                            ...$option_names
+                        )
+                    );
+
+                    if ( is_int( $deleted ) && $deleted > 0 ) {
+                        $total_deleted += $deleted;
+                        $this->log_cli_message(
+                            sprintf(
+                                'Deleted %1$d detection transient rows this batch (%2$d total).',
+                                $deleted,
+                                $total_deleted
+                            )
+                        );
+                    }
+                }
+            } while ( $count === $batch_size );
+        }
+
+        return $total_deleted;
+    }
+
+    private function log_cli_message( string $message ): void {
+        if ( class_exists( '\\WP_CLI' ) ) {
+            WP_CLI::log( $message );
+        }
     }
 
     private function purge_swiper_sources(): bool {
