@@ -3758,14 +3758,41 @@ import {
                         debug.updateInfo('mga-debug-autoplay-time', mgaSprintf(mga__( '%ss', 'lightbox-jlg' ), (time / 1000).toFixed(2)));
                     },
                     slideChangeTransitionStart: function(swiper) {
-                        const slide = swiper.slides[swiper.activeIndex];
+                        const slides = Array.isArray(swiper.slides) ? swiper.slides : Array.from(swiper.slides || []);
+                        const slide = slides[swiper.activeIndex];
+
+                        if (!slide) {
+                            debug.log(mga__( 'Impossible de récupérer la diapositive active.', 'lightbox-jlg' ));
+                            return;
+                        }
+
                         const img = slide.querySelector('img');
+
                         if (img && !img.complete) {
-                            debug.log(mgaSprintf(mga__( "Chargement de l'image %s...", 'lightbox-jlg' ), slide.dataset.slideIndex));
-                            slide.querySelector('.mga-spinner').style.display = 'block';
+                            const spinner = slide.querySelector('.mga-spinner');
+
+                            debug.log(
+                                mgaSprintf(
+                                    mga__( "Chargement de l'image %s...", 'lightbox-jlg' ),
+                                    slide.dataset.slideIndex
+                                )
+                            );
+
+                            if (spinner) {
+                                spinner.style.display = 'block';
+                            }
+
                             img.onload = () => {
-                                debug.log(mgaSprintf(mga__( 'Image %s chargée.', 'lightbox-jlg' ), slide.dataset.slideIndex));
-                                slide.querySelector('.mga-spinner').style.display = 'none';
+                                debug.log(
+                                    mgaSprintf(
+                                        mga__( 'Image %s chargée.', 'lightbox-jlg' ),
+                                        slide.dataset.slideIndex
+                                    )
+                                );
+
+                                if (spinner) {
+                                    spinner.style.display = 'none';
+                                }
                             };
                         }
                     },
