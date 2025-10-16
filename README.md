@@ -118,7 +118,7 @@ Le modèle de la page d’administration se trouve dans `includes/admin-page-tem
 
 ### Commandes WP-CLI
 - `wp mga cache status [--network]` affiche le nombre d’entrées de cache (`_mga_has_linked_images`, transients `mga_det_*`, sources Swiper) et leur dernière actualisation, site par site si l’option `--network` est fournie.【F:ma-galerie-automatique/includes/Cli/CacheCommand.php†L18-L88】
-- `wp mga cache purge [--scope=all|detection|swiper] [--network]` supprime les metas et transients de détection, rafraîchit l’option Swiper et remonte un résumé détaillé, avec prise en charge multisite.【F:ma-galerie-automatique/includes/Cli/CacheCommand.php†L90-L205】
+- `wp mga cache purge [--scope=all|detection|swiper] [--batch-size=<n>] [--network]` supprime les metas et transients de détection par lots, rafraîchit l’option Swiper et remonte un résumé détaillé, avec prise en charge multisite.【F:ma-galerie-automatique/includes/Cli/CacheCommand.php†L90-L276】
 
 ### Suivi technique courant
 - **Cache multisite** : la couverture unitaire s’étend désormais au hook `switch_blog` pour garantir l’invalidation du cache mémoire lors d’un changement de site et prévenir les réglages incohérents sur les réseaux multisites.【F:tests/phpunit/SettingsCacheTest.php†L52-L91】
