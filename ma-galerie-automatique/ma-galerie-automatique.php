@@ -30,6 +30,12 @@ if ( ! defined( 'MGA_SWIPER_JS_SRI_HASH' ) ) {
     define( 'MGA_SWIPER_JS_SRI_HASH', 'sha384-ChaDfAcubhQlVCLEzy7y8vgjNLbZ4RlIjH2jjcUXjYpn0MwZieWBjpXFMjMx8Dax' );
 }
 
+$composer_autoload = __DIR__ . '/vendor/autoload.php';
+
+if ( file_exists( $composer_autoload ) ) {
+    require_once $composer_autoload;
+}
+
 require_once __DIR__ . '/includes/autoload.php';
 
 global $ma_galerie_automatique_plugin;

@@ -1,0 +1,15 @@
+{
+    "name": "jlg/ma-galerie-automatique",
+    "description": "Dépendances Composer du plugin Ma Galerie Automatique",
+    "type": "wordpress-plugin",
+    "license": "GPL-3.0-or-later",
+    "require": {
+        "php": ">=7.4",
+        "google/apiclient": "^2.17"
+    },
+    "autoload": {
+        "psr-4": {
+            "MaGalerieAutomatique\\": "includes/"
+        }
+    }
+}

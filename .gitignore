@@ -4,3 +4,6 @@ tests/e2e/assets/*
 
 .wordpress-tests/
 tests/phpunit/wp-tests-config-extra.php
+
+ma-galerie-automatique/vendor/
+vendor/
