@@ -28,7 +28,7 @@ if ( empty( $available_post_types ) ) {
 ?>
 <div class="wrap mga-admin-wrap">
     <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-    <?php settings_errors( 'mga_settings_group' ); ?>
+    <?php settings_errors( 'mga_settings' ); ?>
 
     <form action="options.php" method="post" data-mga-settings-form>
         <?php settings_fields( 'mga_settings_group' ); ?>
