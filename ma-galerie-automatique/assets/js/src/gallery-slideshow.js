@@ -7,6 +7,24 @@ import {
     getSharedI18n,
     sanitizeIconKey,
 } from './shared';
+import {
+    DEFAULT_EFFECT,
+    sanitizeEffect,
+    sanitizeSpeed,
+    sanitizeEasing,
+    sanitizeThumbsLayout,
+    isHeavyEffect,
+} from './navigation';
+import {
+    buildLabelFromKey,
+    normalizeShareChannels,
+    hasNativeShareSupport,
+    buildShareUrl,
+} from './share';
+import {
+    createThumbAriaLabel,
+    getAutoplayActionLabel,
+} from './accessibility';
 
 (function() {
     "use strict";
@@ -25,19 +43,6 @@ import {
                 window.clearTimeout(id);
             }
         };
-
-    const buildLabelFromKey = (key) => {
-        if (typeof key !== 'string' || key.trim() === '') {
-            return '';
-        }
-
-        return key
-            .trim()
-            .split(/[-_\s]+/)
-            .filter(Boolean)
-            .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
-            .join(' ');
-    };
 
     const createShareIconElement = (iconKey) => {
         const wrapper = document.createElement('span');
@@ -58,124 +63,6 @@ import {
         }
 
         return sharedCreateSvgElement(document, tag, attributes);
-    };
-
-    function normalizeShareChannels(rawChannels) {
-        const entries = [];
-
-        if (Array.isArray(rawChannels)) {
-            rawChannels.forEach((channel) => {
-                entries.push(channel);
-            });
-        } else if (rawChannels && typeof rawChannels === 'object') {
-            Object.keys(rawChannels).forEach((key) => {
-                const candidate = rawChannels[key];
-
-                if (candidate && typeof candidate === 'object') {
-                    entries.push(Object.assign({ key }, candidate));
-                }
-            });
-        }
-
-        const seenKeys = new Set();
-
-        return entries.reduce((accumulator, entry) => {
-            if (!entry || typeof entry !== 'object') {
-                return accumulator;
-            }
-
-            let rawKey = '';
-
-            if (typeof entry.key === 'string') {
-                rawKey = entry.key;
-            } else if (typeof entry.slug === 'string') {
-                rawKey = entry.slug;
-            }
-
-            let key = sanitizeIconKey(rawKey);
-
-            if (!key && typeof entry.label === 'string') {
-                key = sanitizeIconKey(entry.label.replace(/\s+/g, '-'));
-            }
-
-            if (!key || seenKeys.has(key)) {
-                return accumulator;
-            }
-
-            seenKeys.add(key);
-
-            const label = typeof entry.label === 'string' && entry.label.trim()
-                ? entry.label.trim()
-                : buildLabelFromKey(key);
-
-            const template = typeof entry.template === 'string'
-                ? entry.template.trim()
-                : '';
-
-            const icon = sanitizeIconKey(entry.icon || key) || key;
-
-            const enabled = entry.enabled === true
-                || entry.enabled === '1'
-                || entry.enabled === 1
-                || entry.enabled === 'true'
-                || entry.enabled === 'on';
-
-            accumulator.push({
-                key,
-                label,
-                template,
-                icon,
-                enabled,
-            });
-
-            return accumulator;
-        }, []);
-    }
-
-    const DEFAULT_EFFECT = 'slide';
-    const DEFAULT_SPEED = 600;
-    const DEFAULT_EASING = 'ease-out';
-    const ALLOWED_EFFECTS = [ 'slide', 'fade', 'cube', 'coverflow', 'flip' ];
-    const HEAVY_EFFECTS = new Set( [ 'cube', 'coverflow', 'flip' ] );
-    const ALLOWED_EASINGS = [ 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear' ];
-    const DEFAULT_THUMBS_LAYOUT = 'bottom';
-    const ALLOWED_THUMBS_LAYOUTS = [ 'bottom', 'left', 'hidden' ];
-
-    const sanitizeEffect = ( rawEffect ) => {
-        if ( typeof rawEffect !== 'string' ) {
-            return DEFAULT_EFFECT;
-        }
-
-        const normalized = rawEffect.trim().toLowerCase();
-        return ALLOWED_EFFECTS.includes( normalized ) ? normalized : DEFAULT_EFFECT;
-    };
-
-    const sanitizeSpeed = ( rawSpeed ) => {
-        const parsed = parseInt( rawSpeed, 10 );
-
-        if ( Number.isNaN( parsed ) ) {
-            return DEFAULT_SPEED;
-        }
-
-        return Math.min( Math.max( parsed, 100 ), 5000 );
-    };
-
-    const sanitizeEasing = ( rawEasing ) => {
-        if ( typeof rawEasing !== 'string' ) {
-            return DEFAULT_EASING;
-        }
-
-        const normalized = rawEasing.trim().toLowerCase();
-        return ALLOWED_EASINGS.includes( normalized ) ? normalized : DEFAULT_EASING;
-    };
-
-    const sanitizeThumbsLayout = ( rawLayout ) => {
-        if ( typeof rawLayout !== 'string' ) {
-            return DEFAULT_THUMBS_LAYOUT;
-        }
-
-        const normalized = rawLayout.trim().toLowerCase();
-        return ALLOWED_THUMBS_LAYOUTS.includes( normalized ) ? normalized : DEFAULT_THUMBS_LAYOUT;
     };
 
     const applyTransitionEasing = ( swiperInstance, easing ) => {
@@ -295,9 +182,7 @@ import {
         }
 
         playPauseButton.setAttribute('aria-pressed', isRunning ? 'true' : 'false');
-        const actionLabel = isRunning
-            ? mga__( 'Mettre le diaporama en pause', 'lightbox-jlg' )
-            : mga__( 'Lancer le diaporama', 'lightbox-jlg' );
+        const actionLabel = getAutoplayActionLabel(mga__, isRunning);
         playPauseButton.setAttribute('aria-label', actionLabel);
         playPauseButton.setAttribute('title', actionLabel);
     }
@@ -957,10 +842,6 @@ import {
             return shareButton;
         }
 
-        function hasNativeShareSupport() {
-            return typeof navigator !== 'undefined' && navigator && typeof navigator.share === 'function';
-        }
-
         function ensureShareModal(viewer) {
             if (!showShare || !hasAnyShareActionAvailable()) {
                 return null;
@@ -1286,29 +1167,6 @@ import {
             shareModalInvoker = null;
 
             debug.shareAction('close', { reason });
-        }
-
-        function buildShareUrl(template, sharePayload) {
-            if (typeof template !== 'string' || !template) {
-                return '';
-            }
-
-            const payload = sharePayload || {};
-            const replacements = {
-                url: payload.url || '',
-                text: payload.text || payload.title || '',
-                title: payload.title || payload.text || '',
-            };
-
-            return template.replace(/%([a-z]+)%/gi, (match, key) => {
-                const normalized = key.toLowerCase();
-
-                if (!Object.prototype.hasOwnProperty.call(replacements, normalized)) {
-                    return '';
-                }
-
-                return encodeURIComponent(replacements[normalized]);
-            });
         }
 
         function copyToClipboard(text) {
@@ -3412,21 +3270,6 @@ import {
                     }
                 };
 
-                const createThumbAriaLabel = (image, position) => {
-                    if (image && image.caption) {
-                        return mgaSprintf(
-                            mga__( 'Afficher la diapositive %s : %s', 'lightbox-jlg' ),
-                            String(position),
-                            image.caption
-                        );
-                    }
-
-                    return mgaSprintf(
-                        mga__( 'Afficher la diapositive %s', 'lightbox-jlg' ),
-                        String(position)
-                    );
-                };
-
                 function handleThumbNavigation(targetIndex) {
                     if (mainSwiper && !mainSwiper.destroyed) {
                         slideToIndex(mainSwiper, targetIndex);
@@ -3468,7 +3311,7 @@ import {
                         thumbButton.type = 'button';
                         thumbButton.className = 'mga-thumb-button';
                         thumbButton.setAttribute('data-slide-index', String(index));
-                        thumbButton.setAttribute('aria-label', createThumbAriaLabel(img, index + 1));
+                        thumbButton.setAttribute('aria-label', createThumbAriaLabel(mga__, mgaSprintf, img, index + 1));
                         thumbButton.setAttribute('tabindex', index === sanitizedStartIndex ? '0' : '-1');
 
                         const thumbImg = document.createElement('img');
@@ -3817,7 +3660,7 @@ import {
             if (prefersReducedMotion) {
                 enableCssMode = true;
 
-                if (HEAVY_EFFECTS.has(resolvedEffect)) {
+                if (isHeavyEffect(resolvedEffect)) {
                     if (debug && typeof debug.log === 'function') {
                         debug.log(mga__( 'Effet 3D désactivé pour respecter la préférence de réduction des animations.', 'lightbox-jlg' ));
                     }
@@ -4050,7 +3893,7 @@ import {
                         }
 
                         const matchesReducedMotion = !!event.matches;
-                        const targetEffect = matchesReducedMotion && HEAVY_EFFECTS.has(sanitizedEffect)
+                        const targetEffect = matchesReducedMotion && isHeavyEffect(sanitizedEffect)
                             ? DEFAULT_EFFECT
                             : sanitizedEffect;
                         const targetSpeed = matchesReducedMotion ? Math.min(sanitizedSpeed, 300) : sanitizedSpeed;
