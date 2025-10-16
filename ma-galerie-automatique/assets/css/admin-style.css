@@ -483,9 +483,22 @@
 }
 
 .mga-settings-layout__content {
-    display: flex;
-    flex-direction: column;
+    display: grid;
     gap: 32px;
+    align-content: start;
+}
+
+.mga-settings-layout__content > * {
+    min-width: 0;
+}
+
+.mga-settings-layout__grid {
+    display: grid;
+    gap: 32px;
+}
+
+.mga-settings-layout__grid > * {
+    min-width: 0;
 }
 
 .mga-live-preview {
@@ -494,6 +507,29 @@
     padding: 24px;
     background: var(--mga-admin-surface);
     box-shadow: var(--mga-admin-shadow-sm);
+}
+
+@media (min-width: 1024px) {
+    .mga-settings-layout__content {
+        grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .mga-live-preview {
+        position: sticky;
+        top: 96px;
+        align-self: start;
+    }
+
+    .mga-settings-layout__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (min-width: 1440px) {
+    .mga-settings-layout__grid {
+        grid-template-columns: repeat(2, minmax(320px, 1fr));
+    }
 }
 
 .mga-live-preview__header h2 {
@@ -808,11 +844,13 @@
 
 .mga-setting-row {
     display: grid;
-    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
-    gap: 20px 40px;
-    padding: 22px 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+        "label"
+        "control";
+    gap: 14px;
+    padding: 24px 0;
     border-top: 1px solid var(--mga-admin-border-soft);
-    align-items: flex-start;
 }
 
 .mga-setting-row:first-child {
@@ -825,18 +863,74 @@
 }
 
 .mga-setting-row__label {
+    grid-area: label;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     font-weight: 600;
     color: var(--mga-admin-text);
 }
 
 .mga-setting-row__label-text {
     display: inline-block;
-    margin-top: 8px;
+    margin: 0;
     overflow-wrap: anywhere;
 }
 
-.mga-setting-row--stacked {
-    align-items: flex-start;
+.mga-setting-row__label > label,
+.mga-setting-row__label > span,
+.mga-setting-row__label > strong {
+    font-weight: inherit;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: inherit;
+}
+
+.mga-setting-row__label .description {
+    margin: 0;
+    font-weight: 400;
+    color: var(--mga-admin-text-muted);
+}
+
+.mga-setting-row__control {
+    grid-area: control;
+    display: grid;
+    gap: 12px;
+    align-content: start;
+}
+
+.mga-setting-field {
+    display: grid;
+    gap: 8px;
+}
+
+.mga-setting-row__sublabel {
+    font-weight: 600;
+    color: var(--mga-admin-text-muted);
+    font-size: 0.95rem;
+}
+
+.mga-setting-range {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.mga-setting-range input[type="range"] {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mga-setting-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mga-setting-row__unit {
+    color: var(--mga-admin-text-muted);
+    font-weight: 600;
 }
 
 .mga-contextual-presets {
@@ -929,7 +1023,7 @@
     border: none;
     border-top: 1px solid rgba(148, 163, 184, 0.28);
     margin: 0;
-    padding: 22px 0;
+    padding: 24px 0;
 }
 
 .mga-setting-row--fieldset legend {
@@ -1249,6 +1343,14 @@
     .mga-settings-layout__sidebar {
         position: static;
     }
+
+    .mga-settings-layout__content {
+        grid-template-columns: 1fr;
+    }
+
+    .mga-live-preview {
+        position: static;
+    }
 }
 
 @media (max-width: 782px) {
@@ -1257,11 +1359,8 @@
     }
 
     .mga-setting-row {
-        grid-template-columns: 1fr;
-    }
-
-    .mga-setting-row__label {
-        margin-bottom: 4px;
+        padding: 20px 0;
+        gap: 12px;
     }
 
     .mga-wizard__progress {
@@ -1354,6 +1453,20 @@
     background-size: 6px 6px, 6px 6px, 1px 100%;
     background-repeat: no-repeat;
     padding-right: 42px;
+}
+
+.mga-range-output {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    padding: 6px 12px;
+    border-radius: var(--mga-admin-radius-md);
+    border: 1px solid var(--mga-admin-border);
+    background: var(--mga-admin-surface-subtle);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--mga-admin-text);
 }
 
 .mga-admin-wrap .regular-text:focus-visible,
