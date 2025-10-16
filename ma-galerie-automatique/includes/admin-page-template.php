@@ -196,8 +196,8 @@ if ( empty( $available_post_types ) ) {
                         </div>
                         <p class="mga-live-preview__fallback" data-mga-preview-fallback hidden><?php echo esc_html__( 'Aperçu interactif indisponible. Veuillez recharger la page.', 'lightbox-jlg' ); ?></p>
                     </div>
-                    </div>
-                    <section
+                    <div class="mga-settings-layout__grid">
+                        <section
                         id="mga-section-style"
                         class="mga-settings-section card"
                         data-mga-settings-section
@@ -574,7 +574,10 @@ if ( empty( $available_post_types ) ) {
                                     <label for="mga_speed"><?php echo esc_html__( 'Vitesse de transition', 'lightbox-jlg' ); ?></label>
                                 </div>
                                 <div class="mga-setting-row__control">
-                                    <input name="mga_settings[speed]" type="number" id="mga_speed" value="<?php echo esc_attr( $settings['speed'] ); ?>" min="100" max="5000" step="50" class="small-text" /> <?php echo esc_html__( 'millisecondes', 'lightbox-jlg' ); ?>
+                                    <div class="mga-setting-inline">
+                                        <input name="mga_settings[speed]" type="number" id="mga_speed" value="<?php echo esc_attr( $settings['speed'] ); ?>" min="100" max="5000" step="50" class="small-text" />
+                                        <span class="mga-setting-row__unit"><?php echo esc_html__( 'millisecondes', 'lightbox-jlg' ); ?></span>
+                                    </div>
                                     <p class="description"><?php echo esc_html__( 'Durée de l’animation entre deux images (100 ms = très rapide, 5000 ms = très lent).', 'lightbox-jlg' ); ?></p>
                                     <label for="mga_easing" class="screen-reader-text"><?php echo esc_html__( 'Courbe d’animation', 'lightbox-jlg' ); ?></label>
                                     <select name="mga_settings[easing]" id="mga_easing">
@@ -637,43 +640,50 @@ if ( empty( $available_post_types ) ) {
                                     <span class="mga-setting-row__label-text"><?php echo esc_html__( 'Taille des miniatures', 'lightbox-jlg' ); ?></span>
                                 </div>
                                 <div class="mga-setting-row__control">
-                                    <label for="mga_thumb_size"><?php echo esc_html__( 'PC', 'lightbox-jlg' ); ?></label><br>
-                                    <input
-                                        name="mga_settings[thumb_size]"
-                                        type="range"
-                                        id="mga_thumb_size"
-                                        value="<?php echo esc_attr( $settings['thumb_size'] ); ?>"
-                                        min="50"
-                                        max="150"
-                                        step="5"
-                                        aria-valuemin="50"
-                                        aria-valuemax="150"
-                                        aria-valuenow="<?php echo esc_attr( $settings['thumb_size'] ); ?>"
-                                        aria-valuetext="<?php echo esc_attr( sprintf( __( '%s pixels', 'lightbox-jlg' ), intval( $settings['thumb_size'] ) ) ); ?>"
-                                        aria-describedby="mga_thumb_size_value"
-                                    />
-                                    <output id="mga_thumb_size_value" for="mga_thumb_size" class="mga-range-output" aria-live="polite">
-                                        <?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size'] ) ); ?>
-                                    </output>
-                                    <br><br>
-                                    <label for="mga_thumb_size_mobile"><?php echo esc_html__( 'Mobile', 'lightbox-jlg' ); ?></label><br>
-                                    <input
-                                        name="mga_settings[thumb_size_mobile]"
-                                        type="range"
-                                        id="mga_thumb_size_mobile"
-                                        value="<?php echo esc_attr( $settings['thumb_size_mobile'] ); ?>"
-                                        min="40"
-                                        max="100"
-                                        step="5"
-                                        aria-valuemin="40"
-                                        aria-valuemax="100"
-                                        aria-valuenow="<?php echo esc_attr( $settings['thumb_size_mobile'] ); ?>"
-                                        aria-valuetext="<?php echo esc_attr( sprintf( __( '%s pixels', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ) ); ?>"
-                                        aria-describedby="mga_thumb_size_mobile_value"
-                                    />
-                                    <output id="mga_thumb_size_mobile_value" for="mga_thumb_size_mobile" class="mga-range-output" aria-live="polite">
-                                        <?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ); ?>
-                                    </output>
+                                    <div class="mga-setting-field">
+                                        <label class="mga-setting-row__sublabel" for="mga_thumb_size"><?php echo esc_html__( 'PC', 'lightbox-jlg' ); ?></label>
+                                        <div class="mga-setting-range">
+                                            <input
+                                                name="mga_settings[thumb_size]"
+                                                type="range"
+                                                id="mga_thumb_size"
+                                                value="<?php echo esc_attr( $settings['thumb_size'] ); ?>"
+                                                min="50"
+                                                max="150"
+                                                step="5"
+                                                aria-valuemin="50"
+                                                aria-valuemax="150"
+                                                aria-valuenow="<?php echo esc_attr( $settings['thumb_size'] ); ?>"
+                                                aria-valuetext="<?php echo esc_attr( sprintf( __( '%s pixels', 'lightbox-jlg' ), intval( $settings['thumb_size'] ) ) ); ?>"
+                                                aria-describedby="mga_thumb_size_value"
+                                            />
+                                            <output id="mga_thumb_size_value" for="mga_thumb_size" class="mga-range-output" aria-live="polite">
+                                                <?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size'] ) ); ?>
+                                            </output>
+                                        </div>
+                                    </div>
+                                    <div class="mga-setting-field">
+                                        <label class="mga-setting-row__sublabel" for="mga_thumb_size_mobile"><?php echo esc_html__( 'Mobile', 'lightbox-jlg' ); ?></label>
+                                        <div class="mga-setting-range">
+                                            <input
+                                                name="mga_settings[thumb_size_mobile]"
+                                                type="range"
+                                                id="mga_thumb_size_mobile"
+                                                value="<?php echo esc_attr( $settings['thumb_size_mobile'] ); ?>"
+                                                min="40"
+                                                max="100"
+                                                step="5"
+                                                aria-valuemin="40"
+                                                aria-valuemax="100"
+                                                aria-valuenow="<?php echo esc_attr( $settings['thumb_size_mobile'] ); ?>"
+                                                aria-valuetext="<?php echo esc_attr( sprintf( __( '%s pixels', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ) ); ?>"
+                                                aria-describedby="mga_thumb_size_mobile_value"
+                                            />
+                                            <output id="mga_thumb_size_mobile_value" for="mga_thumb_size_mobile" class="mga-range-output" aria-live="polite">
+                                                <?php printf( esc_html__( '%dpx', 'lightbox-jlg' ), intval( $settings['thumb_size_mobile'] ) ); ?>
+                                            </output>
+                                        </div>
+                                    </div>
                                     <p class="description"><?php echo esc_html__( "Ajustez la hauteur des miniatures en bas de la galerie pour chaque type d'appareil.", 'lightbox-jlg' ); ?></p>
                                 </div>
                             </div>
@@ -767,23 +777,25 @@ if ( empty( $available_post_types ) ) {
                                     <label for="mga_bg_opacity"><?php echo esc_html__( "Opacité de l'arrière-plan", 'lightbox-jlg' ); ?></label>
                                 </div>
                                 <div class="mga-setting-row__control">
-                                    <input
-                                        name="mga_settings[bg_opacity]"
-                                        type="range"
-                                        id="mga_bg_opacity"
-                                        value="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
-                                        min="0.6"
-                                        max="1"
-                                        step="0.05"
-                                        aria-valuemin="0.6"
-                                        aria-valuemax="1"
-                                        aria-valuenow="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
-                                        aria-valuetext="<?php echo esc_attr( sprintf( __( '%s opacity', 'lightbox-jlg' ), $settings['bg_opacity'] ) ); ?>"
-                                        aria-describedby="mga_bg_opacity_value"
-                                    />
-                                    <output id="mga_bg_opacity_value" for="mga_bg_opacity" class="mga-range-output" aria-live="polite">
-                                        <?php echo esc_html( $settings['bg_opacity'] ); ?>
-                                    </output>
+                                    <div class="mga-setting-range">
+                                        <input
+                                            name="mga_settings[bg_opacity]"
+                                            type="range"
+                                            id="mga_bg_opacity"
+                                            value="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
+                                            min="0.6"
+                                            max="1"
+                                            step="0.05"
+                                            aria-valuemin="0.6"
+                                            aria-valuemax="1"
+                                            aria-valuenow="<?php echo esc_attr( $settings['bg_opacity'] ); ?>"
+                                            aria-valuetext="<?php echo esc_attr( sprintf( __( '%s opacity', 'lightbox-jlg' ), $settings['bg_opacity'] ) ); ?>"
+                                            aria-describedby="mga_bg_opacity_value"
+                                        />
+                                        <output id="mga_bg_opacity_value" for="mga_bg_opacity" class="mga-range-output" aria-live="polite">
+                                            <?php echo esc_html( $settings['bg_opacity'] ); ?>
+                                        </output>
+                                    </div>
                                     <p class="description"><?php echo esc_html__( "Réglez la transparence du fond de la galerie (0.6 = transparent, 1 = opaque).", 'lightbox-jlg' ); ?></p>
                                 </div>
                             </div>
@@ -1196,9 +1208,11 @@ if ( empty( $available_post_types ) ) {
                             </div>
                         </div>
                     </section>
-                        </div>
                     </div>
-                </section>
+                </div>
+            </div>
+        </div>
+    </section>
 
                 <section
                     class="mga-wizard__panel"
