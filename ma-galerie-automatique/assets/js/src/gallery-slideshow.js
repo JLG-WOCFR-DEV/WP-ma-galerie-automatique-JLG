@@ -2754,7 +2754,7 @@ import {
 
         // --- LOGIQUE PRINCIPALE ---
         debug.log(mga__( 'Script initialisé et prêt.', 'lightbox-jlg' ));
-        debug.updateInfo('mga-debug-status', mga__( 'Prêt', 'lightbox-jlg' ), '#4CAF50');
+        debug.updateInfo('mga-debug-status', mga__( 'Prêt', 'lightbox-jlg' ), 'success');
 
         const defaultContentSelectors = [
             '.wp-block-post-content',
@@ -2808,12 +2808,12 @@ import {
         }
 
         if (!contentArea) {
-            debug.updateInfo('mga-debug-content-area', foundSelector, '#F44336');
+            debug.updateInfo('mga-debug-content-area', foundSelector, 'error');
             debug.log(mga__( 'Aucune zone de contenu valide détectée. Initialisation du diaporama interrompue.', 'lightbox-jlg' ), true);
             return false;
         }
 
-        debug.updateInfo('mga-debug-content-area', foundSelector, '#4CAF50');
+        debug.updateInfo('mga-debug-content-area', foundSelector, 'success');
         
         const FALLBACK_GROUP_ID = '__mga-default-group__';
         const configuredGroupAttribute = typeof settings.groupAttribute === 'string'

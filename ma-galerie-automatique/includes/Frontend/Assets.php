@@ -178,6 +178,14 @@ class Assets {
             $can_view_debug = apply_filters( 'mga_user_can_view_debug', is_user_logged_in() && current_user_can( 'manage_options' ) );
 
             if ( $can_view_debug ) {
+                wp_register_style(
+                    'mga-debug-style',
+                    $this->plugin->get_plugin_dir_url() . 'assets/css/debug.css',
+                    [],
+                    MGA_VERSION
+                );
+                wp_enqueue_style( 'mga-debug-style' );
+
                 wp_register_script(
                     'mga-debug-script',
                     $this->plugin->get_plugin_dir_url() . 'assets/js/dist/debug.js',

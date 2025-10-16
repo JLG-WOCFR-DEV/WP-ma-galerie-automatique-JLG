@@ -216,6 +216,53 @@ class EnqueueAssetsTest extends WP_UnitTestCase {
         );
     }
 
+    public function test_debug_module_enqueues_styles_for_privileged_users(): void {
+        $post_id = self::factory()->post->create(
+            [
+                'post_content' => '<a href="https://example.com/image.jpg"><img src="https://example.com/image.jpg" /></a>',
+            ]
+        );
+
+        $this->go_to( get_permalink( $post_id ) );
+
+        $admin_id = self::factory()->user->create(
+            [
+                'role' => 'administrator',
+            ]
+        );
+
+        wp_set_current_user( $admin_id );
+
+        update_option(
+            'mga_settings',
+            [
+                'debug_mode' => true,
+            ]
+        );
+
+        $plugin = mga_plugin();
+
+        if ( $plugin instanceof \MaGalerieAutomatique\Plugin ) {
+            $plugin->settings()->invalidate_settings_cache();
+        }
+
+        try {
+            $this->assets()->enqueue_assets();
+        } finally {
+            wp_set_current_user( 0 );
+        }
+
+        $this->assertTrue(
+            wp_script_is( 'mga-debug-script', 'enqueued' ),
+            'Debug script should load when debug mode is enabled for administrators.'
+        );
+
+        $this->assertTrue(
+            wp_style_is( 'mga-debug-style', 'enqueued' ),
+            'Debug stylesheet should load alongside the debug script for privileged users.'
+        );
+    }
+
     /**
      * Ensures inline assets consume the sanitized settings to guard regressions in the enqueue pipeline.
      */
