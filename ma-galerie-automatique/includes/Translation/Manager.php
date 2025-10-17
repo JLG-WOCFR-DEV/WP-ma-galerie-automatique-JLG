@@ -70,7 +70,16 @@ class Manager {
     }
 
     private function load_from_base64_fallback( string $domain, string $locale ): bool {
-        $base64_path = \trailingslashit( $this->plugin->get_languages_path() ) . $domain . '-' . $locale . '.mo.b64';
+        $safe_locale = (string) \preg_replace( '/[^a-z0-9_\-]/i', '', $locale );
+
+        if ( '' === $safe_locale ) {
+            // Allow third parties to detect and log invalid locale configuration.
+            \do_action( 'ma_galerie_automatique_translation_invalid_locale', $locale );
+
+            return false;
+        }
+
+        $base64_path = \trailingslashit( $this->plugin->get_languages_path() ) . $domain . '-' . $safe_locale . '.mo.b64';
 
         if ( ! file_exists( $base64_path ) ) {
             return false;
@@ -83,7 +92,7 @@ class Manager {
         }
 
         $cache_path      = $this->get_cache_directory();
-        $mo_filename     = $domain . '-' . $locale . '.mo';
+        $mo_filename     = $domain . '-' . $safe_locale . '.mo';
         $cached_hash     = null;
         $using_temp_file = false;
 
