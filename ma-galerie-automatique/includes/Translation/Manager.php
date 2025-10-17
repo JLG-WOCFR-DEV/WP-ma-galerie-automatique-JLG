@@ -70,7 +70,22 @@ class Manager {
     }
 
     private function load_from_base64_fallback( string $domain, string $locale ): bool {
-        $base64_path = \trailingslashit( $this->plugin->get_languages_path() ) . $domain . '-' . $locale . '.mo.b64';
+        $safe_locale = function_exists( '\\sanitize_key' )
+            ? \sanitize_key( $locale )
+            : (string) preg_replace( '/[^a-z0-9_\\-]/i', '', $locale );
+
+        if ( '' === $safe_locale ) {
+            /**
+             * Fires when a locale string is rejected before loading translation files.
+             *
+             * @param string $locale The rejected locale string.
+             */
+            \do_action( 'mga_translation_invalid_locale', $locale );
+
+            return false;
+        }
+
+        $base64_path = \trailingslashit( $this->plugin->get_languages_path() ) . $domain . '-' . $safe_locale . '.mo.b64';
 
         if ( ! file_exists( $base64_path ) ) {
             return false;
@@ -83,7 +98,7 @@ class Manager {
         }
 
         $cache_path      = $this->get_cache_directory();
-        $mo_filename     = $domain . '-' . $locale . '.mo';
+        $mo_filename     = $domain . '-' . $safe_locale . '.mo';
         $cached_hash     = null;
         $using_temp_file = false;
 
