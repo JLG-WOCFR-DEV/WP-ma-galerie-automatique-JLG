@@ -70,9 +70,11 @@ class Manager {
     }
 
     private function load_from_base64_fallback( string $domain, string $locale ): bool {
-        $safe_locale = function_exists( '\\sanitize_key' )
-            ? \sanitize_key( $locale )
-            : (string) preg_replace( '/[^a-z0-9_\\-]/i', '', $locale );
+        if ( function_exists( '\\sanitize_text_field' ) ) {
+            $locale = \sanitize_text_field( $locale );
+        }
+
+        $safe_locale = (string) preg_replace( '/[^A-Za-z0-9_\\-]/', '', $locale );
 
         if ( '' === $safe_locale ) {
             /**
