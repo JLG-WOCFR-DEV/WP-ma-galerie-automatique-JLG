@@ -55,6 +55,53 @@
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) {
+    color-scheme: light;
+    color: var(--mga-admin-text);
+}
+
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .card,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-wizard__panel,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-settings-section {
+    background: var(--mga-admin-surface);
+    border-color: var(--mga-admin-border);
+    color: var(--mga-admin-text);
+}
+
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) > h1,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) h2,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) h3,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) h4,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) label,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-setting-row__label,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-setting-row__control,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-toggle-list__item > label span,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-radio-option > label span {
+    color: var(--mga-admin-text);
+}
+
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-settings-layout__nav a {
+    color: var(--mga-admin-text-muted);
+}
+
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-settings-layout__nav a:hover,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-settings-layout__nav a:focus-visible {
+    color: var(--mga-admin-text);
+}
+
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-settings-layout__nav a[aria-current="true"] {
+    color: #fff;
+}
+
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .description,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-step__intro,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-settings-section__description,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-setting-row__label .description,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-toggle-list__item .description,
+.is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) .mga-radio-option .description {
+    color: var(--mga-admin-text-muted);
+}
+
 .mga-admin-wrap[data-mga-theme='dark'] {
     --mga-admin-page: #101517;
     --mga-admin-surface: #1b1f24;
