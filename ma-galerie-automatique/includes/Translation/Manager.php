@@ -70,17 +70,11 @@ class Manager {
     }
 
     private function load_from_base64_fallback( string $domain, string $locale ): bool {
-        $safe_locale = function_exists( '\\sanitize_key' )
-            ? \sanitize_key( $locale )
-            : (string) preg_replace( '/[^a-z0-9_\\-]/i', '', $locale );
+        $safe_locale = (string) \preg_replace( '/[^a-z0-9_\-]/i', '', $locale );
 
         if ( '' === $safe_locale ) {
-            /**
-             * Fires when a locale string is rejected before loading translation files.
-             *
-             * @param string $locale The rejected locale string.
-             */
-            \do_action( 'mga_translation_invalid_locale', $locale );
+            // Allow third parties to detect and log invalid locale configuration.
+            \do_action( 'ma_galerie_automatique_translation_invalid_locale', $locale );
 
             return false;
         }
