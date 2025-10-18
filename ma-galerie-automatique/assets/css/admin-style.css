@@ -6,14 +6,10 @@
 
 .wrap.mga-admin-wrap {
     width: 100%;
-    max-width: min(1680px, calc(100% - 48px));
+    max-width: none;
     margin: 0 auto;
-}
-
-@media (min-width: 1600px) {
-    .wrap.mga-admin-wrap {
-        max-width: min(1920px, calc(100% - 96px));
-    }
+    padding-left: clamp(16px, 2.5vw, 32px);
+    padding-right: clamp(16px, 2.5vw, 32px);
 }
 
 .mga-admin-wrap {
