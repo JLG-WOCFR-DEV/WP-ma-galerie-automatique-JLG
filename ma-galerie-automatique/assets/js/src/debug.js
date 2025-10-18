@@ -10,12 +10,17 @@ import { createSprintf, createTranslate, resolveI18n } from './shared';
     const state = {
         panel: null,
         logContainer: null,
+        contentWrapper: null,
+        toggleButton: null,
         timerInterval: null,
         startTime: 0,
         active: false,
         forceOpenAttached: false,
         announcer: null,
+        collapsed: false,
     };
+
+    const COLLAPSE_STORAGE_KEY = 'mgaDebugCollapsed';
 
     const TONE_CLASSES = {
         default: 'mga-debug-value--default',
@@ -60,6 +65,90 @@ import { createSprintf, createTranslate, resolveI18n } from './shared';
             : mga__( 'Panneau de debug MGA masqué', 'lightbox-jlg' );
     }
 
+    function readCollapsedPreference() {
+        try {
+            if (typeof global.localStorage === 'undefined') {
+                return null;
+            }
+
+            const stored = global.localStorage.getItem(COLLAPSE_STORAGE_KEY);
+
+            if (stored === '1') {
+                return true;
+            }
+
+            if (stored === '0') {
+                return false;
+            }
+        } catch (error) {
+            /* noop when storage is unavailable */
+        }
+
+        return null;
+    }
+
+    function persistCollapsedPreference(collapsed) {
+        try {
+            if (typeof global.localStorage === 'undefined') {
+                return;
+            }
+
+            if (collapsed) {
+                global.localStorage.setItem(COLLAPSE_STORAGE_KEY, '1');
+            } else {
+                global.localStorage.setItem(COLLAPSE_STORAGE_KEY, '0');
+            }
+        } catch (error) {
+            /* noop when storage is unavailable */
+        }
+    }
+
+    function setCollapsed(collapsed, options = {}) {
+        const { announce = true, persist = true } = options;
+
+        state.collapsed = Boolean(collapsed);
+
+        if (state.panel) {
+            if (state.collapsed) {
+                state.panel.classList.add('mga-debug-panel--collapsed');
+            } else {
+                state.panel.classList.remove('mga-debug-panel--collapsed');
+            }
+
+            state.panel.setAttribute('aria-expanded', state.collapsed ? 'false' : 'true');
+        }
+
+        if (state.contentWrapper) {
+            state.contentWrapper.hidden = state.collapsed;
+        }
+
+        if (state.toggleButton) {
+            const label = state.collapsed
+                ? mga__( 'Afficher le debug', 'lightbox-jlg' )
+                : mga__( 'Masquer le debug', 'lightbox-jlg' );
+            const buttonText = state.collapsed
+                ? mga__( 'Afficher', 'lightbox-jlg' )
+                : mga__( 'Masquer', 'lightbox-jlg' );
+
+            state.toggleButton.textContent = buttonText;
+            state.toggleButton.setAttribute('aria-label', label);
+            state.toggleButton.setAttribute('title', label);
+            state.toggleButton.setAttribute('aria-pressed', state.collapsed ? 'true' : 'false');
+        }
+
+        if (persist) {
+            persistCollapsedPreference(state.collapsed);
+        }
+
+        if (announce) {
+            announcePanelState(!state.collapsed);
+        }
+    }
+
+    function toggleCollapsed() {
+        setCollapsed(!state.collapsed);
+    }
+
     function createPanel() {
         if (state.panel) {
             return state.panel;
@@ -69,12 +158,15 @@ import { createSprintf, createTranslate, resolveI18n } from './shared';
         if (existing) {
             state.panel = existing;
             state.logContainer = existing.querySelector('#mga-debug-log');
-            state.panel.setAttribute('aria-expanded', 'true');
+            state.contentWrapper = existing.querySelector('.mga-debug-content');
+            state.toggleButton = existing.querySelector('#mga-debug-toggle');
+            state.collapsed = existing.classList.contains('mga-debug-panel--collapsed');
             const announcer = ensureAnnouncer();
             if (announcer) {
                 announcer.textContent = '';
             }
-            announcePanelState(true);
+            setCollapsed(state.collapsed, { announce: false, persist: false });
+            announcePanelState(!state.collapsed);
             return state.panel;
         }
 
@@ -84,12 +176,26 @@ import { createSprintf, createTranslate, resolveI18n } from './shared';
         panel.setAttribute('role', 'region');
         panel.setAttribute('aria-label', mga__( 'Panneau de diagnostic MGA', 'lightbox-jlg' ));
         panel.setAttribute('aria-live', 'polite');
-        panel.setAttribute('aria-expanded', 'true');
+
+        const header = document.createElement('div');
+        header.className = 'mga-debug-header';
+        panel.appendChild(header);
 
         const title = document.createElement('h4');
         title.className = 'mga-debug-title';
         title.textContent = mga__( 'Debug MGA Performance', 'lightbox-jlg' );
-        panel.appendChild(title);
+        header.appendChild(title);
+
+        const toggleButton = document.createElement('button');
+        toggleButton.id = 'mga-debug-toggle';
+        toggleButton.type = 'button';
+        toggleButton.className = 'mga-debug-toggle';
+        toggleButton.addEventListener('click', toggleCollapsed);
+        header.appendChild(toggleButton);
+
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'mga-debug-content';
+        panel.appendChild(contentWrapper);
 
         const statsGrid = document.createElement('div');
         statsGrid.className = 'mga-debug-grid';
@@ -185,14 +291,14 @@ import { createSprintf, createTranslate, resolveI18n } from './shared';
         slidesCard.appendChild(slidesValue);
         statsGrid.appendChild(slidesCard);
 
-        panel.appendChild(statsGrid);
+        contentWrapper.appendChild(statsGrid);
 
         const forceButton = document.createElement('button');
         forceButton.id = 'mga-force-open';
         forceButton.type = 'button';
         forceButton.className = 'mga-debug-button';
         forceButton.textContent = mga__( "Forcer l'ouverture (Test)", 'lightbox-jlg' );
-        panel.appendChild(forceButton);
+        contentWrapper.appendChild(forceButton);
 
         const logContainer = document.createElement('div');
         logContainer.id = 'mga-log-container';
@@ -213,15 +319,28 @@ import { createSprintf, createTranslate, resolveI18n } from './shared';
         logContent.setAttribute('aria-relevant', 'additions');
         logContainer.appendChild(logContent);
 
-        panel.appendChild(logContainer);
-
-        ensureAnnouncer();
+        contentWrapper.appendChild(logContainer);
 
         document.body.appendChild(panel);
         state.panel = panel;
         state.logContainer = logContent;
+        state.contentWrapper = contentWrapper;
+        state.toggleButton = toggleButton;
         state.forceOpenAttached = false;
-        announcePanelState(true);
+
+        const storedPreference = readCollapsedPreference();
+        if (storedPreference === true) {
+            setCollapsed(true, { announce: false, persist: false });
+        } else {
+            setCollapsed(false, { announce: false, persist: false });
+        }
+
+        const announcer = ensureAnnouncer();
+        if (announcer) {
+            announcer.textContent = '';
+        }
+        announcePanelState(!state.collapsed);
+
         return panel;
     }
 
@@ -280,7 +399,10 @@ import { createSprintf, createTranslate, resolveI18n } from './shared';
 
         state.panel = null;
         state.logContainer = null;
+        state.contentWrapper = null;
+        state.toggleButton = null;
         state.forceOpenAttached = false;
+        state.collapsed = false;
         state.active = false;
 
         if (typeof console !== 'undefined' && typeof console.info === 'function') {
