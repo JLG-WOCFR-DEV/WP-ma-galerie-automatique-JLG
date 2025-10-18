@@ -1308,17 +1308,19 @@
     font-weight: 600;
     font-size: 14px;
     border: 1px solid transparent;
+    background-color: var(--mga-admin-surface);
+    color: var(--mga-admin-text);
+    background-repeat: no-repeat;
+    background-size: cover;
 }
 
 .mga-summary__alert[data-mga-severity="warning"] {
-    background: linear-gradient(180deg, rgba(var(--mga-score-warning-rgb), 0.18), rgba(var(--mga-score-warning-rgb), 0.08));
-    color: var(--mga-admin-text);
+    background-image: linear-gradient(180deg, rgba(var(--mga-score-warning-rgb), 0.18), rgba(var(--mga-score-warning-rgb), 0.08));
     border-color: rgba(var(--mga-score-warning-rgb), 0.45);
 }
 
 .mga-summary__alert[data-mga-severity="error"] {
-    background: linear-gradient(180deg, rgba(var(--mga-score-alert-rgb), 0.2), rgba(var(--mga-score-alert-rgb), 0.1));
-    color: var(--mga-admin-text);
+    background-image: linear-gradient(180deg, rgba(var(--mga-score-alert-rgb), 0.2), rgba(var(--mga-score-alert-rgb), 0.1));
     border-color: rgba(var(--mga-score-alert-rgb), 0.5);
 }
 
