@@ -2520,6 +2520,7 @@ import {
                     fullscreenButton.id = 'mga-fullscreen';
                     fullscreenButton.className = 'mga-toolbar-button';
                     fullscreenButton.setAttribute('aria-label', mga__( 'Plein écran', 'lightbox-jlg' ));
+                    fullscreenButton.setAttribute('title', mga__( 'Plein écran', 'lightbox-jlg' ));
                     toolbar.appendChild(fullscreenButton);
 
                     const fullscreenIcon = createSvgElement('svg', {
