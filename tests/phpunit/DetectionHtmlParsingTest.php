@@ -287,6 +287,15 @@ class DetectionHtmlParsingTest extends WP_UnitTestCase {
         );
     }
 
+    public function test_is_image_url_detects_extension_from_html_encoded_query_parameters(): void {
+        $detection = $this->detection();
+
+        $this->assertTrue(
+            $detection->is_image_url( 'https://images.example.com/render?utm_source=foo&amp;format=webp' ),
+            'HTML encoded query parameters should be decoded before extracting format hints.'
+        );
+    }
+
     public function test_is_image_url_detects_nested_query_urls(): void {
         $detection = $this->detection();
 

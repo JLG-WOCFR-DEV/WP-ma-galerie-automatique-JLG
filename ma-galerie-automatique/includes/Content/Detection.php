@@ -1128,6 +1128,8 @@ class Detection {
             return false;
         }
 
+        $url = html_entity_decode( $url, ENT_QUOTES );
+
         $url = trim( $url );
 
         if ( '' === $url ) {
