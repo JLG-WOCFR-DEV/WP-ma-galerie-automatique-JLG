@@ -51,6 +51,10 @@ function mga_plugin(): ?Plugin {
     return $ma_galerie_automatique_plugin instanceof Plugin ? $ma_galerie_automatique_plugin : null;
 }
 
+function ma_galerie_automatique(): ?Plugin {
+    return mga_plugin();
+}
+
 function mga_get_languages_path(): string {
     $plugin = mga_plugin();
 
