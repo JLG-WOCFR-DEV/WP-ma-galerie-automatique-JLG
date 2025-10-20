@@ -4,6 +4,7 @@ namespace MaGalerieAutomatique;
 
 use MaGalerieAutomatique\Admin\Settings;
 use MaGalerieAutomatique\Cli\CacheCommand;
+use MaGalerieAutomatique\Cli\DoctorCommand;
 use MaGalerieAutomatique\Content\Detection;
 use MaGalerieAutomatique\Frontend\Assets;
 use MaGalerieAutomatique\Translation\Manager as TranslationManager;
@@ -57,6 +58,7 @@ class Plugin {
 
         if ( defined( 'WP_CLI' ) && WP_CLI ) {
             CacheCommand::register( $this );
+            DoctorCommand::register( $this );
         }
     }
 
