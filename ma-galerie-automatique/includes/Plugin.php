@@ -58,7 +58,7 @@ class Plugin {
 
         if ( defined( 'WP_CLI' ) && WP_CLI ) {
             CacheCommand::register( $this );
-            DoctorCommand::register();
+            DoctorCommand::register( $this );
         }
     }
 
