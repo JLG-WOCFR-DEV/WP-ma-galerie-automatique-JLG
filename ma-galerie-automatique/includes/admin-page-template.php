@@ -86,9 +86,9 @@ if ( empty( $available_post_types ) ) {
                         <div class="mga-settings-toolbar__theme" data-mga-theme-picker>
                             <label for="mga-settings-theme"><?php echo esc_html__( 'Thème de l’interface', 'lightbox-jlg' ); ?></label>
                             <select id="mga-settings-theme" data-mga-theme-select>
-                                <option value="system"><?php echo esc_html__( 'Système', 'lightbox-jlg' ); ?></option>
-                                <option value="light"><?php echo esc_html__( 'Clair', 'lightbox-jlg' ); ?></option>
+                                <option value="light" selected="selected"><?php echo esc_html__( 'Clair', 'lightbox-jlg' ); ?></option>
                                 <option value="dark"><?php echo esc_html__( 'Sombre', 'lightbox-jlg' ); ?></option>
+                                <option value="system"><?php echo esc_html__( 'Système', 'lightbox-jlg' ); ?></option>
                             </select>
                             <p class="description"><?php echo esc_html__( 'Adaptez les contrastes de l’interface en fonction de vos préférences.', 'lightbox-jlg' ); ?></p>
                         </div>
