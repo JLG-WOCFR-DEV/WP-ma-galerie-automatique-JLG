@@ -765,11 +765,11 @@ import {
 
         const normalizeThemePreference = (value) => {
             if (typeof value !== 'string') {
-                return 'system';
+                return 'light';
             }
 
             const trimmed = value.trim().toLowerCase();
-            return THEME_OPTIONS.includes(trimmed) ? trimmed : 'system';
+            return THEME_OPTIONS.includes(trimmed) ? trimmed : 'light';
         };
 
         let currentThemePreference = normalizeThemePreference(readStoredTheme());
