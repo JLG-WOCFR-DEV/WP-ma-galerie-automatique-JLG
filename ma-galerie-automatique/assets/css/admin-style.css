@@ -155,6 +155,7 @@
     border: 1px solid var(--mga-admin-border);
     box-shadow: var(--mga-admin-shadow-sm);
     width: 100%;
+    box-sizing: border-box;
 }
 
 .mga-wizard__progress-item {
