@@ -663,9 +663,19 @@ class Settings {
 
         $settings = get_option( 'mga_settings', $this->get_default_settings() );
 
-        if ( defined( 'MGA_ADMIN_TEMPLATE_PATH' ) && is_readable( MGA_ADMIN_TEMPLATE_PATH ) ) {
-            include MGA_ADMIN_TEMPLATE_PATH;
+        $template_path = defined( 'MGA_ADMIN_TEMPLATE_PATH' )
+            ? MGA_ADMIN_TEMPLATE_PATH
+            : $this->plugin->get_plugin_dir_path() . 'includes/admin-page-template.php';
+
+        if ( is_readable( $template_path ) ) {
+            include $template_path;
+            return;
         }
+
+        printf(
+            '<div class="notice notice-error"><p>%s</p></div>',
+            esc_html__( 'Impossible de charger le formulaire de réglages : le gabarit d’administration est introuvable.', 'lightbox-jlg' )
+        );
     }
 
     public function get_trigger_scenarios(): array {
