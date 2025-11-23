@@ -91,6 +91,16 @@ class DoctorCommand extends WP_CLI_Command {
     }
 
     private function check_google_sdk(): array {
+        $plugin = $this->require_plugin();
+
+        if ( ! $plugin->requires_google_sdk() ) {
+            return [
+                'name'    => 'SDK Google',
+                'success' => true,
+                'details' => 'Le SDK Google est désactivé via le filtre "mga_requires_google_sdk".',
+            ];
+        }
+
         if ( class_exists( '\\Google\\Client' ) ) {
             return [
                 'name'    => 'SDK Google',

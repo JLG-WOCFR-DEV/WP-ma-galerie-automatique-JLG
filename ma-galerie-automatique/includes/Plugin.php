@@ -129,10 +129,18 @@ class Plugin {
         }
     }
 
+    public function requires_google_sdk(): bool {
+        return (bool) apply_filters( 'mga_requires_google_sdk', true, $this );
+    }
+
     public function maybe_show_missing_google_sdk_notice(): void {
         static $displayed = false;
 
         if ( $displayed || ! is_admin() || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) {
+            return;
+        }
+
+        if ( ! $this->requires_google_sdk() ) {
             return;
         }
 
