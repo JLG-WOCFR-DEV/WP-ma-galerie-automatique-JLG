@@ -1,0 +1,11 @@
+{
+    "name": "jlg/ma-galerie-automatique-tests",
+    "description": "Test tooling for Ma Galerie Automatique",
+    "require-dev": {
+        "phpunit/phpunit": "^9.6",
+        "yoast/phpunit-polyfills": "^2.0"
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}
