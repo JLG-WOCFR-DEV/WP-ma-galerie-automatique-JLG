@@ -506,14 +506,12 @@ class Settings {
     }
 
     public function add_admin_menu(): void {
-        add_menu_page(
+        add_options_page(
             __( 'Lightbox - JLG', 'lightbox-jlg' ),
             __( 'Lightbox - JLG', 'lightbox-jlg' ),
             'manage_options',
             'ma-galerie-automatique',
-            [ $this, 'render_options_page' ],
-            'dashicons-format-gallery',
-            26
+            [ $this, 'render_options_page' ]
         );
     }
 

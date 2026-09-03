@@ -141,4 +141,36 @@ class PluginBlockSettingsTest extends WP_UnitTestCase {
 
         $this->assertSame( '#ffffff', $result['accentColor'], 'Invalid accent colours should degrade gracefully to the default.' );
     }
+
+    public function test_render_lightbox_preview_block_outputs_dataset_overrides(): void {
+        $plugin = $this->plugin();
+
+        $html = $plugin->render_lightbox_preview_block(
+            [
+                'autoplay' => true,
+                'delay'    => 7,
+                'effect'   => 'fade',
+            ]
+        );
+
+        $this->assertStringContainsString( 'data-mga-settings-overrides', $html, 'Block markup should expose frontend setting overrides.' );
+        $this->assertStringContainsString( 'hidden', $html, 'Override wrapper should stay visually hidden on the frontend.' );
+
+        if ( ! preg_match( '/data-mga-settings-overrides="([^"]+)"/', $html, $matches ) ) {
+            $this->fail( 'Override payload should be present as a data attribute.' );
+        }
+
+        $payload = json_decode( html_entity_decode( $matches[1], ENT_QUOTES ), true );
+
+        $this->assertIsArray( $payload, 'Override payload should decode to an array.' );
+        $this->assertTrue( $payload['autoplay_start'] ?? false, 'Autoplay should map to the frontend autoplay_start setting.' );
+        $this->assertSame( 7, $payload['delay'] ?? null, 'Delay should be forwarded as an integer override.' );
+        $this->assertSame( 'fade', $payload['effect'] ?? null, 'Effect should be forwarded as a string override.' );
+    }
+
+    public function test_render_lightbox_preview_block_returns_empty_without_attributes(): void {
+        $plugin = $this->plugin();
+
+        $this->assertSame( '', $plugin->render_lightbox_preview_block( [] ), 'Empty attributes should not emit unused markup.' );
+    }
 }

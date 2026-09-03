@@ -187,8 +187,33 @@ import {
         playPauseButton.setAttribute('title', actionLabel);
     }
 
+    function applyDatasetSettingsOverrides(baseSettings) {
+        const merged = Object.assign({}, baseSettings && typeof baseSettings === 'object' ? baseSettings : {});
+        const nodes = typeof document !== 'undefined'
+            ? document.querySelectorAll('[data-mga-settings-overrides]')
+            : [];
+
+        nodes.forEach((node) => {
+            const raw = node.getAttribute('data-mga-settings-overrides');
+            if (!raw) {
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') {
+                    Object.assign(merged, parsed);
+                }
+            } catch (error) {
+                // Ignore invalid override payloads so global settings still apply.
+            }
+        });
+
+        return merged;
+    }
+
     function initGalleryViewer() {
-        const settings = window.mga_settings || {};
+        const settings = applyDatasetSettingsOverrides(window.mga_settings || {});
         const thumbsLayout = sanitizeThumbsLayout(settings.thumbs_layout);
         const noop = () => {};
         const normalizeFlag = (value, defaultValue = true) => {
@@ -3282,6 +3307,13 @@ import {
                     updateThumbFocusState(targetIndex);
                 }
 
+                const lastSlideIndex = Math.max(images.length - 1, 0);
+                const eagerIndexes = new Set([
+                    sanitizedStartIndex,
+                    sanitizedStartIndex >= lastSlideIndex ? 0 : sanitizedStartIndex + 1,
+                    sanitizedStartIndex <= 0 ? lastSlideIndex : sanitizedStartIndex - 1,
+                ]);
+
                 images.forEach((img, index) => {
                     const slide = document.createElement('div');
                     slide.className = 'swiper-slide';
@@ -3297,7 +3329,10 @@ import {
 
                     const mainImg = document.createElement('img');
                     mainImg.setAttribute('loading', 'lazy');
-                    mainImg.setAttribute('src', img.highResUrl);
+                    mainImg.setAttribute('data-src', img.highResUrl);
+                    if (eagerIndexes.has(index)) {
+                        mainImg.setAttribute('src', img.highResUrl);
+                    }
                     mainImg.setAttribute('alt', img.caption);
                     zoomContainer.appendChild(mainImg);
 
@@ -4000,12 +4035,28 @@ import {
         }
         
         function preloadNeighboringImages(images, currentIndex) {
+            if (!Array.isArray(images) || images.length === 0) {
+                return;
+            }
+
+            const viewer = getViewer();
             const nextIndex = (currentIndex + 1) % images.length;
             const prevIndex = (currentIndex - 1 + images.length) % images.length;
-            
-            [nextIndex, prevIndex].forEach(index => {
+
+            [currentIndex, nextIndex, prevIndex].forEach(index => {
                 const imageUrl = images[index]?.highResUrl;
-                if (imageUrl && !preloadedUrls.has(imageUrl)) {
+                if (!imageUrl) {
+                    return;
+                }
+
+                if (viewer) {
+                    const slideImg = viewer.querySelector(`#mga-main-wrapper [data-slide-index="${index}"] img`);
+                    if (slideImg && !slideImg.getAttribute('src')) {
+                        slideImg.setAttribute('src', slideImg.getAttribute('data-src') || imageUrl);
+                    }
+                }
+
+                if (!preloadedUrls.has(imageUrl)) {
                     debug.log(mgaSprintf(mga__( "Préchargement de l'image %s", 'lightbox-jlg' ), index));
                     const img = new Image();
                     img.src = imageUrl;

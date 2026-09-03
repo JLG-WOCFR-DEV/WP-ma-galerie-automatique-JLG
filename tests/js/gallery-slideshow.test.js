@@ -1144,3 +1144,82 @@ describe('download button integration', () => {
         expect(customOption).toBeTruthy();
     });
 });
+
+describe('lazy-loaded slide sources and block setting overrides', () => {
+    const originalMatchMedia = window.matchMedia;
+    let testExports;
+    let viewer;
+    let instances;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = '<main><div hidden data-mga-settings-overrides=\'{"effect":"fade","delay":9}\'></div></main>';
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        window.mga_settings = {
+            allowBodyFallback: true,
+            include_svg: true,
+            loop: true,
+            background_style: 'echo',
+            autoplay_start: false,
+            delay: 4,
+            effect: 'slide',
+        };
+
+        const factory = createSwiperMockFactory();
+        instances = factory.instances;
+        global.Swiper = factory.SwiperMock;
+
+        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        testExports = module.__testExports;
+        viewer = testExports.getViewer();
+    });
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        window.matchMedia = originalMatchMedia;
+    });
+
+    it('sets src only on the active slide and its neighbors', () => {
+        testExports.openViewer([
+            { highResUrl: 'https://example.com/high-1.jpg', thumbUrl: 'https://example.com/thumb-1.jpg', caption: 'Image 1' },
+            { highResUrl: 'https://example.com/high-2.jpg', thumbUrl: 'https://example.com/thumb-2.jpg', caption: 'Image 2' },
+            { highResUrl: 'https://example.com/high-3.jpg', thumbUrl: 'https://example.com/thumb-3.jpg', caption: 'Image 3' },
+            { highResUrl: 'https://example.com/high-4.jpg', thumbUrl: 'https://example.com/thumb-4.jpg', caption: 'Image 4' },
+        ], 0);
+
+        const slides = viewer.querySelectorAll('#mga-main-wrapper .swiper-slide img');
+        expect(slides.length).toBe(4);
+
+        expect(slides[0].getAttribute('src')).toBe('https://example.com/high-1.jpg');
+        expect(slides[1].getAttribute('src')).toBe('https://example.com/high-2.jpg');
+        expect(slides[3].getAttribute('src')).toBe('https://example.com/high-4.jpg');
+        expect(slides[2].getAttribute('src')).toBeNull();
+        expect(slides[2].getAttribute('data-src')).toBe('https://example.com/high-3.jpg');
+        expect(slides[0].getAttribute('data-src')).toBe('https://example.com/high-1.jpg');
+    });
+
+    it('applies per-post dataset overrides to Swiper settings', () => {
+        testExports.openViewer([
+            { highResUrl: 'https://example.com/high-1.jpg', thumbUrl: 'https://example.com/thumb-1.jpg', caption: 'Image 1' },
+            { highResUrl: 'https://example.com/high-2.jpg', thumbUrl: 'https://example.com/thumb-2.jpg', caption: 'Image 2' },
+        ], 0);
+
+        expect(instances.main.params.effect).toBe('fade');
+        expect(instances.main.params.autoplay.delay).toBe(9000);
+    });
+});

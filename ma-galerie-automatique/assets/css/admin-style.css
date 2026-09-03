@@ -4,14 +4,6 @@
  * des rayons généreux afin d’obtenir une hiérarchie visuelle claire.
  */
 
-.wrap.mga-admin-wrap {
-    width: 100%;
-    max-width: none;
-    margin: 0 auto;
-    padding-left: clamp(16px, 2.5vw, 32px);
-    padding-right: clamp(16px, 2.5vw, 32px);
-}
-
 .mga-admin-wrap {
     --mga-admin-page: #f6f7f7;
     --mga-admin-surface: #ffffff;
@@ -45,8 +37,6 @@
     background-color: var(--mga-admin-page);
     color: var(--mga-admin-text);
     color-scheme: light;
-    font-size: 15px;
-    line-height: 1.6;
     padding-bottom: 48px;
     transition: background-color 0.3s ease, color 0.3s ease;
 }

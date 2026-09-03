@@ -239,8 +239,91 @@ class Plugin {
             [
                 'editor_script'   => $script_handle,
                 'editor_style'    => $style_handle,
-                'render_callback' => '__return_empty_string',
+                'render_callback' => [ $this, 'render_lightbox_preview_block' ],
+                'attributes'      => [
+                    'autoplay'          => [ 'type' => 'boolean' ],
+                    'loop'              => [ 'type' => 'boolean' ],
+                    'delay'             => [ 'type' => 'number' ],
+                    'speed'             => [ 'type' => 'number' ],
+                    'effect'            => [ 'type' => 'string' ],
+                    'easing'            => [ 'type' => 'string' ],
+                    'backgroundStyle'   => [ 'type' => 'string' ],
+                    'accentColor'       => [ 'type' => 'string' ],
+                    'bgOpacity'         => [ 'type' => 'number' ],
+                    'showThumbsMobile'  => [ 'type' => 'boolean' ],
+                    'showZoom'          => [ 'type' => 'boolean' ],
+                    'showDownload'      => [ 'type' => 'boolean' ],
+                    'showShare'         => [ 'type' => 'boolean' ],
+                    'showFullscreen'    => [ 'type' => 'boolean' ],
+                ],
             ]
+        );
+    }
+
+    public function render_lightbox_preview_block( array $attributes = [] ): string {
+        $settings_input = [
+            'autoplay_start'     => $attributes['autoplay'] ?? null,
+            'loop'               => $attributes['loop'] ?? null,
+            'delay'              => $attributes['delay'] ?? null,
+            'speed'              => $attributes['speed'] ?? null,
+            'effect'             => $attributes['effect'] ?? null,
+            'easing'             => $attributes['easing'] ?? null,
+            'background_style'   => $attributes['backgroundStyle'] ?? null,
+            'accent_color'       => $attributes['accentColor'] ?? null,
+            'bg_opacity'         => $attributes['bgOpacity'] ?? null,
+            'show_thumbs_mobile' => $attributes['showThumbsMobile'] ?? null,
+            'show_zoom'          => $attributes['showZoom'] ?? null,
+            'show_download'      => $attributes['showDownload'] ?? null,
+            'show_share'         => $attributes['showShare'] ?? null,
+            'show_fullscreen'    => $attributes['showFullscreen'] ?? null,
+        ];
+
+        $settings_input = array_filter(
+            $settings_input,
+            static function ( $value ) {
+                return null !== $value;
+            }
+        );
+
+        if ( empty( $settings_input ) ) {
+            return '';
+        }
+
+        $prepared  = $this->prepare_block_settings( $settings_input );
+        $overrides = [
+            'autoplay_start'     => ! empty( $prepared['autoplay'] ),
+            'loop'               => ! empty( $prepared['loop'] ),
+            'delay'              => (int) $prepared['delay'],
+            'speed'              => (int) $prepared['speed'],
+            'effect'             => (string) $prepared['effect'],
+            'easing'             => (string) $prepared['easing'],
+            'background_style'   => (string) $prepared['backgroundStyle'],
+            'accent_color'       => (string) $prepared['accentColor'],
+            'bg_opacity'         => (float) $prepared['bgOpacity'],
+            'show_thumbs_mobile' => ! empty( $prepared['showThumbsMobile'] ),
+            'show_zoom'          => ! empty( $prepared['showZoom'] ),
+            'show_download'      => ! empty( $prepared['showDownload'] ),
+            'show_share'         => ! empty( $prepared['showShare'] ),
+            'show_fullscreen'    => ! empty( $prepared['showFullscreen'] ),
+        ];
+
+        $filtered = [];
+
+        foreach ( $settings_input as $key => $value ) {
+            if ( array_key_exists( $key, $overrides ) ) {
+                $filtered[ $key ] = $overrides[ $key ];
+            }
+        }
+
+        $json = wp_json_encode( $filtered );
+
+        if ( false === $json ) {
+            return '';
+        }
+
+        return sprintf(
+            '<div class="mga-lightbox-settings" hidden data-mga-settings-overrides="%s"></div>',
+            esc_attr( $json )
         );
     }
 
