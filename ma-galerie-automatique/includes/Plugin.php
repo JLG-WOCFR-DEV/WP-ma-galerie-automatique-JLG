@@ -50,8 +50,7 @@ class Plugin {
         add_action( 'admin_menu', [ $this->settings, 'add_admin_menu' ] );
         add_action( 'admin_init', [ $this->settings, 'register_settings' ] );
         add_action( 'admin_enqueue_scripts', [ $this->settings, 'enqueue_assets' ] );
-        add_action( 'admin_notices', [ $this, 'maybe_show_missing_google_sdk_notice' ] );
-        add_action( 'network_admin_notices', [ $this, 'maybe_show_missing_google_sdk_notice' ] );
+        add_action( 'load-' . Settings::SETTINGS_PAGE_HOOK, [ $this, 'register_missing_google_sdk_notice' ] );
         add_action( 'init', [ $this, 'register_block' ] );
         add_action( 'update_option_mga_settings', [ $this, 'maybe_purge_detection_cache' ], 10, 3 );
         add_action( 'switch_blog', [ $this, 'handle_switch_blog' ], 10, 2 );
@@ -134,10 +133,60 @@ class Plugin {
         return (bool) apply_filters( 'mga_requires_google_sdk', true, $this );
     }
 
-    public function maybe_show_missing_google_sdk_notice(): void {
-        static $displayed = false;
+    /**
+     * Whether the current admin request is the Lightbox settings screen.
+     *
+     * Matches `settings_page_ma-galerie-automatique` (the `add_options_page` hook)
+     * and equivalent slug fallbacks when the screen object is not yet available.
+     */
+    public static function screen_is_plugin_settings( $screen = null, string $hook_suffix = '', string $plugin_page = '' ): bool {
+        $expected_hook = Settings::get_settings_page_hook();
 
-        if ( $displayed || ! is_admin() || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) {
+        if ( is_object( $screen ) && isset( $screen->id ) && is_string( $screen->id ) && '' !== $screen->id ) {
+            return $expected_hook === $screen->id;
+        }
+
+        if ( '' !== $hook_suffix ) {
+            return $expected_hook === $hook_suffix;
+        }
+
+        return Settings::SETTINGS_PAGE_SLUG === $plugin_page;
+    }
+
+    public function is_plugin_settings_screen(): bool {
+        $screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+        $hook_suffix = ( isset( $GLOBALS['hook_suffix'] ) && is_string( $GLOBALS['hook_suffix'] ) )
+            ? $GLOBALS['hook_suffix']
+            : '';
+        $plugin_page = ( isset( $GLOBALS['plugin_page'] ) && is_string( $GLOBALS['plugin_page'] ) )
+            ? $GLOBALS['plugin_page']
+            : '';
+
+        if ( '' === $plugin_page && isset( $_GET['page'] ) && is_string( $_GET['page'] ) ) {
+            $plugin_page = $_GET['page'];
+
+            if ( function_exists( 'wp_unslash' ) ) {
+                $plugin_page = wp_unslash( $plugin_page );
+            }
+
+            if ( function_exists( 'sanitize_key' ) ) {
+                $plugin_page = sanitize_key( $plugin_page );
+            }
+        }
+
+        return self::screen_is_plugin_settings( $screen, $hook_suffix, $plugin_page );
+    }
+
+    public function register_missing_google_sdk_notice(): void {
+        add_action( 'admin_notices', [ $this, 'maybe_show_missing_google_sdk_notice' ] );
+    }
+
+    public function maybe_show_missing_google_sdk_notice(): void {
+        if ( ! is_admin() || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) {
+            return;
+        }
+
+        if ( ! $this->is_plugin_settings_screen() ) {
             return;
         }
 
@@ -152,8 +201,6 @@ class Plugin {
         if ( ! current_user_can( 'activate_plugins' ) ) {
             return;
         }
-
-        $displayed = true;
 
         printf(
             '<div class="notice notice-error"><p>%s</p></div>',
