@@ -3,7 +3,12 @@
  * Plugin Name:       Lightbox - JLG
  * Description:       Transforme les galeries d'images en un slideshow plein écran avec de nombreuses options de personnalisation.
  * Version:           1.8.1
+ * Requires at least: 6.0
+ * Requires PHP:      7.4
+ * Tested up to:      7.1
  * Author:            Jérôme Le Gousse
+ * License:           GPL-3.0-or-later
+ * License URI:       https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain:       lightbox-jlg
  * Domain Path:       /languages
  */

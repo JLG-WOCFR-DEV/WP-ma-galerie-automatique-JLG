@@ -853,6 +853,8 @@ import {
             const submitButton = wizard.querySelector('[data-mga-step-submit]');
             const statusElement = wizard.querySelector('[data-mga-save-status]');
             const summaryIndex = stepPanels.length - 1;
+            const wizardIsComplete = wizard.classList.contains('is-complete')
+                || wizard.getAttribute('data-mga-wizard-complete') === '1';
             let currentIndex = stepPanels.findIndex((panel) => panel.classList.contains('is-active'));
 
             if (currentIndex < 0) {
@@ -1747,26 +1749,45 @@ import {
                 });
             };
 
-            if (prevButton) {
-                prevButton.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    handlePrev();
-                });
-            }
+            if (wizardIsComplete) {
+                stepPanels.forEach((panel) => activatePanel(panel));
 
-            if (nextButton) {
-                nextButton.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    handleNext();
-                });
-            }
+                if (prevButton) {
+                    prevButton.hidden = true;
+                }
 
-            attachIndicatorNavigation();
-            updateIndicators();
-            updateControls();
+                if (nextButton) {
+                    nextButton.hidden = true;
+                }
 
-            if (currentIndex === summaryIndex) {
+                if (submitButton) {
+                    submitButton.hidden = false;
+                }
+
+                currentIndex = summaryIndex;
                 updateSummaryContainers();
+            } else {
+                if (prevButton) {
+                    prevButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        handlePrev();
+                    });
+                }
+
+                if (nextButton) {
+                    nextButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        handleNext();
+                    });
+                }
+
+                attachIndicatorNavigation();
+                updateIndicators();
+                updateControls();
+
+                if (currentIndex === summaryIndex) {
+                    updateSummaryContainers();
+                }
             }
 
             const handleFormInput = () => {
@@ -1862,6 +1883,15 @@ import {
 
                         setStatus('success', successMessage);
                         scheduleSummaryRefresh();
+
+                        const wizardRoot = targetForm.querySelector('[data-mga-wizard]')
+                            || doc.querySelector('[data-mga-wizard]');
+
+                        if (wizardRoot && !wizardRoot.classList.contains('is-complete')) {
+                            global.setTimeout(() => {
+                                global.location.reload();
+                            }, 400);
+                        }
                     })
                     .catch((error) => {
                         const fallbackMessage = (config.messages && config.messages.error)

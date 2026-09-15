@@ -494,40 +494,16 @@ class Assets {
         ];
     }
 
+    public function enqueue_block_editor_canvas_assets(): void {
+        if ( ! is_admin() ) {
+            return;
+        }
+
+        $this->enqueue_block_editor_preview_style();
+    }
+
     public function enqueue_block_editor_assets(): void {
-        $style_handle  = 'mga-block-editor-preview';
         $script_handle = 'mga-block-editor-preview';
-
-        wp_enqueue_style(
-            $style_handle,
-            $this->plugin->get_plugin_dir_url() . 'assets/css/block-editor-preview.css',
-            [],
-            MGA_VERSION
-        );
-
-        $settings = $this->settings->get_sanitized_settings();
-        $defaults = $this->settings->get_default_settings();
-
-        $accent_color = isset( $settings['accent_color'] ) ? sanitize_hex_color( $settings['accent_color'] ) : '';
-
-        if ( ! $accent_color && isset( $defaults['accent_color'] ) ) {
-            $accent_color = sanitize_hex_color( $defaults['accent_color'] );
-        }
-
-        if ( ! $accent_color ) {
-            $accent_color = '#c9356b';
-        }
-
-        $bg_opacity = isset( $settings['bg_opacity'] ) ? floatval( $settings['bg_opacity'] ) : ( $defaults['bg_opacity'] ?? 0.95 );
-        $bg_opacity = max( Settings::MIN_OVERLAY_OPACITY, min( 1, (float) $bg_opacity ) );
-
-        $inline_styles = sprintf(
-            ':root{--mga-accent-color:%1$s;--mga-bg-opacity:%2$s;--mga-editor-note-bg:rgba(10,10,10,%2$s);}',
-            esc_html( $accent_color ),
-            esc_html( (string) $bg_opacity )
-        );
-
-        wp_add_inline_style( $style_handle, $inline_styles );
 
         $default_block_names = [ 'core/gallery', 'core/image', 'core/media-text', 'core/cover' ];
         $linked_block_names  = apply_filters( 'mga_linked_image_blocks', $default_block_names );
@@ -554,6 +530,8 @@ class Assets {
             true
         );
 
+        $settings        = $this->settings->get_sanitized_settings();
+        $defaults        = $this->settings->get_default_settings();
         $merged_settings = wp_parse_args( $settings, $defaults );
         $block_settings  = $this->plugin->prepare_block_settings( $merged_settings );
 
@@ -589,6 +567,47 @@ class Assets {
         }
 
         wp_enqueue_script( $script_handle );
+    }
+
+    /**
+     * Loads lightbox preview CSS inside the block editor canvas (iframe on WP 6.3+ / 7.1).
+     *
+     * `enqueue_block_editor_assets` prints into the parent editor frame, so canvas
+     * badges would be missing. `enqueue_block_assets` is copied into the iframe.
+     */
+    private function enqueue_block_editor_preview_style(): void {
+        $style_handle = 'mga-block-editor-preview';
+
+        wp_enqueue_style(
+            $style_handle,
+            $this->plugin->get_plugin_dir_url() . 'assets/css/block-editor-preview.css',
+            [],
+            MGA_VERSION
+        );
+
+        $settings = $this->settings->get_sanitized_settings();
+        $defaults = $this->settings->get_default_settings();
+
+        $accent_color = isset( $settings['accent_color'] ) ? sanitize_hex_color( $settings['accent_color'] ) : '';
+
+        if ( ! $accent_color && isset( $defaults['accent_color'] ) ) {
+            $accent_color = sanitize_hex_color( $defaults['accent_color'] );
+        }
+
+        if ( ! $accent_color ) {
+            $accent_color = '#c9356b';
+        }
+
+        $bg_opacity = isset( $settings['bg_opacity'] ) ? floatval( $settings['bg_opacity'] ) : ( $defaults['bg_opacity'] ?? 0.95 );
+        $bg_opacity = max( Settings::MIN_OVERLAY_OPACITY, min( 1, (float) $bg_opacity ) );
+
+        $inline_styles = sprintf(
+            ':root{--mga-accent-color:%1$s;--mga-bg-opacity:%2$s;--mga-editor-note-bg:rgba(10,10,10,%2$s);}',
+            esc_html( $accent_color ),
+            esc_html( (string) $bg_opacity )
+        );
+
+        wp_add_inline_style( $style_handle, $inline_styles );
     }
 
     public function refresh_swiper_asset_sources( string $context = 'manual' ): array {
