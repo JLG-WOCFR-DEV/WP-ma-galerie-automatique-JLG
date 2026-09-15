@@ -11,8 +11,8 @@
     z-index: var(--mga-z-index, 99999);
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    justify-content: flex-end;
+    align-items: stretch;
     overflow: hidden;
     --mga-header-offset: 60px;
 }
@@ -37,26 +37,28 @@
 .mga-echo-bg__image.mga-visible { opacity: 1; }
 
 .mga-header {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
+    top: auto;
+    left: auto;
+    flex: 0 0 auto;
     width: 100%;
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: center;
     column-gap: 15px;
     row-gap: 6px;
-    padding: calc(15px + env(safe-area-inset-top, 0px)) 15px 15px 15px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 15px 10px 15px;
     box-sizing: border-box;
     color: #fff;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.28));
     z-index: 20;
+    overflow: visible;
 }
 
 .mga-counter {
     font-size: 16px;
     font-variant-numeric: tabular-nums;
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     order: 0;
 }
 
@@ -64,17 +66,33 @@
     color: #fff;
     text-align: center;
     z-index: 10;
-    padding: 5px 20px;
-    flex: 1 0 100%;
-    order: 2;
-    margin-top: 4px;
+    padding: 0 12px;
+    flex: 1 1 0;
+    order: 1;
+    min-width: 0;
+    margin-top: 0;
+    /* Deux lignes dans le chrome ; le surplus se superpose à l’image. */
+    max-height: 2.7em;
+    overflow: visible;
+    position: relative;
+}
+.mga-viewer:not(.mga-has-caption) .mga-caption-container {
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
 }
 .mga-caption {
     margin: 0;
     font-size: 16px;
+    line-height: 1.35;
     font-style: italic;
     white-space: normal;
     overflow-wrap: anywhere;
+    max-height: 8.1em;
+    overflow-x: hidden;
+    overflow-y: auto;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 .mga-caption-feedback {
     margin: 4px auto 0;
@@ -176,9 +194,9 @@
     display: flex;
     align-items: center;
     gap: var(--mga-toolbar-gap);
-    margin-left: auto;
-    flex: 0 1 auto;
-    order: 1;
+    margin-left: 0;
+    flex: 0 0 auto;
+    order: 2;
     justify-content: flex-end;
 }
 
@@ -219,10 +237,13 @@
 
 .mga-main-swiper {
     position: relative;
+    flex: 1 1 auto;
     width: 100%;
-    height: 75%;
-    max-width: 98vw;
+    height: auto;
+    min-height: 0;
+    max-width: none;
     overflow: hidden;
+    align-self: stretch;
 }
 
 .mga-main-swiper .swiper-wrapper {
@@ -287,12 +308,13 @@
 
 .mga-thumbs-swiper {
     position: relative;
-    height: calc(var(--mga-thumb-size-desktop, 90px) + env(safe-area-inset-bottom, 0px));
+    flex: 0 0 auto;
+    height: calc(var(--mga-thumb-size-desktop, 80px) + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    padding: 10px 0;
-    width: 98%;
-    max-width: 1200px;
+    padding: 4px 0 calc(6px + env(safe-area-inset-bottom, 0px));
+    width: 100%;
+    max-width: none;
+    margin: 0;
     overflow: hidden;
 }
 
@@ -314,16 +336,23 @@
 .mga-viewer.mga-thumbs-left {
     flex-direction: row;
     flex-wrap: wrap;
-    align-content: center;
+    align-content: stretch;
     align-items: stretch;
-    gap: 20px;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.mga-viewer.mga-thumbs-left .mga-header {
+    flex: 1 0 100%;
+    order: 0;
 }
 
 .mga-viewer.mga-thumbs-left .mga-main-swiper {
     order: 2;
     flex: 1 1 min(70%, 900px);
-    height: 80%;
-    max-width: calc(100vw - clamp(120px, 20vw, 280px) - 30px);
+    height: auto;
+    min-height: 0;
+    max-width: calc(100vw - clamp(120px, 20vw, 280px) - 24px);
 }
 
 .mga-viewer.mga-thumbs-left .mga-thumbs-swiper {
@@ -331,15 +360,15 @@
     flex: 0 0 clamp(120px, 20vw, 240px);
     width: auto;
     max-width: none;
-    height: 70%;
-    max-height: 80vh;
-    padding: 10px;
-    align-self: center;
+    height: auto;
+    max-height: none;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+    align-self: stretch;
 }
 
 .mga-viewer.mga-thumbs-left .mga-caption-container {
-    order: 3;
-    flex-basis: 100%;
+    order: 1;
+    flex-basis: auto;
 }
 
 .mga-viewer.mga-thumbs-left .mga-thumbs-swiper .swiper-slide {
@@ -357,8 +386,9 @@
 }
 
 .mga-viewer.mga-thumbs-hidden .mga-main-swiper {
-    height: 85%;
-    max-width: 92vw;
+    flex: 1 1 auto;
+    height: auto;
+    max-width: none;
 }
 
 @media (max-width: 768px) {
@@ -370,25 +400,28 @@
 @media (max-width: 1024px) {
     .mga-viewer.mga-thumbs-left {
         flex-direction: column;
-        align-items: center;
-        gap: 10px;
+        align-items: stretch;
+        gap: 8px;
+        justify-content: flex-end;
     }
 
     .mga-viewer.mga-thumbs-left .mga-main-swiper {
         order: 1;
-        height: 70%;
-        max-width: 98vw;
+        height: auto;
+        flex: 1 1 auto;
+        max-width: none;
     }
 
     .mga-viewer.mga-thumbs-left .mga-thumbs-swiper {
         order: 2;
-        width: 98%;
-        height: calc(var(--mga-thumb-size-desktop, 90px) + 40px);
-        max-height: 240px;
+        width: 100%;
+        height: calc(var(--mga-thumb-size-desktop, 80px) + env(safe-area-inset-bottom, 0px));
+        max-height: none;
+        padding: 4px 0 calc(6px + env(safe-area-inset-bottom, 0px));
     }
 
     .mga-viewer.mga-thumbs-left .mga-caption-container {
-        order: 3;
+        order: 1;
     }
 
     .mga-viewer.mga-thumbs-left .mga-thumbs-swiper .swiper-slide {
@@ -444,12 +477,12 @@
     border-radius: 4px;
 }
 
-.mga-viewer:fullscreen .mga-thumbs-swiper,
-.mga-viewer:fullscreen .mga-caption-container {
+.mga-viewer:fullscreen .mga-thumbs-swiper {
     display: none;
 }
 .mga-viewer:fullscreen .mga-main-swiper {
-    max-height: calc(100vh - 80px);
+    flex: 1 1 auto;
+    max-height: none;
 }
 
 /* --- RESPONSIVE --- */
@@ -457,18 +490,20 @@
 @media (max-width: 768px) and (orientation: portrait) {
     .mga-header {
         height: auto;
-        padding: calc(10px + env(safe-area-inset-top, 0px)) 10px 10px 10px;
+        padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 8px 10px;
         column-gap: 8px;
-        row-gap: 8px;
+        row-gap: 6px;
+        align-items: center;
     }
     .mga-counter {
-        flex: 1 1 auto;
+        flex: 0 0 auto;
         order: 0;
         text-align: left;
     }
     .mga-toolbar {
         order: 1;
-        flex: 0 1 auto;
+        flex: 0 0 auto;
+        margin-left: auto;
         display: flex;
         flex-wrap: wrap;
         justify-content: flex-end;
@@ -479,67 +514,34 @@
     .mga-toolbar-button .mga-icon { width: 20px; height: 20px; }
 
     .mga-caption-container {
+        flex: 1 0 100%;
         width: 100%;
-        padding: 0 12px calc(8px + env(safe-area-inset-bottom, 0px)) 12px;
+        padding: 0 12px;
         order: 2;
+        max-height: 2.7em;
+        overflow: visible;
     }
     .mga-caption {
         white-space: normal;
     }
-    /* Correction : on cible bien .mga-main-swiper pour l'affichage mobile en mode portrait */
-    .mga-viewer.mga-has-caption .mga-main-swiper {
-        margin-top: calc(
-            var(--mga-header-offset, 110px) +
-            env(safe-area-inset-top, 0px)
-        );
-    }
-    .mga-viewer:not(.mga-has-caption) .mga-main-swiper {
-        margin-top: calc(
-            var(--mga-header-offset, 60px) +
-            env(safe-area-inset-top, 0px)
-        );
-    }
     .mga-main-swiper {
-        max-height: calc(
-            100vh - (
-                var(--mga-thumb-size-mobile, 70px) +
-                130px +
-                env(safe-area-inset-top, 0px) +
-                env(safe-area-inset-bottom, 0px)
-            )
-        );
-    }
-    .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper {
-        max-height: calc(
-            100vh - (
-                130px +
-                env(safe-area-inset-top, 0px) +
-                env(safe-area-inset-bottom, 0px)
-            )
-        );
-    }
-    .mga-viewer.mga-hide-thumbs-mobile.mga-has-caption .mga-main-swiper {
-        margin-top: calc(
-            var(--mga-header-offset, 110px) +
-            env(safe-area-inset-top, 0px)
-        );
-    }
-    .mga-viewer.mga-hide-thumbs-mobile:not(.mga-has-caption) .mga-main-swiper {
-        margin-top: calc(
-            var(--mga-header-offset, 60px) +
-            env(safe-area-inset-top, 0px)
-        );
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        max-height: none;
     }
     .mga-thumbs-swiper {
-        height: calc(var(--mga-thumb-size-mobile, 70px) + env(safe-area-inset-bottom, 0px));
+        height: calc(var(--mga-thumb-size-mobile, 64px) + env(safe-area-inset-bottom, 0px));
+        padding: 2px 0 calc(4px + env(safe-area-inset-bottom, 0px));
     }
     .mga-viewer.mga-hide-thumbs-mobile .mga-thumbs-swiper {
         height: auto;
+        padding: 0;
     }
     .mga-main-swiper .swiper-button-next,
     .mga-main-swiper .swiper-button-prev {
         top: auto;
-        bottom: calc(var(--mga-thumb-size-mobile, 70px) + 24px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
         transform: translateY(0);
         width: 56px;
         height: 56px;
@@ -547,52 +549,38 @@
     }
     .mga-main-swiper .swiper-button-next { right: clamp(16px, 6vw, 32px); }
     .mga-main-swiper .swiper-button-prev { left: clamp(16px, 6vw, 32px); }
-    .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper .swiper-button-next,
-    .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper .swiper-button-prev {
-        bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-    }
 }
 
 @media (max-width: 900px) and (orientation: landscape) {
     .mga-header {
-        flex-wrap: nowrap;
-        height: 60px;
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 48px;
     }
     .mga-caption-container {
-        position: absolute;
-        bottom: var(--mga-thumb-size-mobile, 70px);
-        left: 0;
-        width: 100%;
-        padding: 25px 15px 15px;
+        position: relative;
+        bottom: auto;
+        left: auto;
+        width: auto;
+        padding: 0 12px;
         box-sizing: border-box;
-        background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-        pointer-events: none;
-    }
-    .mga-viewer.mga-hide-thumbs-mobile .mga-caption-container {
-        bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-        padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
+        background: none;
+        pointer-events: auto;
+        max-height: 2.7em;
+        overflow: visible;
     }
     .mga-caption {
         white-space: normal;
     }
     .mga-main-swiper {
-        max-height: calc(
-            100vh - (
-                var(--mga-thumb-size-mobile, 70px) +
-                80px +
-                env(safe-area-inset-top, 0px) +
-                env(safe-area-inset-bottom, 0px)
-            )
-        );
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        max-height: none;
     }
-    .mga-viewer.mga-hide-thumbs-mobile .mga-main-swiper {
-        max-height: calc(
-            100vh - (
-                80px +
-                env(safe-area-inset-top, 0px) +
-                env(safe-area-inset-bottom, 0px)
-            )
-        );
+    .mga-thumbs-swiper {
+        height: calc(var(--mga-thumb-size-mobile, 58px) + env(safe-area-inset-bottom, 0px));
+        padding: 2px 0 calc(4px + env(safe-area-inset-bottom, 0px));
     }
     .mga-main-swiper .swiper-button-next,
     .mga-main-swiper .swiper-button-prev {
@@ -668,4 +656,12 @@
         border-color: var(--mga-accent-color, #fff);
         box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
     }
+}
+
+/* Le figcaption Gutenberg recouvre souvent le bas de l’ancre : le clic doit ouvrir la lightbox. */
+figure.wp-block-image:has(> a img),
+figure.wp-block-image:has(> a img) > figcaption,
+.wp-caption:has(a img),
+.wp-caption:has(a img) .wp-caption-text {
+    cursor: pointer;
 }

@@ -337,6 +337,11 @@
                     el( 'span', { className: 'mga-counter' }, '1 / ' + PLACEHOLDER_IMAGES.length ),
                     el(
                         'div',
+                        { className: 'mga-caption-container' },
+                        el( 'p', { className: 'mga-caption' }, __( 'Aperçu de la visionneuse', 'lightbox-jlg' ) )
+                    ),
+                    el(
+                        'div',
                         { className: 'mga-toolbar' },
                         autoplay ? renderToolbarButton( 'pause', __( 'Mettre en pause', 'lightbox-jlg' ) ) : renderToolbarButton( 'play', __( 'Lire', 'lightbox-jlg' ) ),
                         showZoom ? renderToolbarButton( 'zoom', __( 'Zoomer', 'lightbox-jlg' ) ) : null,
@@ -352,11 +357,6 @@
                     el( 'div', { className: 'swiper-wrapper' }, slides ),
                     el( 'div', { className: 'swiper-button-prev', 'aria-hidden': 'true' }, '‹' ),
                     el( 'div', { className: 'swiper-button-next', 'aria-hidden': 'true' }, '›' )
-                ),
-                el(
-                    'div',
-                    { className: 'mga-caption-container' },
-                    el( 'p', { className: 'mga-caption' }, __( 'Aperçu de la visionneuse', 'lightbox-jlg' ) )
                 ),
                 el(
                     'div',
