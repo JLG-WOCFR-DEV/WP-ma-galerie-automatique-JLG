@@ -46,28 +46,40 @@ class WizardOnceTest extends WP_UnitTestCase {
         $html = ob_get_clean();
 
         $this->assertStringContainsString( 'data-mga-wizard', $html );
-        $this->assertStringNotContainsString( 'data-mga-wizard-complete', $html );
         $this->assertStringContainsString( 'mga-wizard__progress', $html );
+        $this->assertStringContainsString( 'mga-wizard__panel', $html );
         $this->assertStringContainsString( 'mga_wizard_action=skip', $html );
         $this->assertStringNotContainsString( 'mga_wizard_action=restart', $html );
+        $this->assertStringNotContainsString( 'mga-settings-form', $html );
     }
 
-    public function test_options_page_hides_wizard_chrome_when_completed(): void {
+    public function test_options_page_renders_normal_settings_form_when_completed(): void {
         $this->settings()->complete_wizard();
 
         ob_start();
         $this->settings()->render_options_page();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString( 'mga-wizard is-complete', $html );
-        $this->assertStringContainsString( 'data-mga-wizard-complete="1"', $html );
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="[^"]*mga-wizard/',
+            $html,
+            'Completed settings must not keep wizard chrome classes.'
+        );
+        $this->assertStringNotContainsString( 'data-mga-wizard', $html );
         $this->assertStringNotContainsString( 'mga-wizard__progress', $html );
+        $this->assertStringNotContainsString( 'mga-wizard__panel', $html );
+        $this->assertStringNotContainsString( 'mga-wizard__actions', $html );
+        $this->assertStringContainsString( 'mga-settings-form', $html );
+        $this->assertStringContainsString( 'mga-settings-panel', $html );
+        $this->assertStringContainsString( 'class="wrap mga-admin-wrap"', $html );
+        $this->assertStringContainsString( 'form-table', $html );
+        $this->assertStringContainsString( 'class="submit"', $html );
         $this->assertStringContainsString( 'mga_wizard_action=restart', $html );
         $this->assertStringNotContainsString( 'mga_wizard_action=skip', $html );
         $this->assertSame(
             3,
-            substr_count( $html, 'mga-wizard__panel is-active' ),
-            'All settings panels should be visible after the wizard is done.'
+            substr_count( $html, 'mga-settings-panel' ),
+            'All settings panels should be visible after the wizard is dismissed.'
         );
     }
 

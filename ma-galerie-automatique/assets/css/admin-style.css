@@ -34,11 +34,9 @@
     --mga-score-alert: #b42318;
     --mga-score-alert-rgb: 180, 35, 24;
 
-    background-color: var(--mga-admin-page);
     color: var(--mga-admin-text);
     color-scheme: light;
-    padding-bottom: 48px;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    padding-bottom: 24px;
 }
 
 .is-dark-theme .mga-admin-wrap:not([data-mga-theme='dark']) {
@@ -116,13 +114,6 @@
     --mga-score-alert-rgb: 248, 113, 113;
 
     color-scheme: dark;
-}
-
-.mga-admin-wrap > h1 {
-    font-weight: 700;
-    font-size: 28px;
-    color: var(--mga-admin-text);
-    margin-bottom: 24px;
 }
 
 .mga-wizard {
@@ -218,21 +209,29 @@
     display: block;
 }
 
-.mga-wizard.is-complete .mga-wizard__progress {
-    display: none;
+.mga-settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
-.mga-wizard.is-complete .mga-wizard__panel {
+.mga-settings-panel {
     display: block;
 }
 
-.mga-wizard.is-complete [data-mga-step-prev],
-.mga-wizard.is-complete [data-mga-step-next] {
-    display: none;
+.mga-wizard__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
 }
 
-.mga-wizard-toolbar {
-    margin: 0 0 16px;
+.mga-wizard__actions .submit,
+.mga-settings-form > .submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
 }
 
 .mga-step__header {
@@ -269,59 +268,6 @@
     border-radius: var(--mga-admin-radius-lg);
     box-shadow: var(--mga-admin-shadow-sm);
     transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.mga-admin-wrap .nav-tab-wrapper {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px;
-    border-radius: var(--mga-admin-radius-lg);
-    background: var(--mga-admin-surface-raised);
-    border: 1px solid var(--mga-admin-border);
-    box-shadow: var(--mga-admin-shadow-sm);
-    margin: 0 0 24px 0;
-}
-
-.mga-admin-wrap .nav-tab {
-    position: relative;
-    border: none;
-    background: transparent;
-    color: var(--mga-admin-text-muted);
-    font-weight: 600;
-    padding: 10px 18px;
-    border-radius: calc(var(--mga-admin-radius-md) - 2px);
-    transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
-}
-
-.mga-admin-wrap .nav-tab::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    border: 1px solid transparent;
-    transition: border-color 0.18s ease;
-}
-
-.mga-admin-wrap .nav-tab:hover,
-.mga-admin-wrap .nav-tab:focus-visible {
-    color: var(--mga-admin-text);
-    background: var(--mga-admin-surface-highlight);
-}
-
-.mga-admin-wrap .nav-tab:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(var(--mga-admin-accent-rgb), 0.3);
-}
-
-.mga-admin-wrap .nav-tab.nav-tab-active {
-    background: var(--mga-admin-surface);
-    color: var(--mga-admin-text);
-    box-shadow: 0 10px 24px rgba(var(--mga-admin-accent-rgb), 0.2);
-}
-
-.mga-admin-wrap .nav-tab.nav-tab-active::after {
-    border-color: rgba(var(--mga-admin-accent-rgb), 0.4);
 }
 
 .mga-admin-wrap .tab-content {
@@ -1572,27 +1518,6 @@
     accent-color: var(--mga-admin-accent);
 }
 
-.mga-admin-wrap .button:not(.button-primary),
-.mga-admin-wrap .button-secondary {
-    border-radius: var(--mga-admin-radius-sm);
-    border: 1px solid transparent;
-    font-weight: 600;
-    padding: 8px 18px;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, color 0.16s ease;
-    box-shadow: 0 10px 20px rgba(var(--mga-admin-accent-rgb), 0.12);
-}
-
-.mga-admin-wrap .button-secondary {
-    background: rgba(var(--mga-admin-accent-rgb), 0.08);
-    color: var(--mga-admin-accent-strong);
-}
-
-.mga-admin-wrap .button-secondary:hover,
-.mga-admin-wrap .button-secondary:focus-visible {
-    background: rgba(var(--mga-admin-accent-rgb), 0.16);
-    color: var(--mga-admin-accent-strong);
-}
-
 .mga-admin-wrap .button-link-delete {
     color: #d13b3c;
     font-weight: 600;
@@ -1829,20 +1754,7 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-}
-
-.mga-share-repeater__controls .button {
-    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    box-shadow: none;
-    background: rgba(var(--mga-admin-accent-rgb), 0.08);
-    color: var(--mga-admin-accent-strong);
-}
-
-.mga-share-repeater__controls .button:hover,
-.mga-share-repeater__controls .button:focus-visible {
-    background: rgba(var(--mga-admin-accent-rgb), 0.18);
 }
 
 .mga-share-repeater__preview {
