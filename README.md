@@ -6,7 +6,7 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 - **Nom** : Lightbox - JLG
 - **Rôle** : Créer une visionneuse plein écran pour les images reliées à leur média.
 - **Auteur** : Jérôme Le Gousse
-- **Version** : 1.8.2
+- **Version** : 1.8.3
 - **Requires at least** : WordPress 6.0
 - **Requires PHP** : 7.4
 - **Tested up to** : WordPress 7.1
@@ -21,7 +21,7 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 
 Le dossier `vendor/` généré par Composer est ignoré dans Git : pensez à lancer `composer install --no-dev` avant de créer une archive ZIP ou de déployer l'extension pour inclure le SDK Google.
 
-En cas de notice « Le SDK Google est indisponible » dans l'administration, vérifiez que `composer install --no-dev` a bien été exécuté et que WordPress dispose des droits d'écriture nécessaires dans le dossier `vendor/` du plugin.
+En cas de notice « Le SDK Google est indisponible » sur **Réglages → Lightbox - JLG**, vérifiez que `composer install --no-dev` a bien été exécuté et que WordPress dispose des droits d'écriture nécessaires dans le dossier `vendor/` du plugin. Cette notice n’apparaît pas sur les autres écrans wp-admin.
 
 Si vous n'utilisez pas les fonctionnalités qui reposent sur le SDK Google, vous pouvez également masquer la notice et désactiver cette dépendance en ajoutant le filtre suivant dans un mu-plugin ou le `functions.php` du thème :
 
