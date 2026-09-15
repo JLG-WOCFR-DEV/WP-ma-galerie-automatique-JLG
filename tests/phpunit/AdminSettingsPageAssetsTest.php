@@ -67,15 +67,44 @@ class AdminSettingsPageAssetsTest extends WP_UnitTestCase {
 
         $this->assertIsString( $css );
         $this->assertDoesNotMatchRegularExpression(
-            '/\.button-primary\s*\{/',
+            '/\.button-primary/',
             $css,
             'Native wp-admin primary buttons must keep core styles.'
         );
-        $this->assertStringContainsString(
-            '.button:not(.button-primary)',
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.button(?:-secondary)?(?:\s|:|,|\{)/',
             $css,
-            'Generic .button rules must exclude .button-primary.'
+            'Native wp-admin .button and .button-secondary must keep core styles.'
         );
+    }
+
+    public function test_plugin_does_not_remove_submenu_pages(): void {
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator(
+                dirname( __DIR__, 2 ) . '/ma-galerie-automatique',
+                FilesystemIterator::SKIP_DOTS
+            )
+        );
+
+        foreach ( $iterator as $file ) {
+            if ( ! $file->isFile() || 'php' !== strtolower( $file->getExtension() ) ) {
+                continue;
+            }
+
+            $pathname = $file->getPathname();
+
+            if ( false !== strpos( $pathname, '/vendor/' ) || false !== strpos( $pathname, '/node_modules/' ) ) {
+                continue;
+            }
+
+            $contents = file_get_contents( $pathname );
+            $this->assertIsString( $contents );
+            $this->assertStringNotContainsString(
+                'remove_submenu_page',
+                $contents,
+                $pathname . ' must not hide admin submenu pages.'
+            );
+        }
     }
 
     private function settings(): Settings {

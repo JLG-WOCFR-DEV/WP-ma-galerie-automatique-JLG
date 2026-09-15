@@ -14,4 +14,15 @@ class PluginHeadersTest extends WP_UnitTestCase {
         $this->assertMatchesRegularExpression( '/Requires PHP:\s*7\.4/', $contents );
         $this->assertMatchesRegularExpression( '/Tested up to:\s*7\.1/', $contents );
     }
+
+    public function test_readme_txt_declares_wordpress_and_php_headers(): void {
+        $contents = file_get_contents(
+            dirname( __DIR__, 2 ) . '/ma-galerie-automatique/readme.txt'
+        );
+
+        $this->assertIsString( $contents );
+        $this->assertMatchesRegularExpression( '/Requires at least:\s*6\.0/', $contents );
+        $this->assertMatchesRegularExpression( '/Requires PHP:\s*7\.4/', $contents );
+        $this->assertMatchesRegularExpression( '/Tested up to:\s*7\.1/', $contents );
+    }
 }

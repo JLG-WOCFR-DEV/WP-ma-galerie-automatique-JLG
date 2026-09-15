@@ -841,19 +841,21 @@ import {
 
         const initializeWizard = (targetForm) => {
             const wizard = doc.querySelector('[data-mga-wizard]');
+            const root = wizard || targetForm;
 
-            if (!wizard) {
+            if (!root) {
                 return null;
             }
 
-            const stepPanels = Array.from(wizard.querySelectorAll('[data-mga-step-panel]'));
-            const indicators = Array.from(wizard.querySelectorAll('[data-mga-step-indicator]'));
-            const prevButton = wizard.querySelector('[data-mga-step-prev]');
-            const nextButton = wizard.querySelector('[data-mga-step-next]');
-            const submitButton = wizard.querySelector('[data-mga-step-submit]');
-            const statusElement = wizard.querySelector('[data-mga-save-status]');
+            const stepPanels = Array.from(root.querySelectorAll('[data-mga-step-panel]'));
+            const indicators = Array.from(root.querySelectorAll('[data-mga-step-indicator]'));
+            const prevButton = root.querySelector('[data-mga-step-prev]');
+            const nextButton = root.querySelector('[data-mga-step-next]');
+            const submitButton = root.querySelector('[data-mga-step-submit]');
+            const statusElement = root.querySelector('[data-mga-save-status]');
             const summaryIndex = stepPanels.length - 1;
-            const wizardIsComplete = wizard.classList.contains('is-complete')
+            const wizardIsComplete = !wizard
+                || wizard.classList.contains('is-complete')
                 || wizard.getAttribute('data-mga-wizard-complete') === '1';
             let currentIndex = stepPanels.findIndex((panel) => panel.classList.contains('is-active'));
 
@@ -924,16 +926,16 @@ import {
             const updateSummaryContainers = (() => {
                 let timeoutId = null;
 
-                const presetTarget = wizard.querySelector('[data-mga-summary-preset]');
-                const timingTarget = wizard.querySelector('[data-mga-summary-timing]');
-                const toolbarTarget = wizard.querySelector('[data-mga-summary-toolbar]');
-                const shareTarget = wizard.querySelector('[data-mga-summary-share]');
-                const validationContainer = wizard.querySelector('[data-mga-summary-validations]');
-                const diffContainer = wizard.querySelector('[data-mga-summary-diff]');
+                const presetTarget = root.querySelector('[data-mga-summary-preset]');
+                const timingTarget = root.querySelector('[data-mga-summary-timing]');
+                const toolbarTarget = root.querySelector('[data-mga-summary-toolbar]');
+                const shareTarget = root.querySelector('[data-mga-summary-share]');
+                const validationContainer = root.querySelector('[data-mga-summary-validations]');
+                const diffContainer = root.querySelector('[data-mga-summary-diff]');
                 const diffList = diffContainer ? diffContainer.querySelector('[data-mga-summary-diff-list]') : null;
                 const diffBaseline = diffContainer ? diffContainer.querySelector('[data-mga-summary-diff-baseline]') : null;
                 const diffEmpty = diffContainer ? diffContainer.querySelector('[data-mga-summary-diff-empty]') : null;
-                const scoreboardContainer = wizard.querySelector('[data-mga-summary-scoreboard]');
+                const scoreboardContainer = root.querySelector('[data-mga-summary-scoreboard]');
                 const scorecardMap = (() => {
                     const map = new Map();
 

@@ -33,32 +33,38 @@ $mga_wizard_panel_is_active = static function ( int $index ) use ( $mga_show_wiz
     return ! $mga_show_wizard || 0 === $index;
 };
 
+$mga_settings_panel_class = static function ( int $index ) use ( $mga_show_wizard, $mga_wizard_panel_is_active ): string {
+    if ( $mga_show_wizard ) {
+        return 'mga-wizard__panel' . ( $mga_wizard_panel_is_active( $index ) ? ' is-active' : '' );
+    }
+
+    return 'mga-settings-panel';
+};
+
 ?>
 <div class="wrap mga-admin-wrap">
     <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
     <?php settings_errors( 'mga_settings' ); ?>
 
-    <p class="mga-wizard-toolbar">
-        <?php if ( $mga_show_wizard ) : ?>
-            <a class="button button-secondary" href="<?php echo esc_url( $mga_skip_wizard_url ?? '' ); ?>">
+    <?php if ( $mga_show_wizard ) : ?>
+        <p>
+            <a class="button" href="<?php echo esc_url( $mga_skip_wizard_url ?? '' ); ?>">
                 <?php echo esc_html__( 'Passer l’assistant', 'lightbox-jlg' ); ?>
             </a>
-        <?php else : ?>
+        </p>
+    <?php else : ?>
+        <p>
             <a href="<?php echo esc_url( $mga_restart_wizard_url ?? '' ); ?>">
                 <?php echo esc_html__( 'Relancer l’assistant', 'lightbox-jlg' ); ?>
             </a>
-        <?php endif; ?>
-    </p>
+        </p>
+    <?php endif; ?>
 
     <form action="options.php" method="post" data-mga-settings-form>
         <?php settings_fields( 'mga_settings_group' ); ?>
 
-        <div
-            class="mga-wizard<?php echo $mga_show_wizard ? '' : ' is-complete'; ?>"
-            data-mga-wizard
-            <?php echo $mga_show_wizard ? '' : 'data-mga-wizard-complete="1"'; ?>
-        >
-            <?php if ( $mga_show_wizard ) : ?>
+        <?php if ( $mga_show_wizard ) : ?>
+        <div class="mga-wizard" data-mga-wizard>
             <ol class="mga-wizard__progress" data-mga-stepper aria-label="<?php echo esc_attr__( 'Étapes de configuration', 'lightbox-jlg' ); ?>">
                 <li class="mga-wizard__progress-item is-active" data-mga-step-indicator data-step-index="0">
                     <span class="mga-wizard__progress-number">1</span>
@@ -73,11 +79,13 @@ $mga_wizard_panel_is_active = static function ( int $index ) use ( $mga_show_wiz
                     <span class="mga-wizard__progress-label"><?php echo esc_html__( 'Récapitulatif', 'lightbox-jlg' ); ?></span>
                 </li>
             </ol>
-            <?php endif; ?>
 
             <div class="mga-wizard__panels">
+        <?php else : ?>
+        <div class="mga-settings-form">
+        <?php endif; ?>
                 <section
-                    class="mga-wizard__panel<?php echo $mga_wizard_panel_is_active( 0 ) ? ' is-active' : ''; ?>"
+                    class="<?php echo esc_attr( $mga_settings_panel_class( 0 ) ); ?>"
                     data-mga-step-panel
                     data-step-index="0"
                     aria-hidden="<?php echo $mga_wizard_panel_is_active( 0 ) ? 'false' : 'true'; ?>"
@@ -1242,7 +1250,7 @@ $mga_wizard_panel_is_active = static function ( int $index ) use ( $mga_show_wiz
     </section>
 
                 <section
-                    class="mga-wizard__panel<?php echo $mga_wizard_panel_is_active( 1 ) ? ' is-active' : ''; ?>"
+                    class="<?php echo esc_attr( $mga_settings_panel_class( 1 ) ); ?>"
                     data-mga-step-panel
                     data-step-index="1"
                     aria-hidden="<?php echo $mga_wizard_panel_is_active( 1 ) ? 'false' : 'true'; ?>"
@@ -1483,7 +1491,7 @@ $mga_wizard_panel_is_active = static function ( int $index ) use ( $mga_show_wiz
                 </section>
 
                 <section
-                    class="mga-wizard__panel<?php echo $mga_wizard_panel_is_active( 2 ) ? ' is-active' : ''; ?>"
+                    class="<?php echo esc_attr( $mga_settings_panel_class( 2 ) ); ?>"
                     data-mga-step-panel
                     data-step-index="2"
                     aria-hidden="<?php echo $mga_wizard_panel_is_active( 2 ) ? 'false' : 'true'; ?>"
@@ -1594,15 +1602,16 @@ $mga_wizard_panel_is_active = static function ( int $index ) use ( $mga_show_wiz
                         </div>
                     </div>
                 </section>
+            <?php if ( $mga_show_wizard ) : ?>
             </div>
 
             <div class="mga-wizard__actions">
-                <button type="button" class="button button-secondary mga-wizard__button" data-mga-step-prev<?php echo $mga_show_wizard ? '' : ' hidden'; ?>><?php echo esc_html__( 'Étape précédente', 'lightbox-jlg' ); ?></button>
-                <button type="button" class="button button-primary mga-wizard__button" data-mga-step-next<?php echo $mga_show_wizard ? '' : ' hidden'; ?>><?php echo esc_html__( 'Étape suivante', 'lightbox-jlg' ); ?></button>
+                <button type="button" class="button" data-mga-step-prev><?php echo esc_html__( 'Étape précédente', 'lightbox-jlg' ); ?></button>
+                <button type="button" class="button button-primary" data-mga-step-next><?php echo esc_html__( 'Étape suivante', 'lightbox-jlg' ); ?></button>
                 <?php
                 submit_button(
                     __( 'Enregistrer les réglages', 'lightbox-jlg' ),
-                    'primary mga-wizard__button',
+                    'primary',
                     'submit',
                     false,
                     [
@@ -1610,8 +1619,25 @@ $mga_wizard_panel_is_active = static function ( int $index ) use ( $mga_show_wiz
                     ]
                 );
                 ?>
-                <span class="mga-wizard__status" data-mga-save-status aria-live="polite"></span>
+                <span data-mga-save-status aria-live="polite"></span>
             </div>
         </div>
+            <?php else : ?>
+            <p class="submit">
+                <?php
+                submit_button(
+                    __( 'Enregistrer les réglages', 'lightbox-jlg' ),
+                    'primary',
+                    'submit',
+                    false,
+                    [
+                        'data-mga-step-submit' => 'true',
+                    ]
+                );
+                ?>
+                <span data-mga-save-status aria-live="polite"></span>
+            </p>
+        </div>
+            <?php endif; ?>
     </form>
 </div>

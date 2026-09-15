@@ -6,7 +6,7 @@ Lightbox - JLG est un plugin WordPress qui transforme automatiquement les galeri
 - **Nom** : Lightbox - JLG
 - **Rôle** : Créer une visionneuse plein écran pour les images reliées à leur média.
 - **Auteur** : Jérôme Le Gousse
-- **Version** : 1.8.1
+- **Version** : 1.8.2
 - **Requires at least** : WordPress 6.0
 - **Requires PHP** : 7.4
 - **Tested up to** : WordPress 7.1
@@ -321,6 +321,14 @@ Si votre thème n’utilise pas les classes habituelles comme `.entry-content`, 
    ```bash
    phpunit -c phpunit.xml.dist
    ```
+
+Contrôles statiques (headers WP/PHP, assistant une fois, charte boutons) sans bootstrap WordPress :
+
+```bash
+php tests/phase2-wizard-charter-test.php
+```
+
+Les tests JavaScript se lancent avec `npm test`.
 
 Vous pouvez ajouter des personnalisations locales sans les committer via `tests/phpunit/wp-tests-config-extra.php`, automatiquement inclus si présent.
 
