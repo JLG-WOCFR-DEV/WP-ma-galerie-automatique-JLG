@@ -14,6 +14,8 @@ import {
     sanitizeEasing,
     sanitizeThumbsLayout,
     isHeavyEffect,
+    resolveTriggerLinkFromEventTarget,
+    navigateSwiperSlide,
 } from './navigation';
 import {
     buildLabelFromKey,
@@ -2829,6 +2831,8 @@ import {
             resolveThumbnailUrl,
             getImageDataAttributes,
             linkMatchesTriggerScenario: doesLinkMatchTriggerScenario,
+            resolveTriggerLinkFromEventTarget,
+            navigateSwiperSlide,
         };
 
         if (typeof module !== 'undefined' && module.exports) {
@@ -3065,7 +3069,7 @@ import {
                 return;
             }
 
-            const targetLink = eventTarget.closest('a');
+            const targetLink = resolveTriggerLinkFromEventTarget(eventTarget);
             if (!targetLink) {
                 return;
             }
@@ -4337,10 +4341,44 @@ import {
         document.addEventListener('keydown', (e) => {
             const viewer = document.getElementById('mga-viewer');
             if (!viewer || viewer.style.display === 'none') return;
+
+            const eventTarget = resolveEventTarget(e);
+            if (eventTarget && typeof eventTarget.closest === 'function') {
+                const tagName = eventTarget.tagName ? eventTarget.tagName.toLowerCase() : '';
+                if (
+                    tagName === 'input' ||
+                    tagName === 'textarea' ||
+                    tagName === 'select' ||
+                    eventTarget.isContentEditable
+                ) {
+                    return;
+                }
+
+                if (eventTarget.closest('.mga-thumb-button') || eventTarget.closest('.mga-share-modal')) {
+                    return;
+                }
+            }
+
             switch (e.key) {
-                case 'Escape': closeViewer(viewer); break;
-                case 'ArrowLeft': if (mainSwiper) mainSwiper.slidePrev(); break;
-                case 'ArrowRight': if (mainSwiper) mainSwiper.slideNext(); break;
+                case 'Escape':
+                    closeViewer(viewer);
+                    break;
+                case 'ArrowLeft':
+                    if (typeof e.preventDefault === 'function') {
+                        e.preventDefault();
+                    }
+                    navigateSwiperSlide(mainSwiper, 'prev', {
+                        slidesCount: Array.isArray(currentGalleryImages) ? currentGalleryImages.length : 0,
+                    });
+                    break;
+                case 'ArrowRight':
+                    if (typeof e.preventDefault === 'function') {
+                        e.preventDefault();
+                    }
+                    navigateSwiperSlide(mainSwiper, 'next', {
+                        slidesCount: Array.isArray(currentGalleryImages) ? currentGalleryImages.length : 0,
+                    });
+                    break;
             }
         });
 

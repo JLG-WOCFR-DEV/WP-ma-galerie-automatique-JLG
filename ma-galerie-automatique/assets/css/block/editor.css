@@ -41,14 +41,20 @@
     top: auto;
     left: auto;
     width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
     padding: 0 0 12px;
     background: none;
     color: var(--mga-block-text);
+    overflow: visible;
 }
 
 .mga-block-preview__viewer .mga-counter {
     font-weight: 600;
     color: var(--mga-block-muted);
+    flex: 0 0 auto;
 }
 
 .mga-block-preview__viewer .mga-toolbar {
@@ -139,7 +145,11 @@
 }
 
 .mga-block-preview__viewer .mga-caption-container {
-    padding: 16px 10px 0;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 10px;
+    max-height: 2.7em;
+    overflow: visible;
 }
 
 .mga-block-preview__viewer .mga-caption {
@@ -152,11 +162,11 @@
 
 .mga-block-preview__viewer .mga-thumbs-swiper {
     width: 100%;
-    margin-top: 12px;
+    margin-top: 8px;
     display: flex;
     justify-content: center;
     gap: 8px;
-    padding: 8px 0 4px;
+    padding: 4px 0 0;
     background: var(--mga-block-surface);
     border-top: 1px solid var(--mga-block-border-soft);
 }

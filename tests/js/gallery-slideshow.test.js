@@ -230,6 +230,8 @@ function createSwiperMockFactory() {
             realIndex: 0,
             slideTo: jest.fn(),
             slideToLoop: jest.fn(),
+            slidePrev: jest.fn(),
+            slideNext: jest.fn(),
         };
 
         if (isMain) {
@@ -1221,5 +1223,169 @@ describe('lazy-loaded slide sources and block setting overrides', () => {
 
         expect(instances.main.params.effect).toBe('fade');
         expect(instances.main.params.autoplay.delay).toBe(9000);
+    });
+});
+
+describe('keyboard navigation with autoplay', () => {
+    const originalMatchMedia = window.matchMedia;
+    let instances;
+    let testExports;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = '<main></main>';
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        window.mga_settings = {
+            allowBodyFallback: true,
+            include_svg: true,
+            loop: true,
+            background_style: 'echo',
+            autoplay_start: true,
+            delay: 3,
+        };
+
+        const factory = createSwiperMockFactory();
+        instances = factory.instances;
+        global.Swiper = factory.SwiperMock;
+
+        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        testExports = module.__testExports;
+        testExports.openViewer([
+            { highResUrl: 'https://example.com/high-1.jpg', thumbUrl: 'https://example.com/thumb-1.jpg', caption: 'Sentier forestier' },
+            { highResUrl: 'https://example.com/high-2.jpg', thumbUrl: 'https://example.com/thumb-2.jpg', caption: 'Yosemite' },
+            { highResUrl: 'https://example.com/high-3.jpg', thumbUrl: 'https://example.com/thumb-3.jpg', caption: 'Chat' },
+        ], 1);
+
+        instances.main.slideToLoop.mockClear();
+        instances.main.slideTo.mockClear();
+        instances.main.slidePrev.mockClear();
+        instances.main.slideNext.mockClear();
+        instances.main.autoplay.stop.mockClear();
+        instances.main.autoplay.start.mockClear();
+        instances.main.realIndex = 1;
+        instances.main.autoplay.running = true;
+    });
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        window.matchMedia = originalMatchMedia;
+        document.body.innerHTML = '';
+    });
+
+    it('changes slide on ArrowLeft and ArrowRight while autoplay is running', () => {
+        const main = instances.main;
+        expect(main.autoplay.running).toBe(true);
+        main.realIndex = 1;
+
+        const leftEvent = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true });
+        document.dispatchEvent(leftEvent);
+
+        expect(main.slidePrev).not.toHaveBeenCalled();
+        expect(main.slideToLoop).toHaveBeenCalledWith(0);
+        expect(main.autoplay.stop).toHaveBeenCalled();
+        expect(main.autoplay.start).toHaveBeenCalled();
+        expect(main.autoplay.running).toBe(true);
+
+        main.slideToLoop.mockClear();
+        main.realIndex = 0;
+
+        const rightEvent = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+        document.dispatchEvent(rightEvent);
+
+        expect(main.slideNext).not.toHaveBeenCalled();
+        expect(main.slideToLoop).toHaveBeenCalledWith(1);
+    });
+});
+
+describe('figcaption and figure clicks open the lightbox', () => {
+    const originalMatchMedia = window.matchMedia;
+    let instances;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = `
+            <main>
+                <figure class="wp-block-image size-full" id="figure-1">
+                    <a href="https://example.com/high-1.jpg" data-mga-gallery="set" id="link-1">
+                        <img src="https://example.com/thumb-1.jpg" alt="Sentier forestier" />
+                    </a>
+                    <figcaption id="caption-1">Sentier forestier — Wikimedia Commons</figcaption>
+                </figure>
+                <figure class="wp-block-image size-full" id="figure-2">
+                    <a href="https://example.com/high-2.jpg" data-mga-gallery="set" id="link-2">
+                        <img src="https://example.com/thumb-2.jpg" alt="Yosemite" />
+                    </a>
+                    <figcaption id="caption-2">Vallée de Yosemite</figcaption>
+                </figure>
+            </main>
+        `;
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        const factory = createSwiperMockFactory();
+        instances = factory.instances;
+        global.Swiper = factory.SwiperMock;
+
+        window.mga_settings = {
+            allowBodyFallback: true,
+            include_svg: true,
+            loop: true,
+            start_on_clicked_image: true,
+            groupAttribute: 'data-mga-gallery',
+            autoplay_start: false,
+            delay: 4,
+        };
+
+        require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+    });
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        window.matchMedia = originalMatchMedia;
+        document.body.innerHTML = '';
+    });
+
+    it('opens the lightbox when clicking the figcaption', () => {
+        const caption = document.getElementById('caption-2');
+        caption.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+        expect(instances.main).toBeTruthy();
+        expect(instances.main.params.initialSlide).toBe(1);
+    });
+
+    it('opens the lightbox when clicking the figure', () => {
+        const figure = document.getElementById('figure-1');
+        figure.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+        expect(instances.main).toBeTruthy();
+        expect(instances.main.params.initialSlide).toBe(0);
     });
 });
