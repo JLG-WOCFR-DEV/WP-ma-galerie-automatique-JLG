@@ -9,6 +9,12 @@ class Settings {
 
     public const MIN_OVERLAY_OPACITY = 0.6;
 
+    public const SETTINGS_PAGE_HOOK = 'settings_page_ma-galerie-automatique';
+
+    public const SETTINGS_PAGE_SLUG = 'ma-galerie-automatique';
+
+    public const WIZARD_OPTION = 'mga_wizard_completed';
+
     private const ACCENT_CONTRAST_MIN_TEXT = 4.5;
 
     private const ACCENT_CONTRAST_MIN_ICON = 3.0;
@@ -31,6 +37,8 @@ class Settings {
         if ( function_exists( 'add_action' ) ) {
             add_action( 'switch_blog', [ $this, 'handle_switch_blog' ], 10, 2 );
             add_action( 'wp_ajax_mga_save_settings', [ $this, 'handle_ajax_save_settings' ] );
+            add_action( 'admin_init', [ $this, 'maybe_handle_wizard_request' ] );
+            add_action( 'admin_init', [ $this, 'maybe_complete_wizard_from_settings_form' ], 20 );
         }
     }
 
@@ -505,12 +513,16 @@ class Settings {
         );
     }
 
+    public static function get_settings_page_hook(): string {
+        return self::SETTINGS_PAGE_HOOK;
+    }
+
     public function add_admin_menu(): void {
         add_options_page(
             __( 'Lightbox - JLG', 'lightbox-jlg' ),
             __( 'Lightbox - JLG', 'lightbox-jlg' ),
             'manage_options',
-            'ma-galerie-automatique',
+            self::SETTINGS_PAGE_SLUG,
             [ $this, 'render_options_page' ]
         );
     }
@@ -537,7 +549,7 @@ class Settings {
             return;
         }
 
-        if ( 'toplevel_page_ma-galerie-automatique' !== $hook ) {
+        if ( self::get_settings_page_hook() !== $hook ) {
             return;
         }
 
@@ -654,12 +666,99 @@ class Settings {
         }
     }
 
+    public function is_wizard_completed(): bool {
+        return (bool) get_option( self::WIZARD_OPTION, false );
+    }
+
+    public function complete_wizard(): void {
+        update_option( self::WIZARD_OPTION, '1', true );
+    }
+
+    public function restart_wizard(): void {
+        delete_option( self::WIZARD_OPTION );
+    }
+
+    public function get_wizard_action_url( string $action ): string {
+        $action = sanitize_key( $action );
+
+        return wp_nonce_url(
+            add_query_arg(
+                [
+                    'page'              => self::SETTINGS_PAGE_SLUG,
+                    'mga_wizard_action' => $action,
+                ],
+                admin_url( 'options-general.php' )
+            ),
+            'mga_wizard_' . $action
+        );
+    }
+
+    public function maybe_handle_wizard_request(): void {
+        if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        if ( empty( $_GET['mga_wizard_action'] ) || empty( $_GET['_wpnonce'] ) ) {
+            return;
+        }
+
+        $action = sanitize_key( wp_unslash( $_GET['mga_wizard_action'] ) );
+
+        if ( ! in_array( $action, [ 'skip', 'restart' ], true ) ) {
+            return;
+        }
+
+        if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'mga_wizard_' . $action ) ) {
+            return;
+        }
+
+        if ( 'restart' === $action ) {
+            $this->restart_wizard();
+        } else {
+            $this->complete_wizard();
+        }
+
+        wp_safe_redirect(
+            add_query_arg(
+                'page',
+                self::SETTINGS_PAGE_SLUG,
+                admin_url( 'options-general.php' )
+            )
+        );
+        exit;
+    }
+
+    public function maybe_complete_wizard_from_settings_form(): void {
+        if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        if ( empty( $_POST['option_page'] ) || empty( $_POST['_wpnonce'] ) ) {
+            return;
+        }
+
+        $option_page = sanitize_key( wp_unslash( $_POST['option_page'] ) );
+
+        if ( 'mga_settings_group' !== $option_page ) {
+            return;
+        }
+
+        if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'mga_settings_group-options' ) ) {
+            return;
+        }
+
+        $this->complete_wizard();
+    }
+
     public function render_options_page(): void {
         if ( ! current_user_can( 'manage_options' ) ) {
             return;
         }
 
         $settings = get_option( 'mga_settings', $this->get_default_settings() );
+        $mga_show_wizard          = ! $this->is_wizard_completed();
+        $mga_skip_wizard_url      = $this->get_wizard_action_url( 'skip' );
+        $mga_restart_wizard_url   = $this->get_wizard_action_url( 'restart' );
 
         $template_path = defined( 'MGA_ADMIN_TEMPLATE_PATH' )
             ? MGA_ADMIN_TEMPLATE_PATH
@@ -1151,6 +1250,7 @@ class Settings {
         $sanitized_settings = $this->sanitize_settings( $raw_settings, $existing_settings );
 
         update_option( 'mga_settings', $sanitized_settings );
+        $this->complete_wizard();
 
         wp_send_json_success(
             [

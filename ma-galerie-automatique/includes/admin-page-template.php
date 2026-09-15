@@ -25,15 +25,40 @@ if ( empty( $available_post_types ) ) {
     $available_post_types = get_post_types( [], 'objects' );
 }
 
+if ( ! isset( $mga_show_wizard ) ) {
+    $mga_show_wizard = true;
+}
+
+$mga_wizard_panel_is_active = static function ( int $index ) use ( $mga_show_wizard ): bool {
+    return ! $mga_show_wizard || 0 === $index;
+};
+
 ?>
 <div class="wrap mga-admin-wrap">
     <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
     <?php settings_errors( 'mga_settings' ); ?>
 
+    <p class="mga-wizard-toolbar">
+        <?php if ( $mga_show_wizard ) : ?>
+            <a class="button button-secondary" href="<?php echo esc_url( $mga_skip_wizard_url ?? '' ); ?>">
+                <?php echo esc_html__( 'Passer l’assistant', 'lightbox-jlg' ); ?>
+            </a>
+        <?php else : ?>
+            <a href="<?php echo esc_url( $mga_restart_wizard_url ?? '' ); ?>">
+                <?php echo esc_html__( 'Relancer l’assistant', 'lightbox-jlg' ); ?>
+            </a>
+        <?php endif; ?>
+    </p>
+
     <form action="options.php" method="post" data-mga-settings-form>
         <?php settings_fields( 'mga_settings_group' ); ?>
 
-        <div class="mga-wizard" data-mga-wizard>
+        <div
+            class="mga-wizard<?php echo $mga_show_wizard ? '' : ' is-complete'; ?>"
+            data-mga-wizard
+            <?php echo $mga_show_wizard ? '' : 'data-mga-wizard-complete="1"'; ?>
+        >
+            <?php if ( $mga_show_wizard ) : ?>
             <ol class="mga-wizard__progress" data-mga-stepper aria-label="<?php echo esc_attr__( 'Étapes de configuration', 'lightbox-jlg' ); ?>">
                 <li class="mga-wizard__progress-item is-active" data-mga-step-indicator data-step-index="0">
                     <span class="mga-wizard__progress-number">1</span>
@@ -48,13 +73,15 @@ if ( empty( $available_post_types ) ) {
                     <span class="mga-wizard__progress-label"><?php echo esc_html__( 'Récapitulatif', 'lightbox-jlg' ); ?></span>
                 </li>
             </ol>
+            <?php endif; ?>
 
             <div class="mga-wizard__panels">
                 <section
-                    class="mga-wizard__panel is-active"
+                    class="mga-wizard__panel<?php echo $mga_wizard_panel_is_active( 0 ) ? ' is-active' : ''; ?>"
                     data-mga-step-panel
                     data-step-index="0"
-                    aria-hidden="false"
+                    aria-hidden="<?php echo $mga_wizard_panel_is_active( 0 ) ? 'false' : 'true'; ?>"
+                    <?php echo $mga_wizard_panel_is_active( 0 ) ? '' : 'hidden'; ?>
                 >
                     <header class="mga-step__header">
                         <h2 class="mga-step__title" data-mga-step-title><?php echo esc_html__( 'Réglages essentiels de la visionneuse', 'lightbox-jlg' ); ?></h2>
@@ -1215,11 +1242,11 @@ if ( empty( $available_post_types ) ) {
     </section>
 
                 <section
-                    class="mga-wizard__panel"
+                    class="mga-wizard__panel<?php echo $mga_wizard_panel_is_active( 1 ) ? ' is-active' : ''; ?>"
                     data-mga-step-panel
                     data-step-index="1"
-                    aria-hidden="true"
-                    hidden
+                    aria-hidden="<?php echo $mga_wizard_panel_is_active( 1 ) ? 'false' : 'true'; ?>"
+                    <?php echo $mga_wizard_panel_is_active( 1 ) ? '' : 'hidden'; ?>
                 >
                     <header class="mga-step__header">
                         <h2 class="mga-step__title" data-mga-step-title><?php echo esc_html__( 'Canaux de partage et options sociales', 'lightbox-jlg' ); ?></h2>
@@ -1456,11 +1483,11 @@ if ( empty( $available_post_types ) ) {
                 </section>
 
                 <section
-                    class="mga-wizard__panel"
+                    class="mga-wizard__panel<?php echo $mga_wizard_panel_is_active( 2 ) ? ' is-active' : ''; ?>"
                     data-mga-step-panel
                     data-step-index="2"
-                    aria-hidden="true"
-                    hidden
+                    aria-hidden="<?php echo $mga_wizard_panel_is_active( 2 ) ? 'false' : 'true'; ?>"
+                    <?php echo $mga_wizard_panel_is_active( 2 ) ? '' : 'hidden'; ?>
                 >
                     <header class="mga-step__header">
                         <h2 class="mga-step__title" data-mga-step-title><?php echo esc_html__( 'Récapitulatif & mise en ligne', 'lightbox-jlg' ); ?></h2>
@@ -1570,8 +1597,8 @@ if ( empty( $available_post_types ) ) {
             </div>
 
             <div class="mga-wizard__actions">
-                <button type="button" class="button button-secondary mga-wizard__button" data-mga-step-prev><?php echo esc_html__( 'Étape précédente', 'lightbox-jlg' ); ?></button>
-                <button type="button" class="button button-primary mga-wizard__button" data-mga-step-next><?php echo esc_html__( 'Étape suivante', 'lightbox-jlg' ); ?></button>
+                <button type="button" class="button button-secondary mga-wizard__button" data-mga-step-prev<?php echo $mga_show_wizard ? '' : ' hidden'; ?>><?php echo esc_html__( 'Étape précédente', 'lightbox-jlg' ); ?></button>
+                <button type="button" class="button button-primary mga-wizard__button" data-mga-step-next<?php echo $mga_show_wizard ? '' : ' hidden'; ?>><?php echo esc_html__( 'Étape suivante', 'lightbox-jlg' ); ?></button>
                 <?php
                 submit_button(
                     __( 'Enregistrer les réglages', 'lightbox-jlg' ),

@@ -84,6 +84,7 @@ if ( is_multisite() ) {
         delete_option( 'mga_settings' );
         delete_option( 'mga_swiper_asset_sources' );
         delete_option( 'mga_detection_cache_version' );
+        delete_option( 'mga_wizard_completed' );
         delete_post_meta_by_key( '_mga_has_linked_images' );
         mga_delete_translation_cache_directory();
         restore_current_blog();
@@ -95,5 +96,6 @@ if ( is_multisite() ) {
 delete_option( 'mga_settings' );
 delete_option( 'mga_swiper_asset_sources' );
 delete_option( 'mga_detection_cache_version' );
+delete_option( 'mga_wizard_completed' );
 delete_post_meta_by_key( '_mga_has_linked_images' );
 mga_delete_translation_cache_directory();
