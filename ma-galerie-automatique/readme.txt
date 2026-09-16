@@ -4,7 +4,7 @@ Tags: lightbox, gallery, slideshow, images, gutenberg
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.8.3
+Stable tag: 1.8.4
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -29,6 +29,11 @@ Les réglages se trouvent sous **Réglages → Lightbox - JLG**. Un assistant s�
 4. Configurer l’extension via **Réglages → Lightbox - JLG**.
 
 == Changelog ==
+
+= 1.8.4 =
+* Thème sombre limité à l’aperçu de la visionneuse (plus de fuite sur le `.wrap` wp-admin).
+* Plus de restyle des classes natives `.button-link` / `.nav-tab`.
+* Plus de chrome wizard JS (`is-complete`) une fois `mga_wizard_completed` persisté.
 
 = 1.8.3 =
 * La notice « SDK Google indisponible » n’apparaît plus que sur Réglages → Lightbox - JLG (plus de fuite sur les autres écrans wp-admin).

@@ -31,7 +31,7 @@ mga_sdk_notice_check( is_string( $plugin_src ) && false === strpos( $plugin_src,
 mga_sdk_notice_check( is_string( $plugin_src ) && false !== strpos( $plugin_src, "class=\"notice notice-error\"" ), 'Notice markup uses native notice notice-error' );
 mga_sdk_notice_check( is_string( $plugin_src ) && false === strpos( $plugin_src, 'mga-notice' ), 'Notice markup does not use a custom mga-notice class' );
 mga_sdk_notice_check( is_string( $css ) && false === strpos( $css, '.notice' ), 'Admin CSS does not restyle core .notice' );
-mga_sdk_notice_check( is_string( $bootstrap ) && (bool) preg_match( '/Version:\s*1\.8\.3/', $bootstrap ), 'Plugin header version 1.8.3' );
+mga_sdk_notice_check( is_string( $bootstrap ) && (bool) preg_match( '/Version:\s*1\.8\.4/', $bootstrap ), 'Plugin header version 1.8.4' );
 
 $submenu_hits = [];
 $php_iterator = new RecursiveIteratorIterator(

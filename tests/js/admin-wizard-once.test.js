@@ -15,4 +15,9 @@ describe('admin wizard once', () => {
         expect(adminSource).toContain('const root = wizard || targetForm');
         expect(adminSource).toContain('const wizardIsComplete = !wizard');
     });
+
+    it('does not keep completed-wizard chrome flags after mga_wizard_completed', () => {
+        expect(adminSource).not.toContain('data-mga-wizard-complete');
+        expect(adminSource).not.toMatch(/classList\.contains\(\s*['"]is-complete['"]\s*\)/);
+    });
 });

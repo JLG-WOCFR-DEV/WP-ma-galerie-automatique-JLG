@@ -76,6 +76,36 @@ class AdminSettingsPageAssetsTest extends WP_UnitTestCase {
             $css,
             'Native wp-admin .button and .button-secondary must keep core styles.'
         );
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.button-link/',
+            $css,
+            'Native wp-admin .button-link must keep core styles.'
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/(?<![a-zA-Z0-9_-])\.wrap(?:\s|:|,|\{)/',
+            $css,
+            'Native wp-admin .wrap must keep core styles.'
+        );
+        $this->assertStringNotContainsString(
+            '.notice',
+            $css,
+            'Native wp-admin .notice must keep core styles.'
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.nav-tab(?:-wrapper)?(?:\s|:|,|\{)/',
+            $css,
+            'Native wp-admin .nav-tab must keep core styles.'
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.mga-admin-wrap\[data-mga-theme=[\'"]dark[\'"]\]/',
+            $css,
+            'Dark theme must not leak onto the settings wrap.'
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.mga-live-preview\[data-mga-theme=[\'"]dark[\'"]\]/',
+            $css,
+            'Dark theme must stay on the live preview.'
+        );
     }
 
     public function test_plugin_does_not_remove_submenu_pages(): void {

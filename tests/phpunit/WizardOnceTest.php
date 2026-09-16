@@ -81,6 +81,25 @@ class WizardOnceTest extends WP_UnitTestCase {
             substr_count( $html, 'mga-settings-panel' ),
             'All settings panels should be visible after the wizard is dismissed.'
         );
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="wrap mga-admin-wrap"[^>]*data-mga-theme/',
+            $html,
+            'Completed settings must not stamp a theme on the wrap.'
+        );
+    }
+
+    public function test_theme_picker_is_scoped_to_preview(): void {
+        ob_start();
+        $this->settings()->render_options_page();
+        $html = ob_get_clean();
+
+        $this->assertStringNotContainsString( 'Thème de l’interface', $html );
+        $this->assertStringContainsString( 'Thème de l’aperçu', $html );
+        $this->assertStringContainsString( 'data-mga-live-preview', $html );
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="wrap mga-admin-wrap"[^>]*data-mga-theme/',
+            $html
+        );
     }
 
     public function test_settings_form_post_completes_wizard(): void {
