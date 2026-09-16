@@ -90,6 +90,105 @@ const resolveTriggerLinkFromEventTarget = (eventTarget) => {
     return null;
 };
 
+const POINTER_NAV_PREV_SELECTOR = '#mga-prev, .swiper-button-prev, .mga-nav-hitarea--prev';
+const POINTER_NAV_NEXT_SELECTOR = '#mga-next, .swiper-button-next, .mga-nav-hitarea--next';
+const POINTER_NAV_IGNORE_SELECTOR = [
+    '.mga-toolbar',
+    '.mga-toolbar-button',
+    '.mga-share-modal',
+    '.mga-thumbs-swiper',
+    '.mga-cta-button',
+    '.mga-caption a',
+    '#mga-close',
+    '#mga-play-pause',
+    '#mga-zoom',
+    '#mga-fullscreen',
+    '#mga-share',
+    '#mga-download',
+].join(', ');
+const SIDE_NAV_EDGE_RATIO = 0.2;
+const SIDE_NAV_MIN_EDGE_PX = 56;
+const FULLSCREEN_CHANGE_EVENTS = [
+    'fullscreenchange',
+    'webkitfullscreenchange',
+    'mozfullscreenchange',
+    'MSFullscreenChange',
+];
+
+const resolvePointerNavDirection = (eventTarget) => {
+    if (!eventTarget || typeof eventTarget.closest !== 'function') {
+        return null;
+    }
+
+    if (eventTarget.closest(POINTER_NAV_PREV_SELECTOR)) {
+        return 'prev';
+    }
+
+    if (eventTarget.closest(POINTER_NAV_NEXT_SELECTOR)) {
+        return 'next';
+    }
+
+    return null;
+};
+
+const shouldIgnorePointerNavTarget = (eventTarget) => {
+    if (!eventTarget || typeof eventTarget.closest !== 'function') {
+        return true;
+    }
+
+    return Boolean(eventTarget.closest(POINTER_NAV_IGNORE_SELECTOR));
+};
+
+const resolveSideNavDirection = (clientX, rect, options = {}) => {
+    if (!rect || typeof clientX !== 'number' || !Number.isFinite(clientX)) {
+        return null;
+    }
+
+    const width = Number(rect.width);
+    if (!width || width <= 0) {
+        return null;
+    }
+
+    const ratio = typeof options.edgeRatio === 'number' ? options.edgeRatio : SIDE_NAV_EDGE_RATIO;
+    const minEdge = typeof options.minEdgePx === 'number' ? options.minEdgePx : SIDE_NAV_MIN_EDGE_PX;
+    const edge = Math.min(Math.max(width * ratio, minEdge), width / 2);
+    const left = typeof rect.left === 'number' ? rect.left : 0;
+    const x = clientX - left;
+
+    if (x <= edge) {
+        return 'prev';
+    }
+
+    if (x >= width - edge) {
+        return 'next';
+    }
+
+    return null;
+};
+
+const isElementFullscreen = (element, doc = typeof document !== 'undefined' ? document : null) => {
+    if (!element || !doc) {
+        return false;
+    }
+
+    const fullscreenElement = doc.fullscreenElement
+        || doc.webkitFullscreenElement
+        || doc.webkitCurrentFullScreenElement
+        || doc.mozFullScreenElement
+        || doc.msFullscreenElement
+        || null;
+
+    if (!fullscreenElement) {
+        return false;
+    }
+
+    if (fullscreenElement === element) {
+        return true;
+    }
+
+    return typeof element.contains === 'function' && element.contains(fullscreenElement);
+};
+
 const navigateSwiperSlide = (swiper, direction, options = {}) => {
     if (!swiper || swiper.destroyed) {
         return false;
@@ -166,4 +265,9 @@ export {
     findImageLinkInRoot,
     resolveTriggerLinkFromEventTarget,
     navigateSwiperSlide,
+    resolvePointerNavDirection,
+    shouldIgnorePointerNavTarget,
+    resolveSideNavDirection,
+    isElementFullscreen,
+    FULLSCREEN_CHANGE_EVENTS,
 };

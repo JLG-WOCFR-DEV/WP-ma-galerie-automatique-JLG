@@ -736,6 +736,7 @@ import {
         const THEME_STORAGE_KEY = 'mgaAdminThemePreference';
         const THEME_OPTIONS = ['light', 'dark', 'system'];
         const themeSelect = adminRoot ? adminRoot.querySelector('[data-mga-theme-select]') : null;
+        const previewRoot = adminRoot ? adminRoot.querySelector('[data-mga-live-preview]') : null;
         const systemThemeQuery = typeof global.matchMedia === 'function'
             ? global.matchMedia('(prefers-color-scheme: dark)')
             : null;
@@ -790,17 +791,25 @@ import {
         };
 
         const applyThemePreference = (preference, options = {}) => {
-            if (!adminRoot) {
+            if (!adminRoot && !previewRoot) {
                 return;
             }
 
             const normalizedPreference = normalizeThemePreference(preference);
             const resolvedTheme = resolveAppliedTheme(normalizedPreference);
 
-            adminRoot.setAttribute('data-mga-theme-preference', normalizedPreference);
-            adminRoot.setAttribute('data-mga-theme', resolvedTheme);
-            adminRoot.classList.toggle('is-theme-dark', resolvedTheme === 'dark');
-            adminRoot.classList.toggle('is-theme-light', resolvedTheme !== 'dark');
+            if (adminRoot) {
+                adminRoot.removeAttribute('data-mga-theme-preference');
+                adminRoot.removeAttribute('data-mga-theme');
+                adminRoot.classList.remove('is-theme-dark', 'is-theme-light');
+            }
+
+            if (previewRoot) {
+                previewRoot.setAttribute('data-mga-theme-preference', normalizedPreference);
+                previewRoot.setAttribute('data-mga-theme', resolvedTheme);
+                previewRoot.classList.toggle('is-theme-dark', resolvedTheme === 'dark');
+                previewRoot.classList.toggle('is-theme-light', resolvedTheme !== 'dark');
+            }
 
             if (themeSelect && themeSelect.value !== normalizedPreference) {
                 themeSelect.value = normalizedPreference;
@@ -854,9 +863,7 @@ import {
             const submitButton = root.querySelector('[data-mga-step-submit]');
             const statusElement = root.querySelector('[data-mga-save-status]');
             const summaryIndex = stepPanels.length - 1;
-            const wizardIsComplete = !wizard
-                || wizard.classList.contains('is-complete')
-                || wizard.getAttribute('data-mga-wizard-complete') === '1';
+            const wizardIsComplete = !wizard;
             let currentIndex = stepPanels.findIndex((panel) => panel.classList.contains('is-active'));
 
             if (currentIndex < 0) {
@@ -1889,7 +1896,7 @@ import {
                         const wizardRoot = targetForm.querySelector('[data-mga-wizard]')
                             || doc.querySelector('[data-mga-wizard]');
 
-                        if (wizardRoot && !wizardRoot.classList.contains('is-complete')) {
+                        if (wizardRoot) {
                             global.setTimeout(() => {
                                 global.location.reload();
                             }, 400);
