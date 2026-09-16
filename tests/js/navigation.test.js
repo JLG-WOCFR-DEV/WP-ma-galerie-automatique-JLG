@@ -152,4 +152,65 @@ describe('navigation helpers', () => {
             expect(swiper.slideNext).not.toHaveBeenCalled();
         });
     });
+
+    describe('pointer and fullscreen navigation helpers', () => {
+        it('resolves prev/next from on-screen controls and side hit areas', () => {
+            document.body.innerHTML = `
+                <div class="mga-viewer" id="mga-viewer">
+                    <button id="mga-prev" class="swiper-button-prev"></button>
+                    <button id="mga-next" class="swiper-button-next"></button>
+                    <div class="mga-nav-hitarea mga-nav-hitarea--prev" id="hit-prev"></div>
+                    <div class="mga-nav-hitarea mga-nav-hitarea--next" id="hit-next"></div>
+                    <button id="mga-close" class="mga-toolbar-button"></button>
+                </div>
+            `;
+
+            expect(helpers.resolvePointerNavDirection(document.getElementById('mga-prev'))).toBe('prev');
+            expect(helpers.resolvePointerNavDirection(document.getElementById('mga-next'))).toBe('next');
+            expect(helpers.resolvePointerNavDirection(document.getElementById('hit-prev'))).toBe('prev');
+            expect(helpers.resolvePointerNavDirection(document.getElementById('hit-next'))).toBe('next');
+            expect(helpers.resolvePointerNavDirection(document.getElementById('mga-close'))).toBeNull();
+        });
+
+        it('ignores toolbar, thumbs and share chrome as side-nav targets', () => {
+            document.body.innerHTML = `
+                <div class="mga-viewer">
+                    <div class="mga-toolbar"><button id="mga-zoom" class="mga-toolbar-button"></button></div>
+                    <div class="mga-thumbs-swiper"><button id="thumb" class="mga-thumb-button"></button></div>
+                    <div class="mga-share-modal"><button id="share-opt"></button></div>
+                    <img id="slide-img" />
+                </div>
+            `;
+
+            expect(helpers.shouldIgnorePointerNavTarget(document.getElementById('mga-zoom'))).toBe(true);
+            expect(helpers.shouldIgnorePointerNavTarget(document.getElementById('thumb'))).toBe(true);
+            expect(helpers.shouldIgnorePointerNavTarget(document.getElementById('share-opt'))).toBe(true);
+            expect(helpers.shouldIgnorePointerNavTarget(document.getElementById('slide-img'))).toBe(false);
+        });
+
+        it('maps left and right edges of the slideshow to prev/next', () => {
+            const rect = { left: 0, width: 1000 };
+
+            expect(helpers.resolveSideNavDirection(40, rect)).toBe('prev');
+            expect(helpers.resolveSideNavDirection(960, rect)).toBe('next');
+            expect(helpers.resolveSideNavDirection(500, rect)).toBeNull();
+            expect(helpers.resolveSideNavDirection(undefined, rect)).toBeNull();
+            expect(helpers.resolveSideNavDirection(40, { width: 0 })).toBeNull();
+        });
+
+        it('detects when the viewer is the fullscreen element', () => {
+            const viewer = document.createElement('div');
+            const doc = {
+                fullscreenElement: viewer,
+            };
+
+            expect(helpers.isElementFullscreen(viewer, doc)).toBe(true);
+            expect(helpers.isElementFullscreen(document.createElement('div'), doc)).toBe(false);
+            expect(helpers.isElementFullscreen(viewer, { webkitFullscreenElement: viewer })).toBe(true);
+            expect(helpers.FULLSCREEN_CHANGE_EVENTS).toEqual(expect.arrayContaining([
+                'fullscreenchange',
+                'webkitfullscreenchange',
+            ]));
+        });
+    });
 });

@@ -32,7 +32,7 @@
 .mga-viewer.mga-has-blur { -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
 .mga-viewer.mga-has-texture { background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOCIgbnVtT2N0YXZlcz0iNCIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjE1Ii8+PC9zdmc+'); }
 
-.mga-echo-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; }
+.mga-echo-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; pointer-events: none; }
 .mga-echo-bg__image { width: 100%; height: 100%; object-fit: cover; transform: scale(1.1); filter: blur(25px) brightness(0.6); transition: opacity 0.4s ease-in-out; opacity: 0; }
 .mga-echo-bg__image.mga-visible { opacity: 1; }
 
@@ -53,6 +53,15 @@
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.28));
     z-index: 20;
     overflow: visible;
+    pointer-events: none;
+}
+
+.mga-header .mga-toolbar-button,
+.mga-header .mga-caption,
+.mga-header .mga-caption-feedback,
+.mga-header .mga-cta-container,
+.mga-header .mga-cta-button {
+    pointer-events: auto;
 }
 
 .mga-counter {
@@ -285,8 +294,9 @@
     justify-content: center;
     transition: background-color 0.2s ease, transform 0.2s ease;
     touch-action: manipulation;
-    z-index: 25;
+    z-index: 30;
     cursor: pointer;
+    pointer-events: auto;
 }
 .mga-main-swiper .swiper-button-next:hover,
 .mga-main-swiper .swiper-button-prev:hover { background-color: rgba(0, 0, 0, 0.6); }
@@ -305,6 +315,23 @@
     box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55);
     outline: none;
 }
+
+.mga-nav-hitarea {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: max(20%, 72px);
+    z-index: 15;
+    pointer-events: auto;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.mga-nav-hitarea--prev { left: 0; }
+.mga-nav-hitarea--next { right: 0; }
 
 .mga-thumbs-swiper {
     position: relative;
@@ -477,12 +504,25 @@
     border-radius: 4px;
 }
 
-.mga-viewer:fullscreen .mga-thumbs-swiper {
+.mga-viewer:fullscreen .mga-thumbs-swiper,
+.mga-viewer:-webkit-full-screen .mga-thumbs-swiper,
+.mga-viewer.mga-is-fullscreen .mga-thumbs-swiper {
     display: none;
 }
-.mga-viewer:fullscreen .mga-main-swiper {
+.mga-viewer:fullscreen .mga-main-swiper,
+.mga-viewer:-webkit-full-screen .mga-main-swiper,
+.mga-viewer.mga-is-fullscreen .mga-main-swiper {
     flex: 1 1 auto;
     max-height: none;
+}
+.mga-viewer:fullscreen .mga-main-swiper .swiper-button-next,
+.mga-viewer:fullscreen .mga-main-swiper .swiper-button-prev,
+.mga-viewer:-webkit-full-screen .mga-main-swiper .swiper-button-next,
+.mga-viewer:-webkit-full-screen .mga-main-swiper .swiper-button-prev,
+.mga-viewer.mga-is-fullscreen .mga-main-swiper .swiper-button-next,
+.mga-viewer.mga-is-fullscreen .mga-main-swiper .swiper-button-prev {
+    z-index: 40;
+    pointer-events: auto;
 }
 
 /* --- RESPONSIVE --- */

@@ -1312,6 +1312,205 @@ describe('keyboard navigation with autoplay', () => {
     });
 });
 
+describe('fullscreen and pointer slideshow navigation', () => {
+    const originalMatchMedia = window.matchMedia;
+    const originalFullscreenDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'fullscreenElement')
+        || Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
+    let instances;
+    let testExports;
+    let fullscreenElement = null;
+
+    const setFullscreenElement = (element) => {
+        fullscreenElement = element;
+        Object.defineProperty(document, 'fullscreenElement', {
+            configurable: true,
+            get: () => fullscreenElement,
+        });
+    };
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = '<main></main>';
+        fullscreenElement = null;
+
+        Object.defineProperty(document, 'readyState', {
+            value: 'complete',
+            configurable: true,
+        });
+
+        window.matchMedia = jest.fn().mockReturnValue({
+            matches: false,
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+        });
+
+        window.mga_settings = {
+            allowBodyFallback: true,
+            include_svg: true,
+            loop: true,
+            background_style: 'echo',
+            autoplay_start: true,
+            delay: 3,
+            show_fullscreen: true,
+        };
+
+        const factory = createSwiperMockFactory();
+        instances = factory.instances;
+        global.Swiper = factory.SwiperMock;
+
+        const module = require('../../ma-galerie-automatique/assets/js/gallery-slideshow');
+        testExports = module.__testExports;
+        testExports.openViewer([
+            { highResUrl: 'https://example.com/high-1.jpg', thumbUrl: 'https://example.com/thumb-1.jpg', caption: 'Sentier forestier' },
+            { highResUrl: 'https://example.com/high-2.jpg', thumbUrl: 'https://example.com/thumb-2.jpg', caption: 'Yosemite' },
+            { highResUrl: 'https://example.com/high-3.jpg', thumbUrl: 'https://example.com/thumb-3.jpg', caption: 'Chat' },
+        ], 1);
+
+        instances.main.slideToLoop.mockClear();
+        instances.main.slideTo.mockClear();
+        instances.main.slidePrev.mockClear();
+        instances.main.slideNext.mockClear();
+        instances.main.autoplay.stop.mockClear();
+        instances.main.autoplay.start.mockClear();
+        instances.main.update.mockClear();
+        instances.main.realIndex = 1;
+        instances.main.autoplay.running = true;
+        instances.main.zoom = { scale: 1 };
+    });
+
+    afterEach(() => {
+        delete window.mga_settings;
+        delete global.Swiper;
+        delete document.readyState;
+        window.matchMedia = originalMatchMedia;
+        document.body.innerHTML = '';
+        fullscreenElement = null;
+
+        if (originalFullscreenDescriptor) {
+            Object.defineProperty(document, 'fullscreenElement', originalFullscreenDescriptor);
+        } else {
+            delete document.fullscreenElement;
+        }
+    });
+
+    const enterFullscreen = (viewer) => {
+        setFullscreenElement(viewer);
+        document.dispatchEvent(new Event('fullscreenchange'));
+    };
+
+    it('keeps caption chrome and thumb strip markup when entering fullscreen', () => {
+        const viewer = document.getElementById('mga-viewer');
+        enterFullscreen(viewer);
+
+        expect(viewer.querySelector('.mga-header')).toBeTruthy();
+        expect(viewer.querySelector('#mga-caption')).toBeTruthy();
+        expect(viewer.querySelector('.mga-thumbs-swiper')).toBeTruthy();
+        expect(viewer.classList.contains('mga-is-fullscreen')).toBe(true);
+        expect(instances.main.update).toHaveBeenCalled();
+    });
+
+    it('goes prev/next from on-screen controls while fullscreen', () => {
+        const viewer = document.getElementById('mga-viewer');
+        enterFullscreen(viewer);
+
+        document.getElementById('mga-prev').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(instances.main.slideToLoop).toHaveBeenCalledWith(0);
+        expect(instances.main.slidePrev).not.toHaveBeenCalled();
+        expect(instances.main.autoplay.stop).toHaveBeenCalled();
+        expect(instances.main.autoplay.start).toHaveBeenCalled();
+
+        instances.main.slideToLoop.mockClear();
+        instances.main.realIndex = 0;
+
+        document.getElementById('mga-next').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(instances.main.slideToLoop).toHaveBeenCalledWith(1);
+    });
+
+    it('goes prev/next when clicking or tapping the left and right sides', () => {
+        const viewer = document.getElementById('mga-viewer');
+        const mainEl = viewer.querySelector('.mga-main-swiper');
+        const slideImg = mainEl.querySelector('.swiper-slide img');
+        mainEl.getBoundingClientRect = () => ({
+            left: 0,
+            width: 1000,
+            top: 0,
+            height: 600,
+            right: 1000,
+            bottom: 600,
+            x: 0,
+            y: 0,
+            toJSON() {},
+        });
+
+        enterFullscreen(viewer);
+
+        slideImg.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            clientX: 24,
+            clientY: 300,
+        }));
+        expect(instances.main.slideToLoop).toHaveBeenCalledWith(0);
+
+        instances.main.slideToLoop.mockClear();
+        instances.main.realIndex = 0;
+
+        slideImg.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            clientX: 980,
+            clientY: 300,
+        }));
+        expect(instances.main.slideToLoop).toHaveBeenCalledWith(1);
+    });
+
+    it('goes prev/next from the dedicated side hit areas', () => {
+        const viewer = document.getElementById('mga-viewer');
+        enterFullscreen(viewer);
+
+        viewer.querySelector('.mga-nav-hitarea--prev').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(instances.main.slideToLoop).toHaveBeenCalledWith(0);
+
+        instances.main.slideToLoop.mockClear();
+        instances.main.realIndex = 0;
+
+        viewer.querySelector('.mga-nav-hitarea--next').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(instances.main.slideToLoop).toHaveBeenCalledWith(1);
+    });
+
+    it('keeps keyboard prev/next while fullscreen', () => {
+        const viewer = document.getElementById('mga-viewer');
+        enterFullscreen(viewer);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+        expect(instances.main.slideToLoop).toHaveBeenCalledWith(0);
+
+        instances.main.slideToLoop.mockClear();
+        instances.main.realIndex = 0;
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+        expect(instances.main.slideToLoop).toHaveBeenCalledWith(1);
+    });
+
+    it('still goes prev/next with on-screen controls outside fullscreen', () => {
+        document.getElementById('mga-next').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(instances.main.slideToLoop).toHaveBeenCalledWith(2);
+
+        instances.main.slideToLoop.mockClear();
+        instances.main.realIndex = 2;
+
+        document.getElementById('mga-prev').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(instances.main.slideToLoop).toHaveBeenCalledWith(1);
+    });
+
+    it('wires Swiper navigation to the actual prev/next buttons', () => {
+        expect(instances.main.params.navigation.nextEl).toBe(document.getElementById('mga-next'));
+        expect(instances.main.params.navigation.prevEl).toBe(document.getElementById('mga-prev'));
+    });
+});
+
 describe('figcaption and figure clicks open the lightbox', () => {
     const originalMatchMedia = window.matchMedia;
     let instances;

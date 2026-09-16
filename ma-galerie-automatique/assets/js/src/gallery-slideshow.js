@@ -16,6 +16,11 @@ import {
     isHeavyEffect,
     resolveTriggerLinkFromEventTarget,
     navigateSwiperSlide,
+    resolvePointerNavDirection,
+    shouldIgnorePointerNavTarget,
+    resolveSideNavDirection,
+    isElementFullscreen,
+    FULLSCREEN_CHANGE_EVENTS,
 } from './navigation';
 import {
     buildLabelFromKey,
@@ -580,6 +585,7 @@ import {
         let bodyPaddingRightWasModified = false;
         let bodyScrollLockClassAdded = false;
         let lastFocusedElementBeforeViewer = null;
+        let fullscreenListenersBound = false;
         let viewerFocusTrapHandler = null;
         let currentGalleryImages = [];
         let currentGalleryId = null;
@@ -2607,6 +2613,16 @@ import {
                 prevButton.setAttribute('title', mga__( 'Image précédente', 'lightbox-jlg' ));
                 mainSwiper.appendChild(prevButton);
 
+                const prevHitArea = document.createElement('div');
+                prevHitArea.className = 'mga-nav-hitarea mga-nav-hitarea--prev';
+                prevHitArea.setAttribute('aria-hidden', 'true');
+                mainSwiper.appendChild(prevHitArea);
+
+                const nextHitArea = document.createElement('div');
+                nextHitArea.className = 'mga-nav-hitarea mga-nav-hitarea--next';
+                nextHitArea.setAttribute('aria-hidden', 'true');
+                mainSwiper.appendChild(nextHitArea);
+
                 if (thumbsLayout !== 'hidden') {
                     const thumbsSwiper = document.createElement('div');
                     thumbsSwiper.className = 'swiper mga-thumbs-swiper';
@@ -2635,7 +2651,133 @@ import {
                 if (viewer && viewer.parentNode) debug.log(mga__( 'Viewer créé et ajouté au body avec succès.', 'lightbox-jlg' ));
                 else debug.log(mga__( 'ERREUR CRITIQUE : Échec de la création du viewer !', 'lightbox-jlg' ), true);
             }
+
+            bindViewerPointerNavigation(viewer);
             return viewer;
+        }
+
+        function getPointerClientX(event) {
+            if (!event) {
+                return null;
+            }
+
+            if (typeof event.clientX === 'number' && Number.isFinite(event.clientX)) {
+                return event.clientX;
+            }
+
+            const touch = event.changedTouches && event.changedTouches[0]
+                ? event.changedTouches[0]
+                : (event.touches && event.touches[0] ? event.touches[0] : null);
+
+            if (touch && typeof touch.clientX === 'number' && Number.isFinite(touch.clientX)) {
+                return touch.clientX;
+            }
+
+            return null;
+        }
+
+        function navigateFromPointerDirection(direction) {
+            return navigateSwiperSlide(mainSwiper, direction, {
+                slidesCount: Array.isArray(currentGalleryImages) ? currentGalleryImages.length : 0,
+            });
+        }
+
+        function handleViewerPointerNav(event) {
+            const viewer = document.getElementById('mga-viewer');
+            if (!viewer || viewer.style.display === 'none') {
+                return;
+            }
+
+            const eventTarget = resolveEventTarget(event);
+            const fromControl = resolvePointerNavDirection(eventTarget);
+
+            if (fromControl) {
+                if (typeof event.preventDefault === 'function') {
+                    event.preventDefault();
+                }
+                if (typeof event.stopPropagation === 'function') {
+                    event.stopPropagation();
+                }
+                navigateFromPointerDirection(fromControl);
+                return;
+            }
+
+            if (shouldIgnorePointerNavTarget(eventTarget)) {
+                return;
+            }
+
+            if (!eventTarget || typeof eventTarget.closest !== 'function' || !eventTarget.closest('.mga-main-swiper')) {
+                return;
+            }
+
+            if (mainSwiper && mainSwiper.zoom && typeof mainSwiper.zoom.scale === 'number' && mainSwiper.zoom.scale > 1) {
+                return;
+            }
+
+            const mainEl = viewer.querySelector('.mga-main-swiper');
+            if (!mainEl || typeof mainEl.getBoundingClientRect !== 'function') {
+                return;
+            }
+
+            const fromSide = resolveSideNavDirection(getPointerClientX(event), mainEl.getBoundingClientRect());
+            if (!fromSide) {
+                return;
+            }
+
+            if (typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+
+            navigateFromPointerDirection(fromSide);
+        }
+
+        function bindViewerPointerNavigation(viewer) {
+            if (!viewer || viewer.getAttribute('data-mga-pointer-nav') === '1') {
+                return;
+            }
+
+            viewer.addEventListener('click', handleViewerPointerNav, true);
+            FULLSCREEN_CHANGE_EVENTS.forEach((eventName) => {
+                viewer.addEventListener(eventName, syncViewerFullscreenState);
+            });
+            viewer.setAttribute('data-mga-pointer-nav', '1');
+        }
+
+        function syncViewerFullscreenState() {
+            const viewer = document.getElementById('mga-viewer');
+            if (!viewer) {
+                return;
+            }
+
+            const active = isElementFullscreen(viewer);
+            viewer.classList.toggle('mga-is-fullscreen', active);
+
+            if (active) {
+                viewer.setAttribute('data-mga-fullscreen', 'true');
+            } else {
+                viewer.removeAttribute('data-mga-fullscreen');
+            }
+
+            scheduleHeaderOffsetUpdate(viewer);
+
+            if (mainSwiper && !mainSwiper.destroyed && typeof mainSwiper.update === 'function') {
+                mainSwiper.update();
+            }
+
+            if (thumbsSwiper && !thumbsSwiper.destroyed && typeof thumbsSwiper.update === 'function') {
+                thumbsSwiper.update();
+            }
+        }
+
+        function bindFullscreenListeners() {
+            if (fullscreenListenersBound) {
+                return;
+            }
+
+            fullscreenListenersBound = true;
+            FULLSCREEN_CHANGE_EVENTS.forEach((eventName) => {
+                document.addEventListener(eventName, syncViewerFullscreenState);
+            });
         }
 
         // --- LOGIQUE PRINCIPALE ---
@@ -2833,6 +2975,10 @@ import {
             linkMatchesTriggerScenario: doesLinkMatchTriggerScenario,
             resolveTriggerLinkFromEventTarget,
             navigateSwiperSlide,
+            resolvePointerNavDirection,
+            shouldIgnorePointerNavTarget,
+            resolveSideNavDirection,
+            isElementFullscreen,
         };
 
         if (typeof module !== 'undefined' && module.exports) {
@@ -3771,7 +3917,12 @@ import {
                 speed: resolvedSpeed,
                 cssMode: shouldUseCssMode,
                 initialSlide: sanitizedInitialSlide,
-                navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+                touchEventsTarget: 'container',
+                simulateTouch: true,
+                navigation: {
+                    nextEl: viewer.querySelector('#mga-next'),
+                    prevEl: viewer.querySelector('#mga-prev'),
+                },
                 on: {
                     init: function(swiper) {
                         preloadNeighboringImages(images, swiper.realIndex);
@@ -4338,6 +4489,8 @@ import {
             }
         });
 
+        bindFullscreenListeners();
+
         document.addEventListener('keydown', (e) => {
             const viewer = document.getElementById('mga-viewer');
             if (!viewer || viewer.style.display === 'none') return;
@@ -4456,6 +4609,7 @@ import {
             module.exports.__testExports.getShareChannels = () => shareChannels;
             module.exports.__testExports.getShareOptions = () => (shareModal && Array.isArray(shareModal.options)) ? shareModal.options : [];
             module.exports.__testExports.syncShareControl = syncShareControl;
+            module.exports.__testExports.syncViewerFullscreenState = syncViewerFullscreenState;
         }
 
         function closeViewer(viewer, options = {}) {
@@ -4505,6 +4659,8 @@ import {
                 viewer.removeEventListener('keydown', viewerFocusTrapHandler, true);
                 viewerFocusTrapHandler = null;
             }
+            viewer.classList.remove('mga-is-fullscreen');
+            viewer.removeAttribute('data-mga-fullscreen');
             viewer.style.display = 'none';
             if (bodyPaddingRightWasModified) {
                 document.body.style.paddingRight = initialBodyPaddingRight;
